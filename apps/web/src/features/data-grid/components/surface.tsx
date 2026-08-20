@@ -1,6 +1,6 @@
+import { type JSX } from "@solidjs/web";
 /* oxlint-disable jsx-a11y/no-noninteractive-element-to-interactive-role */
 import { Show } from "solid-js";
-import { type JSX } from "@solidjs/web";
 
 import { useDataGrid } from "../context/instance-context";
 import {

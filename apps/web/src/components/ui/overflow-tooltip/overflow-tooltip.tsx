@@ -1,5 +1,5 @@
-import { createSignal, onSettled, type ParentProps } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { createSignal, onSettled, type ParentProps } from "solid-js";
 
 import styles from "./overflow-tooltip.module.css";
 

@@ -1,5 +1,5 @@
-import { clsx } from "clsx";
 import type { JSX } from "@solidjs/web";
+import { clsx } from "clsx";
 
 import styles from "./filter-bar.module.css";
 

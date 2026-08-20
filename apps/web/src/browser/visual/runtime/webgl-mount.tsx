@@ -1,5 +1,12 @@
-import { Show, createEffect, createMemo, createSignal, onCleanup, onSettled } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import {
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onSettled,
+} from "solid-js";
 
 import { observeElementVisibility } from "~/browser/dom/observe-element-visibility";
 

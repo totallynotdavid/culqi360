@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { Show } from "solid-js";
 
 import TrendingDown from "~/components/icons/trending-down";
@@ -52,9 +51,9 @@ export function AggregateTile(props: {
       <WidgetCardShell title={props.title}>
         <Show when={props.href} fallback={body()}>
           {(href) => (
-            <A class={styles.aggregateLink} href={href()}>
+            <a class={styles.aggregateLink} href={href()}>
               {body()}
-            </A>
+            </a>
           )}
         </Show>
       </WidgetCardShell>

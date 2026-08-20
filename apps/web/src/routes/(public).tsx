@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import type { RouteSectionProps } from "@solidjs/router";
 import { For, createSignal, onSettled } from "solid-js";
 
@@ -28,25 +27,25 @@ export default function PublicLayout(props: RouteSectionProps) {
       >
         <div class={styles.headerContainer}>
           <div class={styles.navSurface}>
-            <A href="/" class={styles.logo}>
+            <a href="/" class={styles.logo}>
               {PLATFORM_NAME}
-            </A>
+            </a>
             <nav class={styles.nav} aria-label="Público">
               <For each={PUBLIC_MENU_ITEMS}>
                 {(item) => (
-                  <A href={item.href} class={styles.navLink}>
+                  <a href={item.href} class={styles.navLink}>
                     {item.label}
-                  </A>
+                  </a>
                 )}
               </For>
             </nav>
             <div class={styles.rightControls}>
-              <A href="/" class={styles.ctaGhost}>
+              <a href="/" class={styles.ctaGhost}>
                 Inicio
-              </A>
-              <A href="/login" class={styles.ctaPrimary}>
+              </a>
+              <a href="/login" class={styles.ctaPrimary}>
                 Iniciar sesión
-              </A>
+              </a>
               <ThemeToggle class={styles.themeToggle} />
             </div>
           </div>

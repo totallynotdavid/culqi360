@@ -1,6 +1,6 @@
-import { clsx } from "clsx";
-import { merge, splitProps } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { clsx } from "clsx";
+import { merge, omit } from "solid-js";
 
 import styles from "./text-input.module.css";
 
@@ -26,24 +26,25 @@ const SIZE_CLASS: Record<TextInputSize, string> = {
 
 export function TextInput(props: TextInputProps) {
   const withDefaults = merge({ sizeVariant: "lg" as const }, props);
-  const [local, native] = splitProps(withDefaults, [
+  const native = omit(
+    withDefaults,
     "class",
     "onChange",
     "error",
     "sizeVariant",
     "inheritFontStyles",
-  ]);
+  );
 
   return (
     <input
       class={clsx(
         styles.input,
-        SIZE_CLASS[local.sizeVariant],
-        local.inheritFontStyles && styles.inheritFont,
-        local.error && styles.inputError,
-        local.class,
+        SIZE_CLASS[withDefaults.sizeVariant],
+        withDefaults.inheritFontStyles && styles.inheritFont,
+        withDefaults.error && styles.inputError,
+        withDefaults.class,
       )}
-      onInput={(e) => local.onChange?.(e.currentTarget.value)}
+      onInput={(e) => withDefaults.onChange?.(e.currentTarget.value)}
       {...native}
     />
   );

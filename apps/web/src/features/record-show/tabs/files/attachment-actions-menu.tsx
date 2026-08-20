@@ -1,5 +1,11 @@
-import { Show, createEffect, createSignal, onCleanup, onSettled } from "solid-js";
 import { Portal } from "@solidjs/web";
+import {
+  Show,
+  createEffect,
+  createSignal,
+  onCleanup,
+  onSettled,
+} from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
 import type { LeadSaleProofFileView } from "~/contracts/workflow/results";

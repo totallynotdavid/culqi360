@@ -1,5 +1,5 @@
-import { onCleanup, onSettled } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { onCleanup, onSettled } from "solid-js";
 
 interface EnterTransitionProps {
   children: JSX.Element;

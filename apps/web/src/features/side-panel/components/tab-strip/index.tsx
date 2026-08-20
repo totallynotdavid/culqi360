@@ -1,6 +1,15 @@
 import { createResizeObserver } from "@solid-primitives/resize-observer";
-import { For, Show, children, createEffect, createMemo, createSignal, onCleanup, onSettled } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import {
+  For,
+  Show,
+  children,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onSettled,
+} from "solid-js";
 import { createStore } from "solid-js";
 
 import ChevronDown from "~/components/icons/chevron-down";

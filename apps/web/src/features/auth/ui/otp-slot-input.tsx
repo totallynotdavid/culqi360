@@ -1,5 +1,5 @@
-import { For, createMemo, createSignal } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { For, createMemo, createSignal } from "solid-js";
 
 import styles from "./otp-slot-input.module.css";
 

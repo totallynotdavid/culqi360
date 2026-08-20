@@ -1,7 +1,7 @@
 import { useAction, useLocation, useNavigate } from "@solidjs/router";
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
 import { Show, createSignal } from "solid-js";
-import { type JSX } from "@solidjs/web";
 
 import LayoutSidebarLeftCollapse from "~/components/icons/layout-sidebar-left-collapse";
 import Search from "~/components/icons/search";

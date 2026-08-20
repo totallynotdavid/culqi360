@@ -9,13 +9,13 @@ import {
   isPending,
 } from "solid-js";
 
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Activity from "~/components/icons/activity";
 import CircleAlert from "~/components/icons/circle-alert";
 import CircleCheckBig from "~/components/icons/circle-check-big";
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
 import { Button } from "~/components/ui/input/button";
 import { Select } from "~/components/ui/input/select";
-import { Spinner } from "~/components/feedback/spinner/spinner";
 import type { ObservabilitySnapshot } from "~/contracts/observability/snapshot";
 import { DataGrid } from "~/features/data-grid/components/grid";
 import { createGridSource } from "~/features/data-grid/model/create-grid-source";

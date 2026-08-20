@@ -1,5 +1,5 @@
-import { clsx } from "clsx";
 import type { JSX } from "@solidjs/web";
+import { clsx } from "clsx";
 import { Show } from "solid-js";
 
 import styles from "./page.module.css";

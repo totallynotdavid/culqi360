@@ -1,4 +1,10 @@
-import { revalidate, type RouteDefinition, useAction, useNavigate, useSubmission } from "@solidjs/router";
+import {
+  revalidate,
+  type RouteDefinition,
+  useAction,
+  useNavigate,
+  useSubmission,
+} from "@solidjs/router";
 import { Show, Loading, createMemo, createSignal } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";

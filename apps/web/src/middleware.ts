@@ -1,8 +1,7 @@
 import "~/instrument.server";
 import "~/server/entrypoints/runtime-lifecycle";
-
-import { createAPIHandler } from "filesystem-routing/api";
 import { getRequestEvent, redirect, type RequestEvent } from "@solidjs/web";
+import { createAPIHandler } from "filesystem-routing/api";
 import routes from "virtual:file-routes";
 
 import { getApplication } from "./server/composition/application";

@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
 import { OverflowingText } from "~/components/ui/overflow-tooltip/overflow-tooltip";
@@ -77,7 +76,7 @@ interface RecordLinkChipProps extends RecordChipProps {
 export function RecordLinkChip(props: RecordLinkChipProps) {
   return (
     <span class={styles.linkChipWrap}>
-      <A
+      <a
         class={styles.linkChip}
         href={props.href}
         target={props.target}
@@ -96,7 +95,7 @@ export function RecordLinkChip(props: RecordLinkChipProps) {
           avatarUrl={props.avatarUrl}
           showAvatar={props.showAvatar}
         />
-      </A>
+      </a>
     </span>
   );
 }

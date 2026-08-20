@@ -1,10 +1,20 @@
-import { type RouteDefinition, useAction, useSearchParams, useSubmission } from "@solidjs/router";
-import { Loading, Show, createMemo, createSignal, createUniqueId } from "solid-js";
-
-import { Spinner } from "~/components/feedback/spinner/spinner";
+import {
+  type RouteDefinition,
+  useAction,
+  useSearchParams,
+  useSubmission,
+} from "@solidjs/router";
+import {
+  Loading,
+  Show,
+  createMemo,
+  createSignal,
+  createUniqueId,
+} from "solid-js";
 import { createStore, reconcile, snapshot } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";
 import Package from "~/components/icons/package";
 import Target from "~/components/icons/target";

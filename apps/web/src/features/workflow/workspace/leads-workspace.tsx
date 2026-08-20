@@ -1,8 +1,8 @@
 import { Errored, Loading, createMemo } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
-import { Spinner } from "~/components/feedback/spinner/spinner";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";
 import List from "~/components/icons/list";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";

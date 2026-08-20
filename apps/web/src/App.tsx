@@ -4,7 +4,6 @@ import { Loading } from "solid-js";
 import { PLATFORM_NAME } from "~/shared/branding";
 
 import "./browser/bootstrap";
-
 import { AppErrorBoundary } from "./components/feedback/error/boundary";
 import { SnackBarProvider } from "./components/feedback/snack-bar-manager/snack-bar-provider";
 import { ThemeProvider } from "./components/ui/theme/theme-context";

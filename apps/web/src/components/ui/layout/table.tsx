@@ -1,6 +1,6 @@
-import { clsx } from "clsx";
-import { splitProps } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { clsx } from "clsx";
+import { omit } from "solid-js";
 
 import styles from "./table.module.css";
 
@@ -9,14 +9,14 @@ type TableProps = JSX.HTMLAttributes<HTMLTableElement> & {
 };
 
 export const Table = (props: TableProps) => {
-  const [local, tableProps] = splitProps(props, ["class", "variant"]);
+  const tableProps = omit(props, "class", "variant");
   return (
     <div class={styles.wrapper}>
       <table
         class={clsx(
           styles.table,
-          local.variant === "list" && styles.list,
-          local.class,
+          props.variant === "list" && styles.list,
+          props.class,
         )}
         {...tableProps}
       />
@@ -37,11 +37,11 @@ type TableRowProps = JSX.HTMLAttributes<HTMLTableRowElement> & {
 };
 
 export const TableRow = (props: TableRowProps) => {
-  const [local, rowProps] = splitProps(props, ["class", "clickable"]);
+  const rowProps = omit(props, "class", "clickable");
   return (
     <tr
-      class={clsx(styles.row, local.class)}
-      data-clickable={local.clickable ? "true" : undefined}
+      class={clsx(styles.row, props.class)}
+      data-clickable={props.clickable ? "true" : undefined}
       {...rowProps}
     />
   );
@@ -52,11 +52,11 @@ type TableHeadProps = JSX.ThHTMLAttributes<HTMLTableCellElement> & {
 };
 
 export const TableHead = (props: TableHeadProps) => {
-  const [local, headProps] = splitProps(props, ["align", "class"]);
+  const headProps = omit(props, "align", "class");
   return (
     <th
-      class={clsx(styles.head, local.class)}
-      data-align={local.align ?? "left"}
+      class={clsx(styles.head, props.class)}
+      data-align={props.align ?? "left"}
       {...headProps}
     />
   );
@@ -68,11 +68,11 @@ type TableCellProps = JSX.TdHTMLAttributes<HTMLTableCellElement> & {
 };
 
 export const TableCell = (props: TableCellProps) => {
-  const [local, cellProps] = splitProps(props, ["align", "class", "ellipsis"]);
+  const cellProps = omit(props, "align", "class", "ellipsis");
   return (
     <td
-      class={clsx(styles.cell, local.ellipsis && styles.ellipsis, local.class)}
-      data-align={local.align ?? "left"}
+      class={clsx(styles.cell, props.ellipsis && styles.ellipsis, props.class)}
+      data-align={props.align ?? "left"}
       {...cellProps}
     />
   );

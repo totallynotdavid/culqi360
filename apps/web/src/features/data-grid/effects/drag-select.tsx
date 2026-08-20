@@ -1,5 +1,5 @@
-import { createSignal, onSettled, Show } from "solid-js";
 import { Portal } from "@solidjs/web";
+import { createSignal, onSettled, Show } from "solid-js";
 
 import { useDataGrid } from "../context/instance-context";
 import {

@@ -1,5 +1,13 @@
-import { createEffect, createRenderEffect, merge, onCleanup, onSettled, splitProps, useContext } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import {
+  createEffect,
+  createRenderEffect,
+  merge,
+  onCleanup,
+  onSettled,
+  omit,
+  useContext,
+} from "solid-js";
 
 import { PresenceContext } from "./presence-context";
 import { usePresence } from "./use-presence";
@@ -64,7 +72,8 @@ export function Animated(inputProps: AnimatedProps) {
   const props = merge({ transition: {} }, inputProps);
   const [isPresent, safeToRemove] = usePresence();
   const presenceContext = useContext(PresenceContext);
-  const [local, domProps] = splitProps(props, [
+  const domProps = omit(
+    props,
     "children",
     "variants",
     "initial",
@@ -73,7 +82,7 @@ export function Animated(inputProps: AnimatedProps) {
     "transition",
     "layout",
     "style",
-  ]);
+  );
 
   let el: HTMLDivElement | undefined;
   let activeAnimation: Animation | undefined;
@@ -92,11 +101,11 @@ export function Animated(inputProps: AnimatedProps) {
       return undefined;
     }
     if (typeof definition === "string") {
-      return local.variants?.[definition];
+      return props.variants?.[definition];
     }
     if (Array.isArray(definition)) {
       for (const label of definition) {
-        const target = local.variants?.[label];
+        const target = props.variants?.[label];
         if (target) {
           return target;
         }
@@ -186,7 +195,7 @@ export function Animated(inputProps: AnimatedProps) {
       }
       activeAnimation = el.animate(
         [{ ...fromComputed, ...fromFrame }, toFrame],
-        transitionToOptions(local.transition),
+        transitionToOptions(props.transition),
       );
       activeAnimation.onfinish = () => {
         applyTarget(toTarget);
@@ -204,12 +213,12 @@ export function Animated(inputProps: AnimatedProps) {
   };
 
   const runLayoutAnimation = () => {
-    if (!el || !local.layout) {
+    if (!el || !props.layout) {
       return;
     }
-    const animateTarget = resolveTarget(local.animate);
-    const initialTarget = resolveTarget(local.initial);
-    const exitTarget = resolveTarget(local.exit);
+    const animateTarget = resolveTarget(props.animate);
+    const initialTarget = resolveTarget(props.initial);
+    const exitTarget = resolveTarget(props.exit);
     if (
       hasTransformProps(animateTarget) ||
       hasTransformProps(initialTarget) ||
@@ -229,7 +238,7 @@ export function Animated(inputProps: AnimatedProps) {
             { transform: `translate(${dx}px, ${dy}px)` },
             { transform: "translate(0px, 0px)" },
           ],
-          transitionToOptions(local.transition),
+          transitionToOptions(props.transition),
         );
       }
     }
@@ -245,9 +254,9 @@ export function Animated(inputProps: AnimatedProps) {
 
     const currentPresent = isPresent();
     const initialFromPresence = presenceContext?.initial;
-    const initialDef = local.initial ?? initialFromPresence;
-    const animateDef = local.animate;
-    const exitDef = local.exit;
+    const initialDef = props.initial ?? initialFromPresence;
+    const animateDef = props.animate;
+    const exitDef = props.exit;
 
     if (!currentPresent) {
       const exitTarget = resolveTarget(exitDef);
@@ -283,9 +292,9 @@ export function Animated(inputProps: AnimatedProps) {
           forwardedRef(node);
         }
       }}
-      style={local.style}
+      style={props.style}
     >
-      {local.children}
+      {props.children}
     </div>
   );
 }

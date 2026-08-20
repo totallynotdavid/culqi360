@@ -1,6 +1,6 @@
-import { clsx } from "clsx";
-import { merge, splitProps } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { clsx } from "clsx";
+import { merge, omit } from "solid-js";
 
 import styles from "./badge.module.css";
 
@@ -27,15 +27,15 @@ function isBadgeVariant(value: string): value is BadgeVariant {
 
 export function Badge(props: BadgeProps) {
   const merged = merge({ variant: "default" }, props);
-  const [local, others] = splitProps(merged, ["variant", "class", "children"]);
+  const others = omit(merged, "variant", "class", "children");
 
-  const variantInput = local.variant;
+  const variantInput = merged.variant;
   const variant: BadgeVariant =
     variantInput && isBadgeVariant(variantInput) ? variantInput : "default";
 
   return (
-    <div class={clsx(styles.badge, styles[variant], local.class)} {...others}>
-      {local.children}
+    <div class={clsx(styles.badge, styles[variant], merged.class)} {...others}>
+      {merged.children}
     </div>
   );
 }

@@ -8,9 +8,9 @@ export function RecordIndexProvider(
   props: ParentProps<{ value: RecordIndexUiController }>,
 ) {
   return (
-    <RecordIndexContext.Provider value={props.value}>
+    <RecordIndexContext value={props.value}>
       {props.children}
-    </RecordIndexContext.Provider>
+    </RecordIndexContext>
   );
 }
 

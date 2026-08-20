@@ -1,5 +1,5 @@
-import type { MotionValue } from "framer-motion/dom";
 import type { JSX } from "@solidjs/web";
+import type { MotionValue } from "framer-motion/dom";
 
 import type { ElementType } from "./common";
 import type { Options } from "./state";

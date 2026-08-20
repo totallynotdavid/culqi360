@@ -1,5 +1,5 @@
-import { createEffect, onCleanup } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { createEffect, onCleanup } from "solid-js";
 
 interface AnimatedExpandableContainerProps {
   isExpanded: boolean;

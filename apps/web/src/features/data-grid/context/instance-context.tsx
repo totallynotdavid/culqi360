@@ -8,9 +8,7 @@ export function DataGridProvider(
   props: ParentProps<{ value: DataGridController }>,
 ) {
   return (
-    <DataGridContext.Provider value={props.value}>
-      {props.children}
-    </DataGridContext.Provider>
+    <DataGridContext value={props.value}>{props.children}</DataGridContext>
   );
 }
 

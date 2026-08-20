@@ -1,3 +1,5 @@
+import type { APIEvent } from "filesystem-routing/api";
+
 import { ContactAssignmentId } from "~/domain/ids";
 import { getApplication } from "~/server/composition/application";
 import { isCreateExtensionHandoffTokenRequest } from "~/server/extension/contracts";
@@ -6,7 +8,6 @@ import { getRequestOperation } from "~/server/platform/http/request-context-stor
 import { authorizeRoutePermission } from "~/server/platform/http/route-access";
 import { isErr } from "~/shared/result";
 
-import type { APIEvent } from "filesystem-routing/api";
 import { readJsonBody } from "./json-body";
 
 export async function POST(event: APIEvent): Promise<Response> {

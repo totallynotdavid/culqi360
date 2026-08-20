@@ -1,5 +1,5 @@
-import { createEffect, createUniqueId, onCleanup } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { createEffect, createUniqueId, onCleanup } from "solid-js";
 
 interface PopChildProps {
   children: JSX.Element;

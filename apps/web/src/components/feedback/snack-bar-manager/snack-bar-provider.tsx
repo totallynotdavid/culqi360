@@ -1,7 +1,5 @@
-import { batch, createContext, onSettled } from "solid-js";
-import { type JSX } from "@solidjs/web";
-import { createStore, produce } from "solid-js";
-import { Portal } from "@solidjs/web";
+import { Portal, type JSX } from "@solidjs/web";
+import { createContext, createStore, onSettled } from "solid-js";
 
 import { AnimatePresence } from "~/components/ui/animation/animate-presence";
 import { Animated } from "~/components/ui/animation/animated";
@@ -40,25 +38,24 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
 
   onSettled(() => {
     const intervalId = setInterval(() => {
-      batch(() => {
-        setItems(
-          produce((draft) => {
-            for (const item of draft) {
-              if (
-                !item.paused &&
-                item.duration > 0 &&
-                item.elapsed < item.duration
-              ) {
-                item.elapsed = Math.min(item.duration, item.elapsed + TICK_MS);
-              }
-            }
-          }),
-        );
-        setItems((current) =>
-          current.filter(
-            (item) => item.duration <= 0 || item.elapsed < item.duration,
-          ),
-        );
+      setItems((draft) => {
+        for (const item of draft) {
+          if (
+            !item.paused &&
+            item.duration > 0 &&
+            item.elapsed < item.duration
+          ) {
+            item.elapsed = Math.min(item.duration, item.elapsed + TICK_MS);
+          }
+        }
+
+        for (let index = draft.length - 1; index >= 0; index -= 1) {
+          const item = draft[index]!;
+
+          if (item.duration > 0 && item.elapsed >= item.duration) {
+            draft.splice(index, 1);
+          }
+        }
       });
     }, TICK_MS);
     return () => clearInterval(intervalId);
@@ -104,27 +101,27 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
   };
 
   const update = (id: string, patch: SnackBarPatch): void => {
-    setItems(
-      produce((draft) => {
-        const item = draft.find((i) => i.id === id);
-        if (!item) {
-          return;
-        }
-        if (patch.message !== undefined) {
-          item.message = patch.message;
-        }
-        if (patch.detailedMessage !== undefined) {
-          item.detailedMessage = patch.detailedMessage;
-        }
-        if (patch.variant !== undefined) {
-          item.variant = patch.variant;
-        }
-        if (patch.duration !== undefined) {
-          item.duration = patch.duration;
-          item.elapsed = 0;
-        }
-      }),
-    );
+    setItems((draft) => {
+      const item = draft.find((candidate) => candidate.id === id);
+
+      if (!item) {
+        return;
+      }
+
+      if (patch.message !== undefined) {
+        item.message = patch.message;
+      }
+      if (patch.detailedMessage !== undefined) {
+        item.detailedMessage = patch.detailedMessage;
+      }
+      if (patch.variant !== undefined) {
+        item.variant = patch.variant;
+      }
+      if (patch.duration !== undefined) {
+        item.duration = patch.duration;
+        item.elapsed = 0;
+      }
+    });
   };
 
   const dismiss = (id: string): void => {
@@ -132,29 +129,27 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
   };
 
   const pause = (id: string): void => {
-    setItems(
-      produce((draft) => {
-        const item = draft.find((i) => i.id === id);
-        if (item) {
-          item.paused = true;
-        }
-      }),
-    );
+    setItems((draft) => {
+      const item = draft.find((candidate) => candidate.id === id);
+
+      if (item) {
+        item.paused = true;
+      }
+    });
   };
 
   const resume = (id: string): void => {
-    setItems(
-      produce((draft) => {
-        const item = draft.find((i) => i.id === id);
-        if (item) {
-          item.paused = false;
-        }
-      }),
-    );
+    setItems((draft) => {
+      const item = draft.find((candidate) => candidate.id === id);
+
+      if (item) {
+        item.paused = false;
+      }
+    });
   };
 
   return (
-    <SnackBarContext.Provider value={{ enqueue, update, dismiss }}>
+    <SnackBarContext value={{ enqueue, update, dismiss }}>
       {props.children}
       <Portal>
         <div
@@ -182,6 +177,6 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
           </AnimatePresence>
         </div>
       </Portal>
-    </SnackBarContext.Provider>
+    </SnackBarContext>
   );
 }

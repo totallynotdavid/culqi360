@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { For, Show, createMemo } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
@@ -71,7 +70,7 @@ export default function FulfillmentQueuePage() {
                 <ul class={styles.queue}>
                   <For each={group.rows}>
                     {(row) => (
-                      <A
+                      <a
                         href={`/records/${row.leadId}`}
                         class={styles.row}
                         data-state={
@@ -105,7 +104,7 @@ export default function FulfillmentQueuePage() {
                             )}
                           </span>
                         </div>
-                      </A>
+                      </a>
                     )}
                   </For>
                 </ul>

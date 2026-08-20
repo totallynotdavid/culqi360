@@ -1,4 +1,8 @@
-import { useNavigate, useSearchParams, type RouteDefinition } from "@solidjs/router";
+import {
+  useNavigate,
+  useSearchParams,
+  type RouteDefinition,
+} from "@solidjs/router";
 import {
   createEffect,
   createMemo,
@@ -14,8 +18,8 @@ import {
   createRegistrationResponse,
   isPasskeyRegistrationSupported,
 } from "~/browser/auth/passkey/registration-client";
-import { Loader } from "~/components/feedback/spinner/loader";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Loader } from "~/components/feedback/spinner/loader";
 import type { OnboardingSnapshot } from "~/contracts/auth";
 import { actionErrorMessage } from "~/contracts/errors";
 import { normalizePhoneInput, isValidPhone } from "~/domain/phone/pe-mobile";

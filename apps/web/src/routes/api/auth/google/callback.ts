@@ -1,3 +1,5 @@
+import type { APIEvent } from "filesystem-routing/api";
+
 import {
   appendClearedGoogleOAuthCookies,
   readGoogleOAuthCookies,
@@ -10,8 +12,6 @@ import {
   getRequestOperation,
 } from "~/server/platform/http/request-context-storage";
 import { isErr } from "~/shared/result";
-
-import type { APIEvent } from "filesystem-routing/api";
 
 function badRequest(): Response {
   return new Response("Bad request", { status: 400 });

@@ -20,9 +20,9 @@ export function NavigationDrawerStateProvider(props: ParentProps) {
   });
 
   return (
-    <NavigationDrawerStateContext.Provider value={value}>
+    <NavigationDrawerStateContext value={value}>
       {props.children}
-    </NavigationDrawerStateContext.Provider>
+    </NavigationDrawerStateContext>
   );
 }
 

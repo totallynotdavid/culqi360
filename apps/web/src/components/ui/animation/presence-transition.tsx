@@ -1,5 +1,5 @@
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 
 const DURATION_MS = 300;
 

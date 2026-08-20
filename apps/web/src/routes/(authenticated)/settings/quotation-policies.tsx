@@ -1,10 +1,13 @@
-import { type RouteDefinition, useAction, useSubmission } from "@solidjs/router";
+import {
+  type RouteDefinition,
+  useAction,
+  useSubmission,
+} from "@solidjs/router";
 import { Loading, Show, createMemo, type Accessor } from "solid-js";
-
-import { Spinner } from "~/components/feedback/spinner/spinner";
 import { createStore } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import {
   SettingsOptionCard,
   SettingsOptionCardCounterRow,

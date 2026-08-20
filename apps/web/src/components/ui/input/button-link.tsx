@@ -1,6 +1,6 @@
-import { clsx } from "clsx";
-import { merge, splitProps } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { clsx } from "clsx";
+import { merge, omit } from "solid-js";
 
 import type { ButtonSize, ButtonVariant } from "./button";
 
@@ -14,26 +14,20 @@ export interface ButtonLinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElem
 
 export function ButtonLink(props: ButtonLinkProps) {
   const merged = merge({ variant: "primary", size: "md" }, props);
-  const [local, others] = splitProps(merged, [
-    "variant",
-    "size",
-    "class",
-    "href",
-    "children",
-  ]);
+  const others = omit(merged, "variant", "size", "class", "href", "children");
 
   return (
     <a
-      href={local.href}
+      href={merged.href}
       class={clsx(
         buttonStyles.button,
-        buttonStyles[local.size],
-        buttonStyles[local.variant],
-        local.class,
+        buttonStyles[merged.size],
+        buttonStyles[merged.variant],
+        merged.class,
       )}
       {...others}
     >
-      {local.children}
+      {merged.children}
     </a>
   );
 }

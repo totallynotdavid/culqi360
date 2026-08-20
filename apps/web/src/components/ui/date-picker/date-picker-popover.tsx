@@ -1,3 +1,4 @@
+import { Portal } from "@solidjs/web";
 import {
   Show,
   createEffect,
@@ -5,7 +6,6 @@ import {
   onCleanup,
   type Accessor,
 } from "solid-js";
-import { Portal } from "@solidjs/web";
 
 import type { CalendarDate } from "~/domain/time/calendar-date";
 

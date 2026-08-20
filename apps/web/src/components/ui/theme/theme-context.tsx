@@ -39,9 +39,9 @@ export function ThemeProvider(props: ParentProps) {
   const toggleTheme = () => setTheme(theme() === "light" ? "dark" : "light");
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext value={{ theme, setTheme, toggleTheme }}>
       {props.children}
-    </ThemeContext.Provider>
+    </ThemeContext>
   );
 }
 

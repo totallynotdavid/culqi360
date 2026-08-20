@@ -1,5 +1,3 @@
-import { A } from "@solidjs/router";
-
 import { AnimatedPlaceholder } from "~/components/layout/animated-placeholder";
 import { Button } from "~/components/ui/input/button";
 
@@ -18,11 +16,11 @@ export default function NotFound() {
           </p>
         </div>
         <div class={styles.buttonWrap}>
-          <A href="/" style={{ "text-decoration": "none", display: "block" }}>
+          <a href="/" style={{ "text-decoration": "none", display: "block" }}>
             <Button variant="primary" style={{ width: "100%" }}>
               Regresar al inicio
             </Button>
-          </A>
+          </a>
         </div>
       </div>
     </div>

@@ -15,6 +15,8 @@ import {
   PercentField,
 } from "./fields";
 
+// The `!` assertions inside the draft callbacks are gated by the surrounding
+// `Show`: a field only renders while its section is enabled.
 export function EmpresaTab(props: {
   draft: CommissionSchemeRules;
   setDraft: StoreSetter<CommissionSchemeRules>;
@@ -26,11 +28,9 @@ export function EmpresaTab(props: {
         description="Meta única de GPV, todas las mesas y productos, M0+M1+M2."
         enabled={props.draft.company.caja3 !== null}
         onToggle={(enabled) =>
-          props.setDraft(
-            "company",
-            "caja3",
-            enabled ? defaultCompanyCaja3Rules() : null,
-          )
+          props.setDraft((draft) => {
+            draft.company.caja3 = enabled ? defaultCompanyCaja3Rules() : null;
+          })
         }
       >
         <Show when={props.draft.company.caja3}>
@@ -39,7 +39,9 @@ export function EmpresaTab(props: {
               label="Meta de GPV"
               value={caja3().targetGpv}
               onChange={(targetGpv) =>
-                props.setDraft("company", "caja3", { targetGpv })
+                props.setDraft((draft) => {
+                  draft.company.caja3!.targetGpv = targetGpv;
+                })
               }
             />
           )}
@@ -51,10 +53,11 @@ export function EmpresaTab(props: {
         description="Las ventas no activadas en acumulado (M0+M1+M2) deben ser menos del 10% de la empresa."
         enabled={props.draft.penalidadActivacion !== null}
         onToggle={(enabled) =>
-          props.setDraft(
-            "penalidadActivacion",
-            enabled ? defaultPenalidadActivacionRules() : null,
-          )
+          props.setDraft((draft) => {
+            draft.penalidadActivacion = enabled
+              ? defaultPenalidadActivacionRules()
+              : null;
+          })
         }
       >
         <Show when={props.draft.penalidadActivacion}>
@@ -63,9 +66,9 @@ export function EmpresaTab(props: {
               <MesaCumulativeGpvRow
                 value={activacion().minCumulativeGpvByMesa}
                 onChange={(minCumulativeGpvByMesa) =>
-                  props.setDraft("penalidadActivacion", {
-                    ...activacion(),
-                    minCumulativeGpvByMesa,
+                  props.setDraft((draft) => {
+                    draft.penalidadActivacion!.minCumulativeGpvByMesa =
+                      minCumulativeGpvByMesa;
                   })
                 }
               />
@@ -75,9 +78,9 @@ export function EmpresaTab(props: {
                 description="Estrictamente menor a este porcentaje."
                 value={activacion().maxInactiveRate}
                 onChange={(maxInactiveRate) =>
-                  props.setDraft("penalidadActivacion", {
-                    ...activacion(),
-                    maxInactiveRate,
+                  props.setDraft((draft) => {
+                    draft.penalidadActivacion!.maxInactiveRate =
+                      maxInactiveRate;
                   })
                 }
               />
@@ -91,10 +94,11 @@ export function EmpresaTab(props: {
         description="Umbral uniforme que exige Infinity Pay, distinto del criterio real de Culqi."
         enabled={props.draft.executiveActivationBar !== null}
         onToggle={(enabled) =>
-          props.setDraft(
-            "executiveActivationBar",
-            enabled ? defaultExecutiveActivationBarRules() : null,
-          )
+          props.setDraft((draft) => {
+            draft.executiveActivationBar = enabled
+              ? defaultExecutiveActivationBarRules()
+              : null;
+          })
         }
       >
         <Show when={props.draft.executiveActivationBar}>
@@ -103,7 +107,9 @@ export function EmpresaTab(props: {
               label="GPV mínimo por venta"
               value={bar().minGpvPerSale}
               onChange={(minGpvPerSale) =>
-                props.setDraft("executiveActivationBar", { minGpvPerSale })
+                props.setDraft((draft) => {
+                  draft.executiveActivationBar!.minGpvPerSale = minGpvPerSale;
+                })
               }
             />
           )}

@@ -1,5 +1,5 @@
-import { onCleanup } from "solid-js";
 import { isServer } from "@solidjs/web";
+import { onCleanup } from "solid-js";
 
 type ResizablePanelSide = "left" | "right";
 

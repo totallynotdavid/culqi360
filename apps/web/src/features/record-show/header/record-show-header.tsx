@@ -1,5 +1,4 @@
 import { Title } from "@solidjs/meta";
-import { A } from "@solidjs/router";
 import { Show, createMemo, type ParentProps } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
@@ -64,14 +63,14 @@ export function RecordShowHeader(
       <PageCardHeader
         breadcrumb={
           <span class={styles.breadcrumb}>
-            <A href="/records" class={styles.breadcrumbLink}>
+            <a href="/records" class={styles.breadcrumbLink}>
               <span class={styles.breadcrumbPrefix}>
                 <span class={styles.objectIconBadge}>
                   <Building2 size={14} />
                 </span>
                 <span>Registros</span>
               </span>
-            </A>
+            </a>
 
             <span class={styles.breadcrumbSep}>/</span>
 

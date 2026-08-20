@@ -1,6 +1,6 @@
 import { type RouteDefinition, useAction } from "@solidjs/router";
-import { For, Show, createMemo, createSignal } from "solid-js";
 import { Dynamic } from "@solidjs/web";
+import { For, Show, createMemo, createSignal } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import BrandWhatsapp from "~/components/icons/brand-whatsapp";

@@ -1,4 +1,10 @@
-import { action, createEffect, createOptimistic, createSignal, type Accessor } from "solid-js";
+import {
+  action,
+  createEffect,
+  createOptimistic,
+  createSignal,
+  type Accessor,
+} from "solid-js";
 
 import type { CurrentUserView } from "~/contracts/auth";
 import { codeIs } from "~/contracts/error-codes";

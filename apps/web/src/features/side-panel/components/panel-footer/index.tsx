@@ -1,6 +1,14 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onSettled } from "solid-js";
 import { type JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
+import {
+  For,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onSettled,
+} from "solid-js";
 
 import { useDismissibleLayer } from "~/components/ui/utilities/use-dismissible-layer";
 import { useScopedHotkey } from "~/features/side-panel/core/hotkeys/create-scoped-hotkey";

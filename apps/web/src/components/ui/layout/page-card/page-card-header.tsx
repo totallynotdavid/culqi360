@@ -1,6 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
 import { Show, children } from "solid-js";
-import { type JSX } from "@solidjs/web";
 
 import LayoutSidebarLeftExpand from "~/components/icons/layout-sidebar-left-expand";
 import { useNavigationDrawerState } from "~/features/navigation-drawer/state/navigation-drawer-provider";

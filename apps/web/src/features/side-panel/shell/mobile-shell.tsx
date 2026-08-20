@@ -1,6 +1,6 @@
+import { Portal } from "@solidjs/web";
 import { clsx } from "clsx";
 import { type ParentProps, Show, onSettled } from "solid-js";
-import { Portal } from "@solidjs/web";
 
 import { SIDE_PANEL_CLICK_OUTSIDE_ID } from "../constants/side-panel-click-outside-id";
 import { useSidePanel } from "../state/use-side-panel";
@@ -50,8 +50,7 @@ export function MobileShell(props: MobileShellProps) {
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
   });
 
   return (

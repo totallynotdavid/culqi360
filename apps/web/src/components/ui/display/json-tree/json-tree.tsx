@@ -1,3 +1,4 @@
+import { Dynamic } from "@solidjs/web";
 import {
   createContext,
   createMemo,
@@ -9,7 +10,6 @@ import {
   useContext,
   type Component,
 } from "solid-js";
-import { Dynamic } from "@solidjs/web";
 
 import Checkbox from "~/components/icons/checkbox";
 import ChevronDown from "~/components/icons/chevron-down";
@@ -321,10 +321,10 @@ export function JsonTree(props: {
   };
 
   return (
-    <JsonTreeConfigContext.Provider value={config}>
+    <JsonTreeConfigContext value={config}>
       <ul class={styles.list}>
         <JsonNode value={props.value} depth={0} keyPath="" />
       </ul>
-    </JsonTreeConfigContext.Provider>
+    </JsonTreeConfigContext>
   );
 }

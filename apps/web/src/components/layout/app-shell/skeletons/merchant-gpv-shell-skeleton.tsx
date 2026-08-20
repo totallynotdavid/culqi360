@@ -23,7 +23,9 @@ export function MerchantGpvShellSkeleton() {
       </div>
 
       <div class={styles.grid}>
-        <For keyed={false} each={WIDGETS}>{() => <WidgetSkeleton />}</For>
+        <For keyed={false} each={WIDGETS}>
+          {() => <WidgetSkeleton />}
+        </For>
       </div>
     </div>
   );

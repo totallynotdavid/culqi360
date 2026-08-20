@@ -1,5 +1,11 @@
-import { children, createEffect, createMemo, createUniqueId, onCleanup } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import {
+  children,
+  createEffect,
+  createMemo,
+  createUniqueId,
+  onCleanup,
+} from "solid-js";
 
 import { PopChild } from "./pop-child";
 import { PresenceContext, type PresenceContextValue } from "./presence-context";
@@ -63,7 +69,7 @@ export function PresenceChild(props: PresenceChildProps) {
   });
 
   return (
-    <PresenceContext.Provider value={context()}>
+    <PresenceContext value={context()}>
       {props.mode === "popLayout" ? (
         <PopChild
           isPresent={props.isPresent}
@@ -76,6 +82,6 @@ export function PresenceChild(props: PresenceChildProps) {
       ) : (
         content()
       )}
-    </PresenceContext.Provider>
+    </PresenceContext>
   );
 }

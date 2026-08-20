@@ -1,7 +1,7 @@
 import { combineStyle } from "@solid-primitives/props";
-import { createEffect, on, onCleanup, onMount, splitProps } from "solid-js";
 import { type JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
+import { createEffect, on, onCleanup, onMount, splitProps } from "solid-js";
 
 import { domMax } from "../../features/dom-max";
 import { updateLazyFeatures } from "../../features/lazy-features";

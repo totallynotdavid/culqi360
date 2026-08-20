@@ -1,6 +1,6 @@
 import { useAction } from "@solidjs/router";
-import { For, Match, Show, Switch, createSignal } from "solid-js";
 import type { JSX } from "@solidjs/web";
+import { For, Match, Show, Switch, createSignal } from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
 import { FileInput } from "~/components/ui/input/file-input";

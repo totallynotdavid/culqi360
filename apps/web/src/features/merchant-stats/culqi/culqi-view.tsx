@@ -1,10 +1,4 @@
-import {
-  createMemo,
-  createSignal,
-  Errored,
-  Show,
-  Loading,
-} from "solid-js";
+import { createMemo, createSignal, Errored, Show, Loading } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import { SearchInput } from "~/components/ui/input/search-input";

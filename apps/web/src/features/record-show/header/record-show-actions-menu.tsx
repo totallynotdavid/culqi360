@@ -1,3 +1,4 @@
+import { Portal } from "@solidjs/web";
 import {
   For,
   Show,
@@ -7,7 +8,6 @@ import {
   onSettled,
   type Component,
 } from "solid-js";
-import { Portal } from "@solidjs/web";
 
 import DotsVertical from "~/components/icons/dots-vertical";
 import { TopBarActionButton } from "~/components/layout/top-bar-action-button";

@@ -1,7 +1,6 @@
-import { A } from "@solidjs/router";
+import type { JSX } from "@solidjs/web";
 import { clsx } from "clsx";
 import { Show } from "solid-js";
-import type { JSX } from "@solidjs/web";
 
 import CircleAlert from "~/components/icons/circle-alert";
 import CircleCheckBig from "~/components/icons/circle-check-big";
@@ -112,9 +111,9 @@ export function SnackBar(props: SnackBarProps) {
               }
             >
               {(href) => (
-                <A href={href()} class={styles.actionLink}>
+                <a href={href()} class={styles.actionLink}>
                   {props.item.buttonLabel}
-                </A>
+                </a>
               )}
             </Show>
           </div>

@@ -23,7 +23,8 @@ export const removeAllPasskeysMutation = action(
 );
 
 export const disableTotpMutation = action(
-  async () => respond(await disableTotp(), { revalidate: SECURITY_STATUS_KEYS }),
+  async () =>
+    respond(await disableTotp(), { revalidate: SECURITY_STATUS_KEYS }),
   "settingsDisableTotp",
 );
 

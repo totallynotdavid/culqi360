@@ -18,9 +18,7 @@ export function RecordShowShell(props: RouteSectionProps) {
         </RecordShowHeader>
       }
     >
-      <Loading fallback={<RecordShowShellSkeleton />}>
-        {props.children}
-      </Loading>
+      <Loading fallback={<RecordShowShellSkeleton />}>{props.children}</Loading>
     </PageCardLayout>
   );
 }

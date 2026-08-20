@@ -1,5 +1,4 @@
 import { createMemo } from "solid-js";
-
 import type { Accessor } from "solid-js";
 
 import type { FilterOptions } from "~/contracts/merchant-stats/views";

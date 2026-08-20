@@ -1,10 +1,11 @@
+import type { APIEvent } from "filesystem-routing/api";
+
 import { getApplication } from "~/server/composition/application";
 import { isRefreshExtensionSessionRequest } from "~/server/extension/contracts";
 import { toWire } from "~/server/platform/action/domain-error";
 import { getRequestOperation } from "~/server/platform/http/request-context-storage";
 import { isErr } from "~/shared/result";
 
-import type { APIEvent } from "filesystem-routing/api";
 import { readJsonBody } from "../json-body";
 
 export async function POST(event: APIEvent): Promise<Response> {

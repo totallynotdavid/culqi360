@@ -1,7 +1,7 @@
-import { clsx } from "clsx";
-import { createEffect, onCleanup, onSettled, type Accessor } from "solid-js";
 import { type JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
+import { clsx } from "clsx";
+import { createEffect, onCleanup, onSettled, type Accessor } from "solid-js";
 
 import styles from "./anchored-popover.module.css";
 

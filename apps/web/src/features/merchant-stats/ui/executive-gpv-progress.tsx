@@ -1,11 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import {
-  createMemo,
-  createSignal,
-  Errored,
-  Show,
-  Loading,
-} from "solid-js";
+import { createMemo, createSignal, Errored, Show, Loading } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import Building2 from "~/components/icons/building-2";

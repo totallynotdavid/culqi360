@@ -1,5 +1,5 @@
-import { onSettled } from "solid-js";
 import { type JSX } from "@solidjs/web";
+import { onSettled } from "solid-js";
 
 interface SpringParallaxProps {
   children: JSX.Element;

@@ -15,9 +15,9 @@ export function PageInstanceProvider(props: PageInstanceProviderProps) {
   const pageId = () => props.pageId;
 
   return (
-    <SidePanelPageInstanceContext.Provider value={pageId}>
+    <SidePanelPageInstanceContext value={pageId}>
       {props.children}
-    </SidePanelPageInstanceContext.Provider>
+    </SidePanelPageInstanceContext>
   );
 }
 

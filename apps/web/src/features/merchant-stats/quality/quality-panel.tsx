@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 
 import { Badge } from "~/components/ui/display/badge";
@@ -16,7 +15,7 @@ export function QualityPanel(props: { summary: QualitySummary }) {
       <For each={QUALITY_ISSUES}>
         {(issue) => (
           <li class={styles.row}>
-            <A
+            <a
               href={`/dashboards/merchant-gpv/quality/${issue}`}
               class={styles.link}
             >
@@ -35,7 +34,7 @@ export function QualityPanel(props: { summary: QualitySummary }) {
                   {formatInteger(props.summary[issue])}
                 </Badge>
               </Show>
-            </A>
+            </a>
           </li>
         )}
       </For>
