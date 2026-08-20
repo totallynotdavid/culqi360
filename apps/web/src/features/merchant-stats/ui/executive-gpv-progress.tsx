@@ -219,10 +219,7 @@ function PortfolioContent(props: { portfolio: ExecutiveGpvProgressView }) {
         }
         rowId={(merchant) => merchant.ruc}
         rowOpenIndicator="route"
-        source={{
-          status: "ready",
-          rows: filteredMerchants(),
-        }}
+        source={{ rows: filteredMerchants() }}
         onRowOpen={(merchant) =>
           navigate(
             merchant.leadId

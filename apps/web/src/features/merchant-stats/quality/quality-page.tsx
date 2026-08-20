@@ -17,7 +17,6 @@ import {
 import type { QualityRow } from "~/contracts/merchant-stats/views";
 import { isQualityIssue } from "~/contracts/merchant-stats/vocabulary";
 import { DataGrid } from "~/features/data-grid/components/grid";
-import type { DataGridSource } from "~/features/data-grid/model/source";
 import type { DataGridColumn } from "~/features/data-grid/model/types";
 import { qualityRowsQuery } from "~/rpc/merchant-stats/quality-rows";
 
@@ -140,19 +139,20 @@ export function QualityPage() {
 
   const renderDataGrid = (
     label: string,
-    source: DataGridSource<QualityRow>,
+    rows: ReadonlyArray<QualityRow>,
+    emptyState: string,
   ) => (
     <DataGrid
       ariaLabel={label}
       columns={columns}
-      emptyState="No hay comercios pendientes en esta cola."
+      emptyState={emptyState}
       loadMore={{
         hasMore: grid.hasMore(),
         loading: grid.loading(),
         onLoadMore: grid.onLoadMore,
       }}
       rowId={(row) => `${row.ruc}:${row.month}`}
-      source={source}
+      source={{ rows }}
     />
   );
 
@@ -175,21 +175,20 @@ export function QualityPage() {
               <h1 class={styles.title}>{label()}</h1>
 
               <Errored
-                fallback={renderDataGrid(label(), {
-                  status: "error",
-                  rows: [],
-                })}
+                fallback={renderDataGrid(
+                  label(),
+                  [],
+                  "No se pudo cargar la cola.",
+                )}
               >
                 <Loading
-                  fallback={renderDataGrid(label(), {
-                    status: "pending",
-                    rows: [],
-                  })}
+                  fallback={renderDataGrid(label(), [], "Cargando cola...")}
                 >
-                  {renderDataGrid(label(), {
-                    status: "ready",
-                    rows: grid.rows(),
-                  })}
+                  {renderDataGrid(
+                    label(),
+                    grid.rows(),
+                    "No hay comercios pendientes en esta cola.",
+                  )}
                 </Loading>
               </Errored>
             </>
