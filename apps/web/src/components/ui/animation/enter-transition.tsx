@@ -1,4 +1,5 @@
-import { onCleanup, onMount, type JSX } from "solid-js";
+import { onCleanup, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 interface EnterTransitionProps {
   children: JSX.Element;
@@ -11,7 +12,7 @@ export function EnterTransition(props: EnterTransitionProps) {
   let containerRef: HTMLDivElement | null = null;
   let animation: Animation | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (typeof window === "undefined" || !containerRef) {
       return;
     }

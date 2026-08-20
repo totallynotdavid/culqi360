@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { For, Show } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
@@ -56,7 +55,7 @@ function isRemovable(phase: UploadRowPhase): boolean {
 }
 
 export function DataSourceUploadSection() {
-  const sources = createAsync(() => listDataSourceKeysQuery(), {
+  const sources = createMemo(() => listDataSourceKeysQuery(), {
     initialValue: [],
   });
   const upload = useDataSourceUpload();

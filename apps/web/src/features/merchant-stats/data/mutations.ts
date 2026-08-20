@@ -1,4 +1,5 @@
-import { action, json } from "@solidjs/router";
+import { action } from "@solidjs/router";
+import { respond } from "@solidjs/web";
 
 import {
   adjustMonthCredit,
@@ -26,7 +27,7 @@ export const adjustMonthCreditMutation = action(
   async (input: Parameters<typeof adjustMonthCredit>[0]) => {
     const result = await adjustMonthCredit(input);
 
-    return json(result, {
+    return respond(result, {
       revalidate: [
         ...ATTRIBUTION_GPV_QUERY_KEYS,
         merchantFilterOptionsQuery.key,
@@ -40,7 +41,7 @@ export const setMerchantTargetMutation = action(
   async (input: Parameters<typeof setMerchantTarget>[0]) => {
     const result = await setMerchantTarget(input);
 
-    return json(result, { revalidate: ATTRIBUTION_GPV_QUERY_KEYS });
+    return respond(result, { revalidate: ATTRIBUTION_GPV_QUERY_KEYS });
   },
   "setMerchantGpvTarget",
 );
@@ -49,7 +50,7 @@ export const setCommissionSchemeMutation = action(
   async (input: Parameters<typeof setCommissionScheme>[0]) => {
     const result = await setCommissionScheme(input);
 
-    return json(result, {
+    return respond(result, {
       revalidate: [
         commissionSchemeDraftQuery.key,
         commissionManagerDashboardQuery.key,
@@ -73,7 +74,7 @@ export const resolveGpvImportIssueMutation = action(
       revalidate.push(...PUBLISHED_GPV_QUERY_KEYS);
     }
 
-    return json(result, { revalidate });
+    return respond(result, { revalidate });
   },
   "resolveMerchantGpvImportIssue",
 );

@@ -1,10 +1,9 @@
-import { createAsync } from "@solidjs/router";
 import {
   createMemo,
   createSignal,
-  ErrorBoundary,
+  Errored,
   Show,
-  Suspense,
+  Loading,
 } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
@@ -25,7 +24,7 @@ import type { GpvView } from "../gpv-view";
 import styles from "./culqi-view.module.css";
 
 export function CulqiView(props: { view: GpvView }) {
-  const culqi = createAsync(() =>
+  const culqi = createMemo(() =>
     gpvCulqiViewQuery({ filter: props.view.filter() }),
   );
 
@@ -54,8 +53,8 @@ export function CulqiView(props: { view: GpvView }) {
   const count = () => filteredRows().length;
 
   return (
-    <ErrorBoundary fallback={<CulqiError />}>
-      <Suspense fallback={<CulqiSkeleton />}>
+    <Errored fallback={<CulqiError />}>
+      <Loading fallback={<CulqiSkeleton />}>
         <Show
           when={readyView()}
           fallback={
@@ -105,8 +104,8 @@ export function CulqiView(props: { view: GpvView }) {
             </WidgetCanvas>
           )}
         </Show>
-      </Suspense>
-    </ErrorBoundary>
+      </Loading>
+    </Errored>
   );
 }
 

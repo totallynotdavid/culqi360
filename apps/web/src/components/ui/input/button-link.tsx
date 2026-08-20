@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
-import { type JSX, mergeProps, splitProps } from "solid-js";
+import { merge, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import type { ButtonSize, ButtonVariant } from "./button";
 
@@ -12,7 +13,7 @@ export interface ButtonLinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElem
 }
 
 export function ButtonLink(props: ButtonLinkProps) {
-  const merged = mergeProps({ variant: "primary", size: "md" }, props);
+  const merged = merge({ variant: "primary", size: "md" }, props);
   const [local, others] = splitProps(merged, [
     "variant",
     "size",

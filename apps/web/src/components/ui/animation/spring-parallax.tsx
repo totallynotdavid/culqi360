@@ -1,4 +1,5 @@
-import { onCleanup, onMount, type JSX } from "solid-js";
+import { onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 interface SpringParallaxProps {
   children: JSX.Element;
@@ -17,7 +18,7 @@ export function SpringParallax(props: SpringParallaxProps) {
   let containerRef: HTMLDivElement | null = null;
   let rafId: number | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (typeof window === "undefined" || !containerRef) {
       return;
     }
@@ -85,13 +86,13 @@ export function SpringParallax(props: SpringParallaxProps) {
     window.addEventListener("mousemove", onMouseMove);
     window.document.addEventListener("mouseleave", onMouseLeave);
 
-    onCleanup(() => {
+    return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.document.removeEventListener("mouseleave", onMouseLeave);
       if (rafId != null) {
         cancelAnimationFrame(rafId);
       }
-    });
+    };
   });
 
   return (

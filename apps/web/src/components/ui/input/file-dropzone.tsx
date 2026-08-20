@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
-import { createSignal, type JSX, splitProps } from "solid-js";
+import { createSignal, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import styles from "./file-dropzone.module.css";
 

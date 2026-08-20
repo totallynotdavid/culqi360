@@ -1,13 +1,5 @@
-import {
-  createEffect,
-  createRenderEffect,
-  mergeProps,
-  onCleanup,
-  onMount,
-  splitProps,
-  useContext,
-  type JSX,
-} from "solid-js";
+import { createEffect, createRenderEffect, merge, onCleanup, onSettled, splitProps, useContext } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import { PresenceContext } from "./presence-context";
 import { usePresence } from "./use-presence";
@@ -69,7 +61,7 @@ function transitionToOptions(
 }
 
 export function Animated(inputProps: AnimatedProps) {
-  const props = mergeProps({ transition: {} }, inputProps);
+  const props = merge({ transition: {} }, inputProps);
   const [isPresent, safeToRemove] = usePresence();
   const presenceContext = useContext(PresenceContext);
   const [local, domProps] = splitProps(props, [
@@ -278,7 +270,7 @@ export function Animated(inputProps: AnimatedProps) {
     animateTo(animateTarget);
   });
 
-  onMount(runLayoutAnimation);
+  onSettled(runLayoutAnimation);
   onCleanup(stopAnimation);
 
   return (

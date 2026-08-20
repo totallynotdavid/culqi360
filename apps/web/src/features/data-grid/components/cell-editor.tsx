@@ -1,4 +1,5 @@
-import { createEffect, onCleanup, type Accessor, type JSX } from "solid-js";
+import { createEffect, onCleanup, type Accessor } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import { AnchoredPopover } from "~/components/ui/overlay/anchored-popover";
 

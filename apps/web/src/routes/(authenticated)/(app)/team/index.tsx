@@ -1,4 +1,4 @@
-import { createAsync, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
 
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
@@ -73,7 +73,7 @@ const TEAM_COLUMNS = [
 
 export default function TeamPage() {
   const navigate = useNavigate();
-  const executives = createAsync(() => managedExecutivesQuery());
+  const executives = createMemo(() => managedExecutivesQuery());
   const [filter, setFilter] = createSignal("");
   const filtered = createMemo(() => {
     const value = filter().trim().toLowerCase();

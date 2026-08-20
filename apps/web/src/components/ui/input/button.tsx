@@ -1,7 +1,8 @@
 import { clsx } from "clsx";
-import { type JSX, mergeProps, splitProps } from "solid-js";
+import { merge, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 
 import styles from "./button.module.css";
 
@@ -30,7 +31,7 @@ export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 export function Button(props: ButtonProps) {
-  const merged = mergeProps(
+  const merged = merge(
     {
       variant: "primary" as const,
       size: "md" as const,

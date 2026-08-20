@@ -1,7 +1,7 @@
-import { createAsync, useSearchParams, useSubmission } from "@solidjs/router";
-import { createMemo, createSignal, Show, Suspense } from "solid-js";
+import { useSearchParams, useSubmission } from "@solidjs/router";
+import { createMemo, createSignal, Show, Loading } from "solid-js";
 
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 import { EnterTransition } from "~/components/ui/animation/enter-transition";
 import { Button } from "~/components/ui/input/button";
 import { codeIs } from "~/contracts/error-codes";
@@ -25,7 +25,7 @@ export default function LoginVerifyPage() {
   const totpSubmission = useSubmission(totpLoginMutation);
   const [totpCode, setTotpCode] = createSignal("");
   const flowId = () => parseLoginFlowId(searchParams.flow);
-  const loginFlow = createAsync(() => {
+  const loginFlow = createMemo(() => {
     const currentFlowId = flowId();
     return currentFlowId
       ? loginFlowQuery(currentFlowId)
@@ -64,7 +64,7 @@ export default function LoginVerifyPage() {
       description="Ingresa el código de 6 dígitos de tu app de autenticación."
     >
       <div class={pageStyles.formStack}>
-        <Suspense
+        <Loading
           fallback={
             <output class={pageStyles.loadingStack} aria-live="polite">
               <p class={pageStyles.loadingLabel}>Cargando verificación</p>
@@ -133,7 +133,7 @@ export default function LoginVerifyPage() {
               </EnterTransition>
             )}
           </Show>
-        </Suspense>
+        </Loading>
         <div class={shellStyles.footerNote}>
           <LegalFooter />
         </div>

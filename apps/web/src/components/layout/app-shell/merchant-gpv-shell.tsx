@@ -1,6 +1,6 @@
 import { Title } from "@solidjs/meta";
 import { type RouteSectionProps } from "@solidjs/router";
-import { Suspense } from "solid-js";
+import { Loading } from "solid-js";
 
 import { AppHeaderActions } from "~/components/layout/app-header/app-header-actions";
 import { PageCardLayout } from "~/components/ui/layout/page-card/page-card-layout";
@@ -19,9 +19,9 @@ export function MerchantGpvShell(props: RouteSectionProps) {
           </MerchantGpvHeader>
         }
       >
-        <Suspense fallback={<MerchantGpvShellSkeleton />}>
+        <Loading fallback={<MerchantGpvShellSkeleton />}>
           {props.children}
-        </Suspense>
+        </Loading>
       </PageCardLayout>
     </>
   );

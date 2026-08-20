@@ -1,4 +1,4 @@
-import { createEffect, onMount } from "solid-js";
+import { createEffect, onSettled } from "solid-js";
 
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
 
@@ -9,7 +9,7 @@ export function NavigationDrawerBrowserEffects() {
   const { setIsMobile, setExpanded } = useNavigationDrawerState();
   const isMobile = useIsMobile();
 
-  onMount(() => {
+  onSettled(() => {
     const hasExpandedPreference =
       navigationDrawerExpandedCookie.read() !== null;
 

@@ -1,5 +1,5 @@
-import { createAsync, revalidate } from "@solidjs/router";
-import { Show } from "solid-js";
+import { revalidate } from "@solidjs/router";
+import { Show, createMemo } from "solid-js";
 
 import { createRecordPageController } from "~/features/record-show/record-page-controller";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
@@ -18,7 +18,7 @@ const POLL_INTERVAL_MS = 3_500;
 const POLL_TIMEOUT_MS = 60_000;
 
 export function RecordShowPage(props: RecordShowPageProps) {
-  const data = createAsync(() => leadDetailQuery(props.recordId));
+  const data = createMemo(() => leadDetailQuery(props.recordId));
 
   createRecordPageController({
     leadId: () => props.recordId,

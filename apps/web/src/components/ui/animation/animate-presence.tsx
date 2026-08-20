@@ -1,10 +1,5 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  For,
-  type JSX,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import { PresenceChild } from "./presence-child";
 

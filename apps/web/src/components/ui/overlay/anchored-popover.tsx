@@ -1,12 +1,7 @@
 import { clsx } from "clsx";
-import {
-  createEffect,
-  onCleanup,
-  onMount,
-  type Accessor,
-  type JSX,
-} from "solid-js";
-import { Portal } from "solid-js/web";
+import { createEffect, onCleanup, onSettled, type Accessor } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 
 import styles from "./anchored-popover.module.css";
 
@@ -90,7 +85,7 @@ export function AnchoredPopover(props: {
     panel.style.minWidth = props.matchAnchorWidth ? `${rect.width}px` : "";
   }
 
-  onMount(() => {
+  onSettled(() => {
     if (!panel) {
       return;
     }
@@ -117,7 +112,7 @@ export function AnchoredPopover(props: {
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
-    onCleanup(() => {
+    return () => {
       currentPanel.removeEventListener("toggle", handleToggle);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
@@ -125,7 +120,7 @@ export function AnchoredPopover(props: {
       if (props.dismissible !== false) {
         anchor()?.focus();
       }
-    });
+    };
   });
 
   createEffect(() => {

@@ -1,31 +1,35 @@
-import { deleteCookie, getCookie, setCookie } from "@solidjs/start/http";
-
+import {
+  expireCookie,
+  readCookie,
+  writeCookie,
+} from "~/server/platform/http/cookies";
 import { isProduction } from "~/shared/observability/runtime-env";
 
 const COOKIE_NAME = "request_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24;
 
-export function getRequestSessionCookie(): string | undefined {
-  return getCookie(COOKIE_NAME);
-}
-
-export function setRequestSessionCookie(id: string): void {
-  setCookie(COOKIE_NAME, id, {
+function cookieOptions() {
+  return {
     httpOnly: true,
     secure: isProduction(),
     sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
     path: "/",
+  } as const;
+}
+
+export function getRequestSessionCookie(): string | undefined {
+  return readCookie(COOKIE_NAME);
+}
+
+export function setRequestSessionCookie(id: string): void {
+  writeCookie(COOKIE_NAME, id, {
+    ...cookieOptions(),
+    maxAge: COOKIE_MAX_AGE,
   });
 }
 
 export function deleteRequestSessionCookie(): void {
-  deleteCookie(COOKIE_NAME, {
-    httpOnly: true,
-    secure: isProduction(),
-    sameSite: "lax",
-    path: "/",
-  });
+  expireCookie(COOKIE_NAME, cookieOptions());
 }
 
 export function getRequestSessionMaxAgeSeconds(): number {

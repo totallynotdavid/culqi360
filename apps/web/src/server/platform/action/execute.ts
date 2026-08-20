@@ -1,5 +1,5 @@
 import { captureException } from "@sentry/bun";
-import { getRequestEvent } from "solid-js/web";
+import { getRequestEvent } from "@solidjs/web";
 
 import type { WireError } from "~/contracts/errors";
 import type { DomainError } from "~/domain/errors";

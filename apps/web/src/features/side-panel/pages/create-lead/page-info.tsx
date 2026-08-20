@@ -1,4 +1,4 @@
-import { onMount } from "solid-js";
+import { onSettled } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
 import { TextInput } from "~/components/ui/input/text-input";
@@ -10,7 +10,7 @@ export function CreateLeadPageInfo() {
   const { draftRuc, label, setRuc } = useCreateLeadPageState();
   let inputRef: HTMLInputElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     inputRef?.focus();
   });
 

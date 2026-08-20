@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { createSignal, For, onCleanup, Show } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup } from "solid-js";
 
 import Search from "~/components/icons/search";
 import { useDismissibleLayer } from "~/components/ui/utilities/use-dismissible-layer";
@@ -28,7 +27,7 @@ export function UserPicker(props: UserPickerProps) {
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let containerRef: HTMLDivElement | undefined;
 
-  const users = createAsync(() => props.fetchUsers(debouncedSearch()));
+  const users = createMemo(() => props.fetchUsers(debouncedSearch()));
 
   function handleSearchInput(value: string) {
     setSearch(value);

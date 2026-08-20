@@ -1,16 +1,7 @@
 import { createResizeObserver } from "@solid-primitives/resize-observer";
-import {
-  For,
-  Show,
-  children,
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  onMount,
-  type JSX,
-} from "solid-js";
-import { createStore } from "solid-js/store";
+import { For, Show, children, createEffect, createMemo, createSignal, onCleanup, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { createStore } from "solid-js";
 
 import ChevronDown from "~/components/icons/chevron-down";
 import {
@@ -107,7 +98,7 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
     }
   });
 
-  onMount(() => {
+  onSettled(() => {
     const handleDocumentPointerDown = (event: PointerEvent) => {
       if (!isOverflowOpen()) {
         return;
@@ -128,9 +119,9 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
 
     document.addEventListener("pointerdown", handleDocumentPointerDown);
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
-    });
+    };
   });
 
   return (

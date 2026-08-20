@@ -1,10 +1,10 @@
-import { createAsync, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import {
   createMemo,
   createSignal,
-  ErrorBoundary,
+  Errored,
   Show,
-  Suspense,
+  Loading,
 } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
@@ -50,17 +50,17 @@ const DAY_MS = 86_400_000;
 type StatusFilter = "all" | "attention";
 
 export function ExecutiveGpvProgress() {
-  const portfolio = createAsync(() => executiveGpvProgressQuery());
+  const portfolio = createMemo(() => executiveGpvProgressQuery());
 
   return (
     <AppPageBody>
-      <ErrorBoundary fallback={<PortfolioError />}>
-        <Suspense fallback={<PortfolioLoading />}>
+      <Errored fallback={<PortfolioError />}>
+        <Loading fallback={<PortfolioLoading />}>
           <Show when={portfolio()}>
             {(data) => <PortfolioContent portfolio={data()} />}
           </Show>
-        </Suspense>
-      </ErrorBoundary>
+        </Loading>
+      </Errored>
     </AppPageBody>
   );
 }

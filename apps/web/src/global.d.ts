@@ -1,15 +1,13 @@
 import type { RequestContext } from "~/server/platform/http/request-context-storage";
 
-declare namespace App {
-  interface RequestObservabilityContext {
-    traceId: string;
-    requestId: string;
-    routePath: string | null;
-    httpMethod: string | null;
-  }
-
+declare module "@solidjs/web" {
   interface RequestEventLocals {
     requestContext: RequestContext;
-    nonce: string;
+    /**
+     * Seeded by the serving layer, which also hands it to `handleRequest` for
+     * the injected client entry script. Absent in development, where the Vite
+     * dev server owns that injection.
+     */
+    nonce?: string;
   }
 }

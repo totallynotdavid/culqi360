@@ -4,8 +4,7 @@ import {
   createMemo,
   createSignal,
   createUniqueId,
-  onCleanup,
-  onMount,
+  onSettled,
 } from "solid-js";
 
 import { useHotkey } from "~/browser/hotkey/use-hotkey";
@@ -65,7 +64,7 @@ export function DatePicker(props: DatePickerProps) {
     setIsOpen(true);
   };
 
-  onMount(() => {
+  onSettled(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!isOpen()) {
         return;
@@ -86,9 +85,9 @@ export function DatePicker(props: DatePickerProps) {
 
     document.addEventListener("pointerdown", handlePointerDown);
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
-    });
+    };
   });
 
   useHotkey("Escape", closePicker, {

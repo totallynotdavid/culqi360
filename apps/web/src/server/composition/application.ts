@@ -1,7 +1,6 @@
 import { createAuditActionPoliciesRepo } from "~/server/audit-reader/audit-policy-repo";
 import { createAuditPolicyService } from "~/server/audit-reader/policy-service";
 import { createAuthRuntime } from "~/server/auth/runtime";
-import { resolveSessionFromEvent } from "~/server/auth/session/resolve-from-event";
 import { createCapacityRuntime } from "~/server/capacity/runtime";
 import { createSharedRuntime } from "~/server/composition/shared-runtime";
 import { createContactAssignmentsRuntime } from "~/server/contact-assignments/runtime";
@@ -53,8 +52,6 @@ function createApplication(infrastructure: ServerInfrastructure) {
       createRecordImportChannel(shared.recordImports),
     ],
     databaseUrl: dbUrl,
-    resolveSession: (event) =>
-      resolveSessionFromEvent(event, auth.sessions.resolve),
   });
 
   return {

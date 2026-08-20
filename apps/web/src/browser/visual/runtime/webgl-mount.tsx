@@ -1,12 +1,5 @@
-import {
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  onMount,
-  type JSX,
-} from "solid-js";
+import { Show, createEffect, createMemo, createSignal, onCleanup, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import { observeElementVisibility } from "~/browser/dom/observe-element-visibility";
 
@@ -53,7 +46,7 @@ export function WebGlMount(props: WebGlMountProps) {
   const [hasContextSlot, setHasContextSlot] = createSignal(false);
   const [contextEpoch, setContextEpoch] = createSignal(0);
 
-  onMount(() => {
+  onSettled(() => {
     const element = rootElement;
 
     if (!element) {
@@ -94,13 +87,13 @@ export function WebGlMount(props: WebGlMountProps) {
 
     element.addEventListener(SITE_WEBGL_CONTEXT_LOST_EVENT, handleContextLost);
 
-    onCleanup(() => {
+    return () => {
       stopObservingVisibility();
       element.removeEventListener(
         SITE_WEBGL_CONTEXT_LOST_EVENT,
         handleContextLost,
       );
-    });
+    };
   });
 
   const mountPriority = createMemo<VisualMountPriority>(() => {

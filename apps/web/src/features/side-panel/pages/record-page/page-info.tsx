@@ -1,6 +1,5 @@
-import { createAsync } from "@solidjs/router";
 import { clsx } from "clsx";
-import { Show } from "solid-js";
+import { Show, createMemo } from "solid-js";
 
 import { Avatar } from "~/components/ui/display/avatar";
 import { Tag } from "~/components/ui/tag/tag";
@@ -21,7 +20,7 @@ function firstInitial(name: string): string {
 
 export function RecordPageInfo() {
   const { pageState, leadId } = useLeadRecordPageState();
-  const leadDetail = createAsync(() => leadDetailQuery(leadId()));
+  const leadDetail = createMemo(() => leadDetailQuery(leadId()));
 
   const isNameEmpty = () => !pageState().title.trim();
 

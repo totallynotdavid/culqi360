@@ -1,4 +1,5 @@
-import { action, json } from "@solidjs/router";
+import { action } from "@solidjs/router";
+import { respond } from "@solidjs/web";
 
 import { upsertAuditPolicy } from "~/rpc/admin/audit-policy";
 import { auditPolicySnapshotQuery } from "~/rpc/audit-policies/audit-policy-snapshot";
@@ -6,7 +7,7 @@ import { auditPolicySnapshotQuery } from "~/rpc/audit-policies/audit-policy-snap
 export const upsertAuditPolicyMutation = action(
   async (input: { action: string; riskLevel: string; isActive: boolean }) => {
     await upsertAuditPolicy(input);
-    return json({}, { revalidate: auditPolicySnapshotQuery.key });
+    return respond({}, { revalidate: auditPolicySnapshotQuery.key });
   },
   "upsertAuditPolicy",
 );

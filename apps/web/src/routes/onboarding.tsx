@@ -1,17 +1,12 @@
-import {
-  createAsync,
-  useNavigate,
-  useSearchParams,
-  type RouteDefinition,
-} from "@solidjs/router";
+import { useNavigate, useSearchParams, type RouteDefinition } from "@solidjs/router";
 import {
   createEffect,
   createMemo,
   createSignal,
   Match,
-  onMount,
+  onSettled,
   Show,
-  Suspense,
+  Loading,
   Switch,
 } from "solid-js";
 
@@ -19,7 +14,7 @@ import {
   createRegistrationResponse,
   isPasskeyRegistrationSupported,
 } from "~/browser/auth/passkey/registration-client";
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import type { OnboardingSnapshot } from "~/contracts/auth";
 import { actionErrorMessage } from "~/contracts/errors";
@@ -64,7 +59,7 @@ function OnboardingContent() {
   const [searchParams] = useSearchParams();
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
-  const loadedSnapshot = createAsync(() => onboardingSnapshotQuery(), {
+  const loadedSnapshot = createMemo(() => onboardingSnapshotQuery(), {
     deferStream: true,
   });
   const [localSnapshot, setLocalSnapshot] = createSignal<OnboardingSnapshot>();
@@ -101,7 +96,7 @@ function OnboardingContent() {
     setPhone(value ?? "");
   });
 
-  onMount(() => {
+  onSettled(() => {
     setPasskeySupported(isPasskeyRegistrationSupported());
   });
 
@@ -352,7 +347,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense
+    <Loading
       fallback={
         <OnboardingShell centered>
           <output class={styles.loaderCenter} aria-live="polite">
@@ -362,6 +357,6 @@ export default function OnboardingPage() {
       }
     >
       <OnboardingContent />
-    </Suspense>
+    </Loading>
   );
 }

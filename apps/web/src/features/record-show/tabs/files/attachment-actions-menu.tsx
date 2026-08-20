@@ -1,5 +1,5 @@
-import { Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Show, createEffect, createSignal, onCleanup, onSettled } from "solid-js";
+import { Portal } from "@solidjs/web";
 
 import { Button } from "~/components/ui/input/button";
 import type { LeadSaleProofFileView } from "~/contracts/workflow/results";
@@ -30,7 +30,7 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
     });
   }
 
-  onMount(() => {
+  onSettled(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!isOpen()) {
         return;
@@ -46,9 +46,8 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
     };
 
     window.document.addEventListener("pointerdown", handlePointerDown);
-    onCleanup(() =>
-      window.document.removeEventListener("pointerdown", handlePointerDown),
-    );
+    return () =>
+      window.document.removeEventListener("pointerdown", handlePointerDown);
   });
 
   createEffect(() => {

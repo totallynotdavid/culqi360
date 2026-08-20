@@ -1,4 +1,4 @@
-import { createAsync, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { Show, createMemo, createSignal } from "solid-js";
 
 import { useModKeyLabel } from "~/browser/hotkey/use-mod-key-label";
@@ -31,8 +31,8 @@ const LEAD_NAVIGATION_LIMIT = 200;
 
 export function RecordShowHeaderActions(props: { leadId: string }) {
   const navigate = useNavigate();
-  const detail = createAsync(() => leadDetailQuery(props.leadId));
-  const leadList = createAsync(() =>
+  const detail = createMemo(() => leadDetailQuery(props.leadId));
+  const leadList = createMemo(() =>
     leadListQuery({ limit: LEAD_NAVIGATION_LIMIT, offset: 0 }),
   );
 

@@ -1,4 +1,5 @@
-import { children, Show, type JSX, type ParentProps } from "solid-js";
+import { children, Show, type ParentProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import styles from "./styles.module.css";
 

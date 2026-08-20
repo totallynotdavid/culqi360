@@ -1,19 +1,5 @@
-import {
-  createAsync,
-  revalidate,
-  useAction,
-  useSubmission,
-} from "@solidjs/router";
-import {
-  createEffect,
-  ErrorBoundary,
-  For,
-  Match,
-  on,
-  Show,
-  Suspense,
-  Switch,
-} from "solid-js";
+import { revalidate, useAction, useSubmission } from "@solidjs/router";
+import { Errored, For, Match, Show, Loading, Switch, createEffect, createMemo } from "solid-js";
 
 import { createTopicState } from "~/browser/realtime/create-topic-state";
 import { actionErrorMessage } from "~/contracts/errors";
@@ -34,7 +20,7 @@ import { formatInteger } from "../format";
 import styles from "./upload-report.module.css";
 
 export function ImportStatus(props: { snapshotId: string }) {
-  const snapshot = createAsync(() => gpvSnapshotQuery(props.snapshotId));
+  const snapshot = createMemo(() => gpvSnapshotQuery(props.snapshotId));
   const resolveIssue = useAction(resolveGpvImportIssueMutation);
   const resolution = useSubmission(resolveGpvImportIssueMutation);
   let refreshedActiveSnapshotId: string | null = null;
@@ -54,15 +40,13 @@ export function ImportStatus(props: { snapshotId: string }) {
     isFinal: (event) => isTerminalJob(event.queueState),
   });
 
-  createEffect(
-    on(progress.value, (event) => {
-      if (!event) {
-        return;
-      }
+  createEffect(progress.value, (event) => {
+    if (!event) {
+      return;
+    }
 
-      void revalidate(gpvSnapshotQuery.key);
-    }),
-  );
+    void revalidate(gpvSnapshotQuery.key);
+  });
 
   createEffect(() => {
     const view = snapshot();
@@ -94,14 +78,14 @@ export function ImportStatus(props: { snapshotId: string }) {
   }
 
   return (
-    <ErrorBoundary
+    <Errored
       fallback={
         <WidgetCardShell title="Importación GPV" status="error">
           <span />
         </WidgetCardShell>
       }
     >
-      <Suspense fallback={<WidgetSkeleton />}>
+      <Loading fallback={<WidgetSkeleton />}>
         <Show when={snapshot()}>
           {(view) => (
             <WidgetCardShell
@@ -239,8 +223,8 @@ export function ImportStatus(props: { snapshotId: string }) {
             </WidgetCardShell>
           )}
         </Show>
-      </Suspense>
-    </ErrorBoundary>
+      </Loading>
+    </Errored>
   );
 }
 

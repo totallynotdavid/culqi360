@@ -1,5 +1,5 @@
 import { Show, createEffect } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 
 import type { RecordContext } from "~/features/record-show/model/record-context";
 import type { RecordTabId } from "~/features/record-show/model/record-tab-id";

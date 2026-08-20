@@ -1,5 +1,6 @@
-import { createEffect, onCleanup, type JSX } from "solid-js";
-import { Portal } from "solid-js/web";
+import { createEffect, onCleanup } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 
 import { PresenceTransition } from "~/components/ui/animation/presence-transition";
 import { Button } from "~/components/ui/input/button";

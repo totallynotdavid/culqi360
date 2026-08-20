@@ -4,10 +4,10 @@ import { toWire } from "~/server/platform/action/domain-error";
 import { getRequestOperation } from "~/server/platform/http/request-context-storage";
 import { isErr } from "~/shared/result";
 
-import type { ApiRequestEvent } from "../../request-event";
+import type { APIEvent } from "filesystem-routing/api";
 import { readJsonBody } from "../json-body";
 
-export async function POST(event: ApiRequestEvent): Promise<Response> {
+export async function POST(event: APIEvent): Promise<Response> {
   try {
     const parsed = await readJsonBody(event.request);
     if (!parsed.ok) {

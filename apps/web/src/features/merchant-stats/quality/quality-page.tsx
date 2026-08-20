@@ -1,5 +1,5 @@
 import { useAction, useParams } from "@solidjs/router";
-import { createMemo, ErrorBoundary, Suspense } from "solid-js";
+import { createMemo, Errored, Loading } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import Building2 from "~/components/icons/building-2";
@@ -174,13 +174,13 @@ export function QualityPage() {
             <>
               <h1 class={styles.title}>{label()}</h1>
 
-              <ErrorBoundary
+              <Errored
                 fallback={renderDataGrid(label(), {
                   status: "error",
                   rows: [],
                 })}
               >
-                <Suspense
+                <Loading
                   fallback={renderDataGrid(label(), {
                     status: "pending",
                     rows: [],
@@ -190,8 +190,8 @@ export function QualityPage() {
                     status: "ready",
                     rows: grid.rows(),
                   })}
-                </Suspense>
-              </ErrorBoundary>
+                </Loading>
+              </Errored>
             </>
           );
         }}

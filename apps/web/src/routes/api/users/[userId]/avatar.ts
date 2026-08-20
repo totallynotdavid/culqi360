@@ -1,4 +1,4 @@
-import type { APIEvent } from "@solidjs/start/server";
+import type { APIEvent } from "filesystem-routing/api";
 
 import { hasPermission } from "~/domain/auth/access/rbac";
 import { UserId } from "~/domain/ids";

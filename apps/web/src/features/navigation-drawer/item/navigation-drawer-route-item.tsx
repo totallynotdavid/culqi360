@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import { WithTooltip } from "~/components/ui/overflow-tooltip/overflow-tooltip";
 

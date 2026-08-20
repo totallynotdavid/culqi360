@@ -1,4 +1,5 @@
-import { For, splitProps, type JSX } from "solid-js";
+import { For, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 const defaultAttributes = {
   xmlns: "http://www.w3.org/2000/svg",

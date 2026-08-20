@@ -1,4 +1,5 @@
-import { For, type JSX, Show } from "solid-js";
+import { For, Show } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import Moneybag from "~/components/icons/moneybag";
 import Package from "~/components/icons/package";

@@ -1,4 +1,5 @@
-import { createAsync, useAction } from "@solidjs/router";
+import { createMemo } from "solid-js";
+import { useAction } from "@solidjs/router";
 
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
 import List from "~/components/icons/list";
@@ -18,7 +19,7 @@ import { pendingCapacityRequestsQuery } from "~/rpc/capacity/pending-capacity-re
 import styles from "./requests-page.module.css";
 
 export default function TeamRequestsPage() {
-  const requests = createAsync(() => pendingCapacityRequestsQuery());
+  const requests = createMemo(() => pendingCapacityRequestsQuery());
   const approveRequest = useAction(approveCapacityRequestMutation);
   const rejectRequest = useAction(rejectCapacityRequestMutation);
 

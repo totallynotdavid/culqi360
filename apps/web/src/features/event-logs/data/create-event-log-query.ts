@@ -1,4 +1,3 @@
-import { createAsync } from "@solidjs/router";
 import {
   createEffect,
   createMemo,
@@ -57,7 +56,7 @@ export function createEventLogQuery(options: {
 }) {
   const activeKey = createMemo(() => queryKey(options.input()));
 
-  const firstPage = createAsync(async () => {
+  const firstPage = createMemo(async () => {
     const input = options.input();
     const key = queryKey(input);
     const page = await eventLogsQuery(input);

@@ -1,4 +1,5 @@
-import { action, json } from "@solidjs/router";
+import { action } from "@solidjs/router";
+import { respond } from "@solidjs/web";
 
 import {
   approveCapacity,
@@ -24,7 +25,7 @@ import {
 export const requestMoreSearchesMutation = action(
   async (amount: number, reason: string) => {
     const result = await requestMoreSearches(amount, reason);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         mySearchAllowanceQuery.key,
         pendingCapacityRequestsQuery.key,
@@ -37,7 +38,7 @@ export const requestMoreSearchesMutation = action(
 export const requestMoreLeadRefillMutation = action(
   async (amount: number, reason: string) => {
     const result = await requestMoreLeadRefill(amount, reason);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         myContactAssignmentCapacityQuery.key,
         pendingCapacityRequestsQuery.key,
@@ -50,7 +51,7 @@ export const requestMoreLeadRefillMutation = action(
 export const approveCapacityRequestMutation = action(
   async (requestId: string, note?: string) => {
     const result = await approveCapacity(requestId, note);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         pendingCapacityRequestsQuery.key,
         managedExecutivesQuery.key,
@@ -66,7 +67,7 @@ export const approveCapacityRequestMutation = action(
 export const rejectCapacityRequestMutation = action(
   async (requestId: string, note: string) => {
     const result = await rejectCapacity(requestId, note);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         pendingCapacityRequestsQuery.key,
         managedExecutivesQuery.key,
@@ -80,7 +81,7 @@ export const rejectCapacityRequestMutation = action(
 export const grantMoreSearchesMutation = action(
   async (userId: string, amount: number, reason: string) => {
     const result = await grantMoreSearches(userId, amount, reason);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         managedExecutivesQuery.key,
         executiveCapacityDetailQuery.key,
@@ -94,7 +95,7 @@ export const grantMoreSearchesMutation = action(
 export const grantMoreLeadRefillMutation = action(
   async (userId: string, amount: number, reason: string) => {
     const result = await grantMoreLeadRefill(userId, amount, reason);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         managedExecutivesQuery.key,
         executiveCapacityDetailQuery.key,
@@ -114,7 +115,7 @@ export const updateExecutivePolicyOverrideMutation = action(
     expiresAt: number | null;
   }) => {
     const result = await updateExecutivePolicyOverride(input);
-    return json(result, {
+    return respond(result, {
       revalidate: [
         managedExecutivesQuery.key,
         executiveCapacityDetailQuery.key,
@@ -133,7 +134,7 @@ export const updateScopePolicyMutation = action(
     dailyRefillLimit: number;
   }) => {
     const result = await updateScopePolicy(input);
-    return json(result, {
+    return respond(result, {
       revalidate: [capacityPolicyDefaultsQuery.key, managedExecutivesQuery.key],
     });
   },

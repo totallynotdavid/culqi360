@@ -1,6 +1,7 @@
-import { batch, createContext, onCleanup, onMount, type JSX } from "solid-js";
-import { createStore, produce } from "solid-js/store";
-import { Portal } from "solid-js/web";
+import { batch, createContext, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { createStore, produce } from "solid-js";
+import { Portal } from "@solidjs/web";
 
 import { AnimatePresence } from "~/components/ui/animation/animate-presence";
 import { Animated } from "~/components/ui/animation/animated";
@@ -37,7 +38,7 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
   const [items, setItems] = createStore<SnackBarItem[]>([]);
   let counter = 0;
 
-  onMount(() => {
+  onSettled(() => {
     const intervalId = setInterval(() => {
       batch(() => {
         setItems(
@@ -60,7 +61,7 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
         );
       });
     }, TICK_MS);
-    onCleanup(() => clearInterval(intervalId));
+    return () => clearInterval(intervalId);
   });
 
   const enqueue = (spec: SnackBarSpec): string => {

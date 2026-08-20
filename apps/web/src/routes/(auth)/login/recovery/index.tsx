@@ -1,7 +1,7 @@
-import { createAsync, useSearchParams, useSubmission } from "@solidjs/router";
-import { createMemo, createSignal, Show, Suspense } from "solid-js";
+import { useSearchParams, useSubmission } from "@solidjs/router";
+import { createMemo, createSignal, Show, Loading } from "solid-js";
 
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 import { EnterTransition } from "~/components/ui/animation/enter-transition";
 import { Button } from "~/components/ui/input/button";
 import { Input } from "~/components/ui/input/input";
@@ -23,7 +23,7 @@ export default function LoginRecoveryPage() {
   const recoverySubmission = useSubmission(recoveryLoginMutation);
   const [recoveryCode, setRecoveryCode] = createSignal("");
   const flowId = () => parseLoginFlowId(searchParams.flow);
-  const loginFlow = createAsync(() => {
+  const loginFlow = createMemo(() => {
     const currentFlowId = flowId();
     return currentFlowId
       ? loginFlowQuery(currentFlowId)
@@ -75,7 +75,7 @@ export default function LoginRecoveryPage() {
       description="Ingresa uno de los códigos que guardaste al configurar tu seguridad."
     >
       <div class={pageStyles.formStack}>
-        <Suspense
+        <Loading
           fallback={
             <output class={pageStyles.loadingStack} aria-live="polite">
               <p class={pageStyles.loadingLabel}>Cargando recuperación</p>
@@ -148,7 +148,7 @@ export default function LoginRecoveryPage() {
               </EnterTransition>
             )}
           </Show>
-        </Suspense>
+        </Loading>
         <div class={shellStyles.footerNote}>
           <LegalFooter />
         </div>

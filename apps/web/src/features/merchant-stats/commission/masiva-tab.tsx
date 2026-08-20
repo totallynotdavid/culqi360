@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import type { SetStoreFunction } from "solid-js/store";
+import type { StoreSetter } from "solid-js";
 
 import { SettingsOptionCardCounterRow } from "~/components/settings/settings-option-card";
 import {
@@ -18,7 +18,7 @@ import {
 
 export function MasivaTab(props: {
   draft: CommissionSchemeRules;
-  setDraft: SetStoreFunction<CommissionSchemeRules>;
+  setDraft: StoreSetter<CommissionSchemeRules>;
 }) {
   return (
     <>

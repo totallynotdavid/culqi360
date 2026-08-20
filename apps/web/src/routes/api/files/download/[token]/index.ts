@@ -1,4 +1,4 @@
-import type { APIEvent } from "@solidjs/start/server";
+import type { APIEvent } from "filesystem-routing/api";
 
 import { getApplication } from "~/server/composition/application";
 import { buildFileDownloadHeaders } from "~/server/files/headers";

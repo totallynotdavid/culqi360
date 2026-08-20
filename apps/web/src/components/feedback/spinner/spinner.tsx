@@ -2,13 +2,13 @@ import { clsx } from "clsx";
 
 import LoaderCircle from "~/components/icons/loader-circle";
 
-import styles from "./screen.module.css";
+import styles from "./spinner.module.css";
 
-interface LoadingProps {
+interface SpinnerProps {
   size?: "sm" | "md" | "lg";
 }
 
-export function Loading(props: LoadingProps) {
+export function Spinner(props: SpinnerProps) {
   const sizeClass = () => {
     switch (props.size) {
       case "sm":

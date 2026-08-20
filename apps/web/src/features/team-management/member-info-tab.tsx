@@ -1,6 +1,6 @@
 import { useAction } from "@solidjs/router";
 import { For, Show, onCleanup } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";

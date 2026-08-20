@@ -1,5 +1,5 @@
 import type { RouteSectionProps } from "@solidjs/router";
-import { Suspense } from "solid-js";
+import { Loading } from "solid-js";
 
 import { PageCardLayout } from "~/components/ui/layout/page-card/page-card-layout";
 
@@ -8,9 +8,9 @@ import { RecordIndexShellSkeleton } from "./skeletons/record-index-shell-skeleto
 export function RecordIndexAppShell(props: RouteSectionProps) {
   return (
     <PageCardLayout>
-      <Suspense fallback={<RecordIndexShellSkeleton />}>
+      <Loading fallback={<RecordIndexShellSkeleton />}>
         {props.children}
-      </Suspense>
+      </Loading>
     </PageCardLayout>
   );
 }

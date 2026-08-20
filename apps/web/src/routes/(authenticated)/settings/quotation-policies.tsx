@@ -1,11 +1,8 @@
-import {
-  createAsync,
-  type RouteDefinition,
-  useAction,
-  useSubmission,
-} from "@solidjs/router";
-import { Show, type Accessor } from "solid-js";
-import { createStore } from "solid-js/store";
+import { type RouteDefinition, useAction, useSubmission } from "@solidjs/router";
+import { Loading, Show, createMemo, type Accessor } from "solid-js";
+
+import { Spinner } from "~/components/feedback/spinner/spinner";
+import { createStore } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import {
@@ -188,25 +185,17 @@ function PendingQuotationPolicyEditor(props: {
 }
 
 export default function QuotationPoliciesPage() {
-  const rateProposalPolicy = createAsync(() => rateProposalPolicyQuery(), {
-    initialValue: null,
-  });
-  const pendingQuotationPolicy = createAsync(
-    () => pendingQuotationPolicyQuery(),
-    {
-      initialValue: null,
-    },
+  const rateProposalPolicy = createMemo(() => rateProposalPolicyQuery());
+  const pendingQuotationPolicy = createMemo(() =>
+    pendingQuotationPolicyQuery(),
   );
 
   return (
     <SettingsPageLayout>
-      <Show when={rateProposalPolicy()}>
-        {(snapshot) => <RateProposalPolicyEditor snapshot={snapshot} />}
-      </Show>
-
-      <Show when={pendingQuotationPolicy()}>
-        {(snapshot) => <PendingQuotationPolicyEditor snapshot={snapshot} />}
-      </Show>
+      <Loading fallback={<Spinner />}>
+        <RateProposalPolicyEditor snapshot={rateProposalPolicy} />
+        <PendingQuotationPolicyEditor snapshot={pendingQuotationPolicy} />
+      </Loading>
     </SettingsPageLayout>
   );
 }

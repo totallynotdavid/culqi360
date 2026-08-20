@@ -1,7 +1,7 @@
-import { createAsync, useSearchParams } from "@solidjs/router";
-import { createMemo, Show, Suspense } from "solid-js";
+import { useSearchParams } from "@solidjs/router";
+import { createMemo, Show, Loading } from "solid-js";
 
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 import { EnterTransition } from "~/components/ui/animation/enter-transition";
 import { Button } from "~/components/ui/input/button";
 import { parseLoginFlowId } from "~/domain/auth/login-flow/parse-id";
@@ -20,7 +20,7 @@ export default function LoginPasskeyPage() {
   const [searchParams] = useSearchParams();
   const passkeyLogin = usePasskeyLogin();
   const flowId = () => parseLoginFlowId(searchParams.flow);
-  const loginFlow = createAsync(() => {
+  const loginFlow = createMemo(() => {
     const currentFlowId = flowId();
     return currentFlowId
       ? loginFlowQuery(currentFlowId)
@@ -41,7 +41,7 @@ export default function LoginPasskeyPage() {
       title="Verificar clave de acceso"
       description="Retoma el acceso con la clave asociada a tu cuenta."
     >
-      <Suspense
+      <Loading
         fallback={
           <output class={pageStyles.loadingStack} aria-live="polite">
             <p class={pageStyles.loadingLabel}>Cargando clave de acceso</p>
@@ -122,7 +122,7 @@ export default function LoginPasskeyPage() {
             </EnterTransition>
           )}
         </Show>
-      </Suspense>
+      </Loading>
       <a href="/login" class={linkStyles.helpLink}>
         Volver al inicio de sesión
       </a>

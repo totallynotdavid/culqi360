@@ -120,8 +120,6 @@ async function spawnDetached(dbUrl: string): Promise<number> {
       WEB_DB_URL: dbUrl,
       PORT: String(PORT),
       HOST: "127.0.0.1",
-      NITRO_PORT: String(PORT),
-      NITRO_HOST: "127.0.0.1",
 
       // Application-generated links must point at the preview server.
       APP_PUBLIC_ORIGIN: BASE_URL,

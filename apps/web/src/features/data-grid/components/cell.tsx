@@ -1,4 +1,5 @@
-import { splitProps, type JSX } from "solid-js";
+import { splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import styles from "../styles/table.module.css";
 

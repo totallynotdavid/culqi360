@@ -1,11 +1,12 @@
 import { revalidate, useAction, useSearchParams } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
+import { createSignal, Errored, Loading, Show } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
 import CalendarDays from "~/components/icons/calendar-days";
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
 import Info from "~/components/icons/info";
 import Target from "~/components/icons/target";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import { Badge } from "~/components/ui/display/badge";
 import { Button } from "~/components/ui/input/button";
 import { TextInput } from "~/components/ui/input/text-input";
@@ -189,13 +190,19 @@ export function InquiriesPage() {
         </Show>
       </div>
 
-      <DataGrid
-        ariaLabel="Consultas de disponibilidad"
-        columns={columns}
-        emptyState="Aún no has consultado ningún RUC."
-        rowId={(row) => row.id}
-        source={source()}
-      />
+      <Errored
+        fallback={<p class={styles.error}>No se pudieron cargar las consultas.</p>}
+      >
+        <Loading fallback={<Spinner size="lg" />}>
+          <DataGrid
+            ariaLabel="Consultas de disponibilidad"
+            columns={columns}
+            emptyState="Aún no has consultado ningún RUC."
+            rowId={(row) => row.id}
+            source={source()}
+          />
+        </Loading>
+      </Errored>
     </div>
   );
 }

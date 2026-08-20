@@ -1,14 +1,6 @@
-import {
-  For,
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  onMount,
-  type JSX,
-} from "solid-js";
-import { Portal } from "solid-js/web";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 
 import { useDismissibleLayer } from "~/components/ui/utilities/use-dismissible-layer";
 import { useScopedHotkey } from "~/features/side-panel/core/hotkeys/create-scoped-hotkey";
@@ -93,7 +85,7 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
     getAdditionalContainers: () => [menuRef()],
   });
 
-  onMount(() => {
+  onSettled(() => {
     setIsMac(/Mac/i.test(navigator.platform));
   });
 

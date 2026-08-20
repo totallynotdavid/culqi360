@@ -1,5 +1,5 @@
 import { Title } from "@solidjs/meta";
-import { A, createAsync } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import { Show, createMemo, type ParentProps } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
@@ -16,8 +16,8 @@ export function RecordShowHeader(
     leadId: string;
   }>,
 ) {
-  const data = createAsync(() => leadDetailQuery(props.leadId));
-  const leadList = createAsync(() =>
+  const data = createMemo(() => leadDetailQuery(props.leadId));
+  const leadList = createMemo(() =>
     leadListQuery({
       limit: LEAD_NAVIGATION_LIMIT,
       offset: 0,

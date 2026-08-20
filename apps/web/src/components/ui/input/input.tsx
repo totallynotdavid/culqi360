@@ -1,11 +1,6 @@
 import { clsx } from "clsx";
-import {
-  createSignal,
-  createUniqueId,
-  Show,
-  type JSX,
-  splitProps,
-} from "solid-js";
+import { createSignal, createUniqueId, Show, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import { InputErrorHelper } from "./input-error-helper";
 import { InputHint } from "./input-hint";

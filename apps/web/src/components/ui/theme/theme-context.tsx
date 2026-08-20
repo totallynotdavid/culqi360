@@ -1,7 +1,7 @@
 import {
   createContext,
   createSignal,
-  onMount,
+  onSettled,
   useContext,
   type ParentProps,
 } from "solid-js";
@@ -24,7 +24,7 @@ const ThemeContext = createContext<ThemeState>();
 export function ThemeProvider(props: ParentProps) {
   const [theme, setThemeSignal] = createSignal<ThemeMode>("light");
 
-  onMount(() => {
+  onSettled(() => {
     const stored = getThemeMode();
     setThemeSignal(stored);
     applyThemeMode(stored);

@@ -1,4 +1,4 @@
-import { createAsync, revalidate, useNavigate } from "@solidjs/router";
+import { revalidate, useNavigate } from "@solidjs/router";
 import { Show, createEffect, createMemo } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
@@ -46,7 +46,7 @@ export function RecordPage() {
     useLeadRecordPageState();
 
   const canDeleteCompany = createMemo(() => currentUser().role === "superuser");
-  const detailData = createAsync(() => leadDetailQuery(leadId()));
+  const detailData = createMemo(() => leadDetailQuery(leadId()));
 
   createEffect(() => {
     const detail = detailData();

@@ -1,12 +1,8 @@
-import {
-  createAsync,
-  type RouteDefinition,
-  useAction,
-  useSearchParams,
-  useSubmission,
-} from "@solidjs/router";
-import { createMemo, createSignal, createUniqueId, Show } from "solid-js";
-import { createStore, reconcile, unwrap } from "solid-js/store";
+import { type RouteDefinition, useAction, useSearchParams, useSubmission } from "@solidjs/router";
+import { Loading, Show, createMemo, createSignal, createUniqueId } from "solid-js";
+
+import { Spinner } from "~/components/feedback/spinner/spinner";
+import { createStore, reconcile, snapshot } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import Building2 from "~/components/icons/building-2";
@@ -73,14 +69,14 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
   const { tab, setTab } = useCommissionTab();
 
   const isDirty = createMemo(
-    () => JSON.stringify(unwrap(draft)) !== JSON.stringify(baseline()),
+    () => JSON.stringify(snapshot(draft)) !== JSON.stringify(baseline()),
   );
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
 
-    // Solid stores are proxies, so unwrap before cloning.
-    const rules = structuredClone(unwrap(draft));
+    // Solid stores are proxies, so snapshot before cloning.
+    const rules = structuredClone(snapshot(draft));
     const effectiveFrom = new Date().toISOString().slice(0, 10);
 
     try {
@@ -153,13 +149,11 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
 }
 
 export default function CommissionSchemePage() {
-  const draft = createAsync(() => commissionSchemeDraftQuery(), {
-    initialValue: null,
-  });
+  const draft = createMemo(() => commissionSchemeDraftQuery());
 
   return (
-    <Show when={draft()}>
-      {(initial) => <CommissionSchemeForm initial={initial()} />}
-    </Show>
+    <Loading fallback={<Spinner />}>
+      <CommissionSchemeForm initial={draft()} />
+    </Loading>
   );
 }

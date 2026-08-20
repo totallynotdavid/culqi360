@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
-import { type JSX, Show, onCleanup, onMount } from "solid-js";
+import { Show, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import {
   SIDE_PANEL_CLICK_OUTSIDE_ID,
@@ -26,7 +27,7 @@ export function PanelShell(props: PanelShellProps) {
     }
   }
 
-  onMount(() => {
+  onSettled(() => {
     function handlePointerDown(e: PointerEvent) {
       if (props.isInteractive === false) {
         return;
@@ -56,9 +57,8 @@ export function PanelShell(props: PanelShellProps) {
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
-    onCleanup(() =>
-      document.removeEventListener("pointerdown", handlePointerDown),
-    );
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown);
   });
 
   return (

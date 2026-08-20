@@ -1,5 +1,5 @@
 import { useAction, useNavigate } from "@solidjs/router";
-import { createMemo, createSignal, onMount } from "solid-js";
+import { createMemo, createSignal, onSettled } from "solid-js";
 
 import {
   createAuthenticationResponse,
@@ -50,7 +50,7 @@ export function usePasskeyLogin() {
   const supportKnown = createMemo(() => supportStatus() !== "unknown");
   const busy = createMemo(() => phase() !== "idle");
 
-  onMount(() => {
+  onSettled(() => {
     setSupportStatus(
       isPasskeyAuthenticationSupported() ? "supported" : "unsupported",
     );

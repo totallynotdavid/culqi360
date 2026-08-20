@@ -1,6 +1,6 @@
-import { createAsync, useAction, useSubmission } from "@solidjs/router";
-import { For, Show, createSignal, type Accessor } from "solid-js";
-import { createStore } from "solid-js/store";
+import { useAction, useSubmission } from "@solidjs/router";
+import { For, Show, createMemo, createSignal, type Accessor } from "solid-js";
+import { createStore } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import {
@@ -40,9 +40,7 @@ const REQUEST_STATUS_LABEL: Record<CapacityRequestStatus, string> = {
 };
 
 export function MemberCapacityTab(props: { userId: string }) {
-  const detail = createAsync(() => executiveCapacityDetailQuery(props.userId), {
-    initialValue: null,
-  });
+  const detail = createMemo(() => executiveCapacityDetailQuery(props.userId));
 
   return (
     <Show

@@ -1,11 +1,5 @@
-import {
-  createEffect,
-  createMemo,
-  createResource,
-  onCleanup,
-  onMount,
-  type JSX,
-} from "solid-js";
+import { createEffect, createMemo, createResource, onCleanup, onSettled } from "solid-js";
+import { type JSX } from "@solidjs/web";
 import { PlaneGeometry } from "three";
 
 import { createHalftoneRuntime } from "~/browser/visual/halftone/runtime";
@@ -86,7 +80,7 @@ export function HalftoneImageCanvas(
   let mountRef: HTMLDivElement | undefined;
   let runtime: HalftoneRuntime | null = null;
 
-  onMount(() => {
+  onSettled(() => {
     const host = mountRef;
 
     if (!host) {
@@ -121,11 +115,11 @@ export function HalftoneImageCanvas(
       }
     })();
 
-    onCleanup(() => {
+    return () => {
       cancelled = true;
       runtime?.dispose();
       runtime = null;
-    });
+    };
   });
 
   return (

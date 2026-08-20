@@ -1,4 +1,5 @@
-import { type JSX, splitProps } from "solid-js";
+import { splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import styles from "./responsive-image.module.css";
 

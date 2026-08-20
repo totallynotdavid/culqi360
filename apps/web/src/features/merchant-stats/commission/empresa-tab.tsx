@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import type { SetStoreFunction } from "solid-js/store";
+import type { StoreSetter } from "solid-js";
 
 import {
   defaultCompanyCaja3Rules,
@@ -17,7 +17,7 @@ import {
 
 export function EmpresaTab(props: {
   draft: CommissionSchemeRules;
-  setDraft: SetStoreFunction<CommissionSchemeRules>;
+  setDraft: StoreSetter<CommissionSchemeRules>;
 }) {
   return (
     <>

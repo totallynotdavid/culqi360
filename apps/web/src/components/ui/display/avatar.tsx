@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Show, createEffect, createSignal, on } from "solid-js";
+import { Show, createEffect, createSignal } from "solid-js";
 
 import { avatarPlaceholderColors } from "./avatar-placeholder-color";
 
@@ -23,10 +23,8 @@ export function Avatar(props: AvatarProps) {
   const [hasImageError, setHasImageError] = createSignal(false);
 
   createEffect(
-    on(
-      () => props.imageUrl,
-      () => setHasImageError(false),
-    ),
+    () => props.imageUrl,
+    () => setHasImageError(false),
   );
 
   const showImage = () => Boolean(props.imageUrl) && !hasImageError();

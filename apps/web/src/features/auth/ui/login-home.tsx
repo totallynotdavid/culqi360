@@ -1,5 +1,5 @@
 import { useSubmission } from "@solidjs/router";
-import { createEffect, createSignal, onMount, Show } from "solid-js";
+import { createEffect, createSignal, onSettled, Show } from "solid-js";
 
 import Google from "~/components/icons/brands/google";
 import { Button } from "~/components/ui/input/button";
@@ -29,7 +29,7 @@ export function LoginHome() {
 
   let usernameInputRef: HTMLInputElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     usernameInputRef?.focus();
   });
 

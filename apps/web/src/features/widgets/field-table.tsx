@@ -1,5 +1,6 @@
 import { Show, createSignal } from "solid-js";
-import type { JSX, ParentProps } from "solid-js";
+import type { ParentProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import Pencil from "~/components/icons/pencil";
 import { EditButtonWrapper } from "~/components/ui/input/edit-button-wrapper";

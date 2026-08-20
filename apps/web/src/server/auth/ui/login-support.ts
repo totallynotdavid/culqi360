@@ -1,4 +1,4 @@
-import { redirect } from "@solidjs/router";
+import { redirect } from "@solidjs/web";
 
 import type { Role } from "~/domain/auth/access/rbac";
 import { getSessionPath } from "~/domain/auth/access/route-policy";

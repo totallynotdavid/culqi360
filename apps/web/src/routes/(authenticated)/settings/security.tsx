@@ -1,12 +1,5 @@
-import {
-  createAsync,
-  revalidate,
-  type RouteDefinition,
-  useAction,
-  useNavigate,
-  useSubmission,
-} from "@solidjs/router";
-import { Show, Suspense, createSignal } from "solid-js";
+import { revalidate, type RouteDefinition, useAction, useNavigate, useSubmission } from "@solidjs/router";
+import { Show, Loading, createMemo, createSignal } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
@@ -136,7 +129,7 @@ export default function SecurityPage() {
   const disableTotpDialog = useConfirmDialog();
   const regenerateRecoveryDialog = useConfirmDialog();
 
-  const recoveryStatus = createAsync(() => recoveryCodesStatusQuery());
+  const recoveryStatus = createMemo(() => recoveryCodesStatusQuery());
 
   const removePasskeys = useAction(removeAllPasskeysMutation);
   const removePasskeysSubmission = useSubmission(removeAllPasskeysMutation);
@@ -406,7 +399,7 @@ export default function SecurityPage() {
         </div>
       </SettingsSection>
 
-      <Suspense>
+      <Loading>
         <Show
           when={
             freshRecoveryCodes().length > 0 || recoveryStatus()?.hasActiveSet
@@ -460,7 +453,7 @@ export default function SecurityPage() {
             </div>
           </SettingsSection>
         </Show>
-      </Suspense>
+      </Loading>
     </SettingsPageLayout>
   );
 }

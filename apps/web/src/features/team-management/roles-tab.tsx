@@ -1,4 +1,4 @@
-import { createAsync, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { createMemo, For } from "solid-js";
 
 import ChevronRight from "~/components/icons/chevron-right";
@@ -20,7 +20,7 @@ import styles from "./team-management.module.css";
 
 export function RolesTab() {
   const navigate = useNavigate();
-  const roster = createAsync(() => membersRosterQuery());
+  const roster = createMemo(() => membersRosterQuery());
 
   const memberCountByRole = createMemo(() => {
     const counts = new Map<Role, number>();

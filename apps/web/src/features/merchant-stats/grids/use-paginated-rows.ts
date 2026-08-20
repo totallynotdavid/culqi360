@@ -1,4 +1,4 @@
-import { createAsync, useIsRouting } from "@solidjs/router";
+import { useIsRouting } from "@solidjs/router";
 import { createMemo, createSignal, type Accessor } from "solid-js";
 
 import type { Page, PublishedPage } from "~/contracts/merchant-stats/views";
@@ -35,7 +35,7 @@ export function usePaginatedRows<Row>(
     error: unknown;
   }>();
 
-  const firstPage = createAsync(async () => {
+  const firstPage = createMemo(async () => {
     const key = config.resetKey();
     const page = await config.load({ limit: config.pageSize, offset: 0 });
     return { key, ...page } satisfies LoadedPage<Row>;

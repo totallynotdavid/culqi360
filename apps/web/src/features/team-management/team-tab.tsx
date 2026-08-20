@@ -1,4 +1,4 @@
-import { createAsync, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
 import ChevronRight from "~/components/icons/chevron-right";
@@ -36,7 +36,7 @@ function statusBadge(member: MemberListItem) {
 export function TeamTab() {
   const navigate = useNavigate();
   const { currentUser } = useAuthenticatedSession();
-  const roster = createAsync(() => membersRosterQuery());
+  const roster = createMemo(() => membersRosterQuery());
   const [filter, setFilter] = createSignal("");
 
   const filtered = createMemo(() => {

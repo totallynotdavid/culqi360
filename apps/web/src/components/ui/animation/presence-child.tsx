@@ -1,11 +1,5 @@
-import {
-  children,
-  createEffect,
-  createMemo,
-  createUniqueId,
-  onCleanup,
-  type JSX,
-} from "solid-js";
+import { children, createEffect, createMemo, createUniqueId, onCleanup } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import { PopChild } from "./pop-child";
 import { PresenceContext, type PresenceContextValue } from "./presence-context";

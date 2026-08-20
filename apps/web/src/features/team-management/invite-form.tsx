@@ -1,5 +1,5 @@
 import { useAction, useSubmission } from "@solidjs/router";
-import { For, Show, createEffect, createSignal, on } from "solid-js";
+import { For, Show, createEffect, createSignal } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { DatePicker } from "~/components/ui/date-picker/date-picker-field";
@@ -49,18 +49,16 @@ export function InviteForm(props: {
 
   // Reset the role if updated permissions no longer allow it.
   createEffect(
-    on(
-      () => props.setup,
-      (setup) => {
-        const roleStillAssignable = setup.assignableRoles.some(
-          (option) => option.value === role(),
-        );
+    () => props.setup,
+    (setup) => {
+      const roleStillAssignable = setup.assignableRoles.some(
+        (option) => option.value === role(),
+      );
 
-        if (!roleStillAssignable) {
-          setRole(getDefaultAssignableRole(setup));
-        }
-      },
-    ),
+      if (!roleStillAssignable) {
+        setRole(getDefaultAssignableRole(setup));
+      }
+    },
   );
 
   function resetForm() {

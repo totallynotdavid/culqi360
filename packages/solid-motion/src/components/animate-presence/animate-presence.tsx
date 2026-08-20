@@ -1,6 +1,7 @@
 import { resolveElements } from "@solid-primitives/refs";
 import { createListTransition } from "@solid-primitives/transition-group";
-import { type FlowComponent, type JSX } from "solid-js";
+import { type FlowComponent } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import type { MotionState } from "../../state";
 import { mountedStates } from "../../state";

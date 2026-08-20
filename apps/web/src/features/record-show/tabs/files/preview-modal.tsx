@@ -1,5 +1,5 @@
 import { createEffect, Match, onCleanup, Show, Switch } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
 
 import { PresenceTransition } from "~/components/ui/animation/presence-transition";
 import { Button } from "~/components/ui/input/button";

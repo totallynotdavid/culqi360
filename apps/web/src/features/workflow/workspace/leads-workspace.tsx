@@ -1,6 +1,7 @@
-import { createAsync } from "@solidjs/router";
+import { Errored, Loading, createMemo } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import Building2 from "~/components/icons/building-2";
 import List from "~/components/icons/list";
@@ -10,8 +11,6 @@ import { hasPermission } from "~/domain/auth/access/rbac";
 import { createGridSource } from "~/features/data-grid/model/create-grid-source";
 import { RecordIndexScreen } from "~/features/record-index/components/screen";
 import type { RecordIndexDefinition } from "~/features/record-index/model/definition";
-import { mergeLeadRows } from "~/features/workflow/data/merge-lead-rows";
-import { getOptimisticLeadRows } from "~/features/workflow/data/optimistic-leads";
 import { requestWorkflowLeadsExportDownloadToken } from "~/rpc/workflow/files";
 import { leadListQuery } from "~/rpc/workflow/lead-list";
 import { pendingQuotationCountQuery } from "~/rpc/workflow/pending-quotation-count";
@@ -69,10 +68,6 @@ export function LeadsWorkspace() {
       rows: data.rows,
       totalCount: data.totalCount,
     }),
-    {
-      overlay: (rows) =>
-        mergeLeadRows(rows, getOptimisticLeadRows(route.activeView().id)),
-    },
   );
 
   const totalCount = () => leads.data()?.totalCount ?? 0;
@@ -83,7 +78,7 @@ export function LeadsWorkspace() {
   const openLeadRecord = useOpenLeadRecord();
   const { enqueueWarningSnackBar } = useSnackBar();
 
-  const pendingQuotations = createAsync(
+  const pendingQuotations = createMemo(
     () =>
       canRegister
         ? pendingQuotationCountQuery()
@@ -208,7 +203,11 @@ export function LeadsWorkspace() {
         onChange={recordImport.onFileInputChange}
       />
 
-      <RecordIndexScreen definition={recordIndex} />
+      <Errored fallback={<p>No se pudieron cargar los registros.</p>}>
+        <Loading fallback={<Spinner size="lg" />}>
+          <RecordIndexScreen definition={recordIndex} />
+        </Loading>
+      </Errored>
     </ImportDropzone>
   );
 }

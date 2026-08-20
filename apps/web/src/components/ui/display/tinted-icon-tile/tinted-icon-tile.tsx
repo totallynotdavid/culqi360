@@ -1,5 +1,5 @@
-import type { JSX } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 
 import type { TileColor } from "~/shared/ui/tile-color";
 

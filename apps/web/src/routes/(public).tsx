@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import type { RouteSectionProps } from "@solidjs/router";
-import { For, createSignal, onCleanup, onMount } from "solid-js";
+import { For, createSignal, onSettled } from "solid-js";
 
 import { ThemeToggle } from "~/components/ui/theme/theme-toggle";
 import { PUBLIC_MENU_ITEMS } from "~/features/public/menu/data";
@@ -11,14 +11,14 @@ import styles from "./(public).module.css";
 export default function PublicLayout(props: RouteSectionProps) {
   const [hasScrolled, setHasScrolled] = createSignal(false);
 
-  onMount(() => {
+  onSettled(() => {
     const handleScroll = () => {
       setHasScrolled(window.scrollY > 8);
     };
 
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    onCleanup(() => window.removeEventListener("scroll", handleScroll));
+    return () => window.removeEventListener("scroll", handleScroll);
   });
 
   return (

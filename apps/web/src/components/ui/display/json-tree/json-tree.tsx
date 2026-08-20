@@ -9,7 +9,7 @@ import {
   useContext,
   type Component,
 } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 
 import Checkbox from "~/components/icons/checkbox";
 import ChevronDown from "~/components/icons/chevron-down";

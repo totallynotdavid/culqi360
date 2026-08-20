@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 
 import { createTopicState } from "~/browser/realtime/create-topic-state";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
@@ -113,39 +113,35 @@ export function useRecordsImport() {
     });
   }
 
-  createEffect(
-    on(importProgress.value, (event) => {
-      if (!event || snackBarId === null) {
-        return;
-      }
+  createEffect(importProgress.value, (event) => {
+    if (!event || snackBarId === null) {
+      return;
+    }
 
-      updateImportSnackBar(snackBarId, event);
-    }),
-  );
+    updateImportSnackBar(snackBarId, event);
+  });
 
-  createEffect(
-    on(importProgress.connection, (state) => {
-      if (snackBarId === null) {
-        return;
-      }
+  createEffect(importProgress.connection, (state) => {
+    if (snackBarId === null) {
+      return;
+    }
 
-      if (state === "denied") {
-        updateSnackBar(snackBarId, {
-          message: "Se perdió el seguimiento. Recarga la página.",
-          variant: "warning",
-          duration: IMPORT_COMPLETED_DURATION_MS,
-        });
+    if (state === "denied") {
+      updateSnackBar(snackBarId, {
+        message: "Se perdió el seguimiento. Recarga la página.",
+        variant: "warning",
+        duration: IMPORT_COMPLETED_DURATION_MS,
+      });
 
-        return;
-      }
+      return;
+    }
 
-      if (state === "offline") {
-        updateSnackBar(snackBarId, {
-          message: "Sin conexión. La importación continúa...",
-        });
-      }
-    }),
-  );
+    if (state === "offline") {
+      updateSnackBar(snackBarId, {
+        message: "Sin conexión. La importación continúa...",
+      });
+    }
+  });
 
   async function importFile(file: File): Promise<void> {
     if (!isSupportedFile(file)) {

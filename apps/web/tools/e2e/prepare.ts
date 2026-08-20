@@ -36,8 +36,11 @@ import { ROSTER } from "../../tests/e2e/roster";
 
 const TEMPLATE_DB = "crm_e2e_template";
 const WORKER_DB_PREFIX = "crm_e2e_w";
-const BUILD_HASH_FILE = resolve(process.cwd(), ".output/.e2e-build-hash");
-const SERVER_ENTRY = resolve(process.cwd(), ".output/server/index.mjs");
+const BUILD_HASH_FILE = resolve(process.cwd(), "dist/.e2e-build-hash");
+// The build artifact proves the build is fresh; the runnable server is the
+// Bun entrypoint that imports it.
+const BUILD_ARTIFACT = resolve(process.cwd(), "dist/server/server.js");
+const SERVER_ENTRY = resolve(process.cwd(), "server.ts");
 const ROSTER_PASSWORD = "E2ePassw0rd!";
 
 // Executives need a team to resolve their workspace.
@@ -132,7 +135,7 @@ function sourceFingerprint(): string {
 function buildIfStale(): void {
   const fingerprint = sourceFingerprint();
   const built =
-    existsSync(SERVER_ENTRY) &&
+    existsSync(BUILD_ARTIFACT) &&
     existsSync(BUILD_HASH_FILE) &&
     readFileSync(BUILD_HASH_FILE, "utf8") === fingerprint;
 
@@ -141,7 +144,7 @@ function buildIfStale(): void {
     return;
   }
 
-  console.log("[e2e] building app (.output)...");
+  console.log("[e2e] building app (dist)...");
 
   // NODE_ENV=test breaks Rolldown's resolution of shiki's onig.wasm.
   const result = spawnSync("bun", ["run", "build:container"], {

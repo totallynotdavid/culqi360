@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { clsx } from "clsx";
-import { Show, splitProps, type JSX } from "solid-js";
+import { Show, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import styles from "./top-bar-action-button.module.css";
 

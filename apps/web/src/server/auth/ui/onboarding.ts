@@ -1,4 +1,4 @@
-import { redirect } from "@solidjs/router";
+import { redirect } from "@solidjs/web";
 
 import type { OnboardingSnapshot } from "~/contracts/auth";
 import { getSessionPath } from "~/domain/auth/access/route-policy";

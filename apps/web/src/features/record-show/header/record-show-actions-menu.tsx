@@ -4,10 +4,10 @@ import {
   createEffect,
   createSignal,
   onCleanup,
-  onMount,
+  onSettled,
   type Component,
 } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
 
 import DotsVertical from "~/components/icons/dots-vertical";
 import { TopBarActionButton } from "~/components/layout/top-bar-action-button";
@@ -58,7 +58,7 @@ export function RecordShowActionsMenu(props: RecordShowActionsMenuProps) {
     }
   }
 
-  onMount(() => {
+  onSettled(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!open()) {
         return;
@@ -78,9 +78,8 @@ export function RecordShowActionsMenu(props: RecordShowActionsMenuProps) {
 
     window.document.addEventListener("pointerdown", handlePointerDown);
 
-    onCleanup(() =>
-      window.document.removeEventListener("pointerdown", handlePointerDown),
-    );
+    return () =>
+      window.document.removeEventListener("pointerdown", handlePointerDown);
   });
 
   createEffect(() => {

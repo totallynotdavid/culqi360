@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
-import { createEffect, Show, type JSX, splitProps } from "solid-js";
+import { createEffect, Show, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import Check from "~/components/icons/check";
 import Minus from "~/components/icons/minus";

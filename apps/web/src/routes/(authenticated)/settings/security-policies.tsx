@@ -1,4 +1,4 @@
-import { createAsync, useAction } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
 import { SettingsSection } from "~/components/settings/SettingsSection";
@@ -49,9 +49,9 @@ export default function SecurityPoliciesPage() {
   const [isActive, setIsActive] = createSignal(true);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
 
-  const policySnapshot = createAsync(() => auditPolicySnapshotQuery());
-  const canManagePolicies = createAsync(() => canManageAuditPoliciesQuery(), {
-    initialValue: false,
+  const policySnapshot = createMemo(() => auditPolicySnapshotQuery());
+  const canManagePolicies = createMemo(() => canManageAuditPoliciesQuery(), {
+    loadingValue: false,
   });
 
   const saveAuditPolicy = useAction(upsertAuditPolicyMutation);

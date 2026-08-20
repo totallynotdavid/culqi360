@@ -1,4 +1,4 @@
-import { ErrorBoundary, Suspense } from "solid-js";
+import { Errored, Loading } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
 import CalendarDays from "~/components/icons/calendar-days";
@@ -160,13 +160,13 @@ export function CohortGrid(props: { view: GpvView }) {
 
   return (
     <div class={styles.surface}>
-      <ErrorBoundary
+      <Errored
         fallback={renderGrid({
           status: "error",
           rows: [],
         })}
       >
-        <Suspense
+        <Loading
           fallback={renderGrid({
             status: "pending",
             rows: [],
@@ -176,8 +176,8 @@ export function CohortGrid(props: { view: GpvView }) {
             status: "ready",
             rows: grid.rows(),
           })}
-        </Suspense>
-      </ErrorBoundary>
+        </Loading>
+      </Errored>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { A } from "@solidjs/router";
 import { clsx } from "clsx";
 import { Show } from "solid-js";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import CircleAlert from "~/components/icons/circle-alert";
 import CircleCheckBig from "~/components/icons/circle-check-big";

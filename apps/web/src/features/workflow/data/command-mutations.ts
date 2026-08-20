@@ -1,4 +1,5 @@
-import { action, json } from "@solidjs/router";
+import { action } from "@solidjs/router";
+import { respond } from "@solidjs/web";
 
 import type {
   AcceptRateInput,
@@ -69,7 +70,7 @@ export const createLeadMutation = action(async (input: CreateLeadInput) => {
     ? [leadListQuery.key, inquiryListQuery.key]
     : leadListQuery.key;
 
-  return json(result, { revalidate });
+  return respond(result, { revalidate });
 }, "workflow.createLead");
 
 export const createInquiryMutation = action(

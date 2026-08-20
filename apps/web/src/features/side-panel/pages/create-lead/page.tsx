@@ -1,4 +1,4 @@
-import { createAsync, useAction, useNavigate } from "@solidjs/router";
+import { useAction, useNavigate } from "@solidjs/router";
 import { createMemo, Show } from "solid-js";
 
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
@@ -38,7 +38,7 @@ export function CreateLeadPage() {
     return /^\d{11}$/.test(value) ? value : null;
   });
 
-  const bootstrapPreview = createAsync(() => {
+  const bootstrapPreview = createMemo(() => {
     const ruc = validRuc();
 
     return ruc ? leadBootstrapPreviewQuery(ruc) : Promise.resolve(null);
@@ -56,7 +56,6 @@ export function CreateLeadPage() {
     draftRuc,
     inquiryId: draftInquiryId,
     validRuc,
-    previewName: previewLegalName,
     scope: draftScope,
     currentUser,
     createLead,

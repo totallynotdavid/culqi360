@@ -1,10 +1,5 @@
-import {
-  createContext,
-  type ParentProps,
-  type JSX,
-  useContext,
-  type Accessor,
-} from "solid-js";
+import { createContext, type ParentProps, useContext, type Accessor } from "solid-js";
+import { type JSX } from "@solidjs/web";
 
 import type { HotkeyScope } from "./types";
 

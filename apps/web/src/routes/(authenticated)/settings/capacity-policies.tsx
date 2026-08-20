@@ -1,7 +1,9 @@
 import { Key } from "@solid-primitives/keyed";
-import { createAsync, useAction, useSubmission } from "@solidjs/router";
-import { Show, type Accessor } from "solid-js";
-import { createStore } from "solid-js/store";
+import { useAction, useSubmission } from "@solidjs/router";
+import { Loading, Show, createMemo, type Accessor } from "solid-js";
+
+import { Spinner } from "~/components/feedback/spinner/spinner";
+import { createStore } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import {
@@ -184,15 +186,13 @@ function CapacityPoliciesEditor(props: {
 }
 
 export default function CapacityPoliciesPage() {
-  const defaults = createAsync(() => capacityPolicyDefaultsQuery(), {
-    initialValue: null,
-  });
+  const defaults = createMemo(() => capacityPolicyDefaultsQuery());
 
   return (
     <SettingsPageLayout>
-      <Show when={defaults()}>
-        {(snapshot) => <CapacityPoliciesEditor snapshot={snapshot} />}
-      </Show>
+      <Loading fallback={<Spinner />}>
+        <CapacityPoliciesEditor snapshot={defaults} />
+      </Loading>
     </SettingsPageLayout>
   );
 }

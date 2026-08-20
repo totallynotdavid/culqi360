@@ -1,0 +1,321 @@
+ref: https://raw.githubusercontent.com/solidjs/solid-docs/refs/heads/v2-rebuild/src/routes/(6)migration/(1)from-solid-start.mdx
+
+Solid 2 just shipped to release
+candidate, and this update is a big one.
+It completely reworks how async is
+handled in the framework, making it a
+first-class feature, getting you a way
+better developer experience for data
+fetching, loading states, and
+reactivity. Effects have been changed,
+stores have changed, boundaries have
+changed, and loads of Solid JSX syntax
+has changed. And if that wasn't enough,
+there's a new compiler tool chain
+written in Rust, over 20 times faster
+than before, and the plugin now comes
+with a start mode which completely kills
+the need for Solid Start. They actually
+released Solid Start 2 a couple of weeks
+ago, and in this update, you can say
+goodbye to it. This whole update
+actually feels like a real innovation in
+front-end frameworks, so let's jump in
+and see everything that changed.
+So, the big headline in Solid 2 is that
+async is now part of the reactive graph.
+In Solid 1, you had to use the special
+create resource primitive to manage your
+async data, like we do with fetch user
+here, and from that resource, you could
+then access the latest resolved value,
+loading state, and errors. In Solid 2,
+though, this becomes much simpler.
+Computations can now just return
+promises directly, so we can use fetch
+user inside of create memo, and our user
+is simply a memo that happens to be
+async, and everything downstream
+understands it. Create resource has been
+removed. You may have also noticed that
+our suspense boundary got replaced with
+loading. They've actually reworked all
+of the boundaries, so suspense has now
+been removed, and you use a loading
+boundary, which renders the fallback if
+there's no data yet, so no first result.
+Then after that, you can use is pending
+if you want to track whether new values
+are being fetched. Error boundary also
+got replaced with errored, although this
+largely seems like a rename and a rework
+under the hood, and the same goes for
+suspense list, which has now been
+changed to reveal. Now, those examples
+might make you think the async work is
+basically just renames, but under the
+hood, it's a completely different
+approach to handling async in
+frameworks. Ryan actually posted a
+diagram on Reddit to try and explain
+some of this, so I recommend reading
+that for a full deep dive, but the TLDR
+is most frameworks block UI with a
+suspense boundary at the same time they
+consume a promise, so use in React or
+await in Svelte. But Solid 2 consumes
+the promise on creation into its graph,
+and blocks where the value is read. We
+We see this in React, where if I have
+all of my promises in my parent
+component and I click replay, I only
+ever see that first suspense boundary
+fallback as these requests are blocking
+the UI and it waits for all of them to
+finish first. You can obviously solve
+this in other ways like passing promises
+or co-locating, but it was always a
+trade-off between developer experience
+and user experience. Solid 1 did
+partially solve this already. I have all
+of my promises being consumed with
+create resource here and when I click
+replay, the user profile shows when the
+data is ready and then we see the team
+skeleton until its data is ready and the
+same goes for the member component. So,
+the user experience part is solved
+because the UI immediately updates when
+the data is ready. The problem in Solid
+1 though is we've had to scatter null
+and undefined checks everywhere when
+we're working with that value that we
+get from the resource. So, Solid 2 fixes
+all of this. When we consume our promise
+with create memo, the promise goes into
+the graph immediately and from that
+point on we only ever deal with a plain
+value, not the promise. So, all of these
+nested components can be purely
+presentational and the value also
+doesn't have the undefined state
+anymore. So, we can remove all of those
+checks from our code and at the same
+time we can use a loading boundary and
+Solid will handle whether the value is
+ready or not. This gets you the best
+user experience as UI shows when it's
+ready and the code is cleaner, so it's a
+better developer experience, too. You
+could get a much better developer
+experience by subscribing. It keeps you
+up to date with AI and dev news like
+this. Now, everything I've mentioned so
+far about async has been about reading,
+but what about writing? Because there's
+been some changes to how you do
+optimistic updates. In Solid 1,
+optimistic updates used the resource
+mutate function, but that's actually
+been removed and replaced with a much
+nicer flow with action, create
+optimistic and create optimistic store.
+So, if you wanted to have optimistic
+updates for our to-do app, first we
+create an optimistic store with our
+source of truth, which is going to be
+the server fetch. Then we create an add
+to-do action, add the to-do to the local
+store instantly, fire off the save API
+and then call refresh from the server
+when that's complete. Action actually
+gives the mutation a life cycle, so the
+local changes we make to the optimistic
+store only exist for the lifetime of
+this action. That means if this API call
+were to error out, the optimistic
+override would disappear and the UI goes
+back to the authoritative value. So, we
+now have automatic rollback, which is a
+pretty nice change from doing things
+manually in Solid 1. Now, for those
+Solid devs paying attention, you may
+have noticed something special about
+optimistic store. It actually handed us
+a draft here, which we mutated directly.
+This change has been made across all of
+the stores, so there's no need for the
+produce function anymore. That's been
+removed along with create mutable, as
+it's now just the default behavior.
+There is still a store path helper if
+you want the old pathway back though.
+Moving over to effects, they made some
+big changes here as well. In Solid 1, an
+effect was one function that did
+everything, tracking whatever you read
+and also the side effect. Solid 2 splits
+this into, separating dependency
+tracking from the side effect. The first
+function computes a value and gets
+tracked, and the second function is
+untracked, receives the value, and does
+all of the actual work. This creates a
+separation between what you depend on
+and what you do about it, and it
+replaces the need for the on function,
+as this is handled by the compute
+function now. And if you want the defer
+option that the on function had, you can
+simply do that as an option on the
+effect instead now. Alongside this,
+create computed was also removed, as you
+can simply use a memo if you want a
+derived value or split effect if you
+want a side effect. When it comes to
+cleaning up your effects, this also
+changed as well. Instead of calling on
+cleanup inside the function body, the
+apply function simply returns its
+cleanup function, kind of like React's
+approach. The same change has been made
+to the on mount function, which is now
+on settled. You return your cleanup from
+the callback. On settled actually fires
+when all of the async work under it has
+resolved, not just when the component
+mounts. When it comes to signals, not
+much has changed about how you use them,
+but the difference is under the hood.
+Solid 2 stages writes and commits them
+on the next microtask, so if you read a
+signal on the line right after setting
+it, you'll get the old value, but you
+can use the flush function to force the
+value through if you need it right away.
+This change has also meant that batch
+has been removed, because consecutive
+writes already share a batch by default,
+so there's nothing left to wrap. I think
+that's just about it for the async and
+reactivity changes that I wanted to
+cover, so let's take a look at JSX,
+which they also reworked, aiming to get
+a DOM model that's closer to HTML. If we
+start with classes, classList is now
+gone. Instead, class itself now takes
+strings, objects, or arrays. For
+conditionals now, you can simply use an
+object. So, there's no more
+concatenation, filter, or join tricks.
+Attributes also got the same treatment.
+The attribute and bool prefixes are
+gone. You just write standard
+attributes, and booleans follow normal
+HTML presence and absence rules. So, the
+attribute only appears if its value is
+truthy. On and on capture are also gone.
+Just use the camel case event props now,
+and use a ref callback and add event
+listener if you need the native listener
+options. For directives, the use
+namespace is gone. It's been replaced by
+ref callbacks and directive factories.
+And ref now takes an array, so you can
+stack multiple directives on the same
+element without wrapper function.
+Staying in JSX, lists also got
+simplified. In Solid 1, you had two
+components for rendering an array, for
+and index. For was keyed to each item
+got matched by identity, and index was
+the opposite. It was mapped by position.
+In Solid 2 though, index has been
+removed. So, there's now just for, but
+you can get that index behavior back by
+setting the prop key to false. And
+lastly for the JSX changes, there's also
+a new component called repeat. Instead
+of taking an array, this renders by
+count. You give it a start index and a
+count, and each row reads its own slot
+in the store. So, updating one row
+touches nothing else. I think that is
+finally everything noteworthy from the
+framework point of view. So, now let's
+focus on the tooling because the V
+plugin got two big changes, and the
+second one is why SolidStart doesn't
+need to exist anymore. First up, the
+compiler. Solid 2 ships a brand new
+compiler tool chain written in Rust on
+top of Oxy, and the V plugin defaults to
+this. So, you shouldn't have to make any
+changes. According to that benchmarks,
+they saw a speed up on that test project
+from around 440 milliseconds to compile
+down to just 19. And on a larger 1 MB
+single module, this came down from 25
+seconds to just 70 milliseconds. So, 355
+times faster. The second change is the
+bigger one though. The plugin now has
+its own start mode. This gets you a full
+app build on plain V with no index HTML
+scripts or entry files needed. By
+default, this will be in client only
+mode. So, building will emit purely
+static files, but you can also enable
+SSR if you want to ship a server bundle
+with the build and get server-side
+rendering. And on that note, if you like
+server functions, use server is now a
+core feature. On top of that, you can
+also get file system routing with a
+router neutral package, giving you solid
+start proven conventions, hot module
+reloading, code splitting, and more. I
+really like this setup because deploying
+is either static files or a server
+module that exports a web standard fetch
+handler, which Cloudflare Workers,
+Netlify Nitro, Bun, and Deno already
+speak. So, you deploy with your
+platform's own tooling, and there's no
+Solid specific adapter in the middle.
+This does mean that Solid Start is no
+longer needed, though. As that blog post
+says, Solid Start did its job. It was a
+meta framework meant to fill the gaps of
+Solid, but now two brings all of those
+capabilities home. If you are running
+Solid Start, nothing changes today. It
+will continue to get maintenance
+updates, and you can check out that
+migration guide if you want to switch
+over. That's about as many updates as I
+can fit in one video. You can see this
+was a seriously big update with loads of
+changes and removals from the APIs, and
+there would have even been a few that I
+didn't cover, like start transition and
+use transition being removed. So, I
+recommend checking out that migration
+guide from Solid 1 to Solid 2 if you
+want the full list. And it's also a
+great resource to point your agent at
+and ask it to migrate for you. I was
+going back and forth between Solid 1 and
+Solid 2 a lot, and Claude Code seemed to
+understand from this document and pick
+up all of the changes. I really liked
+diving deep into this update, and I'll
+be honest, I haven't used Solid in a
+while, but Solid 2 let me pick it up
+really easy, and I actually enjoyed
+using it quite a lot. So, I think I
+might use it a bit more in the future.
+What do you think? Did you use Solid
+before, and do you like this update? Let
+me know in the comments down below, or
+either subscribe, and as always, see you
+in the next one.

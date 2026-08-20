@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { For, Show } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 
 import { merchantStatsByRucQuery } from "~/rpc/merchant-stats/merchant-stats-by-ruc";
 
@@ -10,7 +9,7 @@ import { formatMonth, formatSolesCompact } from "../format";
 import styles from "./merchant-gpv-widget.module.css";
 
 export function MerchantGpvWidget(props: { ruc: string }) {
-  const stats = createAsync(() => merchantStatsByRucQuery(props.ruc));
+  const stats = createMemo(() => merchantStatsByRucQuery(props.ruc));
 
   return (
     <Show when={stats()} keyed>
