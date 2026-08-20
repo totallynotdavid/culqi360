@@ -35,7 +35,7 @@ export async function GET(event: APIEvent): Promise<Response> {
       return new Response("Forbidden", { status: 403 });
     }
 
-    const parsedUserId = UserId.parse(event.params.userId);
+    const parsedUserId = UserId.parse(event.params?.userId);
     if (isErr(parsedUserId)) {
       return new Response("Not found", { status: 404 });
     }

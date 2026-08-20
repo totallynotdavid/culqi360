@@ -101,11 +101,14 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
     setMoreButtonWidth(width);
   });
 
-  createEffect(() => {
-    if (!hasHiddenTabs() && isOverflowOpen()) {
-      setIsOverflowOpen(false);
-    }
-  });
+  createEffect(
+    () => hasHiddenTabs(),
+    (hasHidden) => {
+      if (!hasHidden) {
+        setIsOverflowOpen(false);
+      }
+    },
+  );
 
   onSettled(() => {
     const handleDocumentPointerDown = (event: PointerEvent) => {
@@ -141,11 +144,15 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
             const [element, setElement] = createSignal<HTMLDivElement>();
 
             createResizeObserver(element, ({ width }) => {
-              setTabWidths(tab.id, width);
+              setTabWidths((widths) => {
+                widths[tab.id] = width;
+              });
             });
 
             onCleanup(() => {
-              setTabWidths(tab.id, undefined);
+              setTabWidths((widths) => {
+                widths[tab.id] = undefined;
+              });
             });
 
             return (

@@ -32,7 +32,9 @@ export function createCreateLeadController(input: CreateLeadControllerInput) {
 
   createEffect(
     () => input.draftRuc(),
-    () => setErrorMessage(null),
+    () => {
+      setErrorMessage(null);
+    },
     { defer: true },
   );
 

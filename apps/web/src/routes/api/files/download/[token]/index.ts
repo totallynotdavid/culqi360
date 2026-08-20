@@ -10,7 +10,7 @@ export async function GET(
   event: Pick<APIEvent, "params" | "request">,
 ): Promise<Response> {
   try {
-    const token = event.params.token;
+    const token = event.params?.token;
     if (!token || typeof token !== "string" || token.length < 16) {
       return new Response("Invalid token", { status: 400 });
     }

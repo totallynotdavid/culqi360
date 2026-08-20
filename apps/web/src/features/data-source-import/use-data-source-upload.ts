@@ -89,15 +89,25 @@ export function useDataSourceUpload() {
   const rows = () => store.rows;
 
   function patchRow(id: string, patch: Partial<UploadRow>): void {
-    setStore("rows", (row) => row.id === id, patch);
+    setStore((draft) => {
+      const row = draft.rows.find((candidate) => candidate.id === id);
+
+      if (row) {
+        Object.assign(row, patch);
+      }
+    });
   }
 
   function addRow(defaultSourceKey: string): void {
-    setStore("rows", (current) => [...current, createRow(defaultSourceKey)]);
+    setStore((draft) => {
+      draft.rows.push(createRow(defaultSourceKey));
+    });
   }
 
   function removeRow(id: string): void {
-    setStore("rows", (current) => current.filter((row) => row.id !== id));
+    setStore((draft) => {
+      draft.rows = draft.rows.filter((row) => row.id !== id);
+    });
   }
 
   function setFile(id: string, file: File | null): void {

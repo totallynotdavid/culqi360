@@ -1,4 +1,5 @@
-import type { APIEvent } from "~/routes/api/request-event";
+import type { APIEvent } from "filesystem-routing/api";
+
 import { getApplication } from "~/server/composition/application";
 import { getRequestOperation } from "~/server/platform/http/request-context-storage";
 import { createLogger } from "~/shared/observability/runtime-logger";

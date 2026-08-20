@@ -30,7 +30,7 @@ export async function PUT(event: APIEvent): Promise<Response> {
       return new Response("Forbidden", { status: 403 });
     }
 
-    const uploadId = event.params.uploadId;
+    const uploadId = event.params?.uploadId;
 
     if (!uploadId) {
       return new Response("Not found", { status: 404 });

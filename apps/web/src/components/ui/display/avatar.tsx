@@ -24,7 +24,9 @@ export function Avatar(props: AvatarProps) {
 
   createEffect(
     () => props.imageUrl,
-    () => setHasImageError(false),
+    () => {
+      setHasImageError(false);
+    },
   );
 
   const showImage = () => Boolean(props.imageUrl) && !hasImageError();

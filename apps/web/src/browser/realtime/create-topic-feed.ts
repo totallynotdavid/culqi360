@@ -26,7 +26,9 @@ export function createTopicFeed<T>({
   const [records, setRecords] = createSignal<T[]>([]);
 
   if (resetKey) {
-    createEffect(resetKey, () => setRecords([]));
+    createEffect(resetKey, () => {
+      setRecords([]);
+    });
   }
 
   const connection = createTopicConnection({

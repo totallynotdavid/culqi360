@@ -17,6 +17,11 @@
       "~/*": ["./src/*"],
       "@tests/*": ["./tests/*"]
     },
-    "types": ["vite/client", "mdx", "@solidjs/vite-plugin/boundary-modules"]
+    "types": [
+      "vite/client",
+      "mdx",
+      "@solidjs/vite-plugin/boundary-modules",
+      "filesystem-routing/types"
+    ]
   }
 }

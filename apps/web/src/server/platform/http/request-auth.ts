@@ -1,3 +1,5 @@
+import type { RequestEvent } from "@solidjs/web";
+
 import {
   canAccessPath,
   getDefaultAppPath,
@@ -13,11 +15,6 @@ import { classifyRequest, isApiPath } from "./request-class";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const logger = createLogger("auth-request-guard");
-
-export interface AuthRequestEvent {
-  request: Request;
-  locals: App.RequestEventLocals;
-}
 
 export type AuthRequestDecision =
   | { kind: "allow" }
@@ -116,7 +113,7 @@ async function enforceWebhookRequest(
 }
 
 export async function enforceAuthRequest(
-  event: AuthRequestEvent,
+  event: RequestEvent,
 ): Promise<AuthRequestDecision> {
   const url = new URL(event.request.url);
   const requestClass = classifyRequest(url.pathname);
@@ -194,7 +191,7 @@ export async function enforceAuthRequest(
 }
 
 function logCsrfReject(
-  event: AuthRequestEvent,
+  event: RequestEvent,
   reason: string,
   targetOrigin: string,
 ): void {
