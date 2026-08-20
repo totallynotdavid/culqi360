@@ -1,5 +1,4 @@
 import { type JSX } from "@solidjs/web";
-import { clsx } from "clsx";
 import { merge, omit } from "solid-js";
 
 import { Loader } from "~/components/feedback/spinner/loader";
@@ -51,24 +50,19 @@ export function Button(props: ButtonProps) {
 
   return (
     <button
-      class={clsx(
+      class={[
         styles.button,
         styles[merged.size],
         styles[merged.variant],
         ACCENT_CLASS[merged.accent],
         merged.class,
-      )}
+      ]}
+      data-loading={merged.loading ? "" : undefined}
       disabled={others.disabled || merged.loading}
       {...others}
     >
-      <span
-        class={clsx(
-          styles.loaderSlot,
-          !merged.loading && styles.loaderSlotHidden,
-        )}
-        aria-hidden={merged.loading ? undefined : "true"}
-      >
-        {merged.loading ? <Loader /> : null}
+      <span class={styles.loaderSlot} aria-hidden="true">
+        <Loader />
       </span>
       <span class={styles.content}>{merged.children}</span>
     </button>

@@ -1,12 +1,8 @@
-import {
-  revalidate,
-  useAction,
-  useNavigate,
-  useSubmission,
-} from "@solidjs/router";
+import { revalidate, useAction, useNavigate } from "@solidjs/router";
 import { Match, Switch } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
+import { createActionPending } from "~/browser/ui/create-action-pending";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { AppPageBody } from "~/components/layout/page";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
@@ -41,7 +37,7 @@ export function MerchantGpvDashboard() {
   const view = useGpvView();
   const navigate = useNavigate();
   const requestExport = useAction(requestMerchantGpvExportMutation);
-  const exportSubmission = useSubmission(requestMerchantGpvExportMutation);
+  const exporting = createActionPending(requestMerchantGpvExportMutation);
   const { enqueueErrorSnackBar } = useSnackBar();
   const { currentUser } = useAuthenticatedSession();
 
@@ -83,7 +79,7 @@ export function MerchantGpvDashboard() {
             <Button
               variant="secondary"
               size="sm"
-              loading={exportSubmission.pending}
+              loading={exporting()}
               onClick={() => void exportReport()}
             >
               Exportar resultado

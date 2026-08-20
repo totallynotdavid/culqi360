@@ -1,4 +1,4 @@
-import { useSubmission } from "@solidjs/router";
+import { useSubmissions } from "@solidjs/router";
 import { createMemo, createSignal } from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
@@ -15,7 +15,7 @@ export function InviteActivationForm(props: {
   token: string;
   info: InviteActivationView;
 }) {
-  const submission = useSubmission(acceptInvitePasswordMutation);
+  const submissions = useSubmissions(acceptInvitePasswordMutation);
   const [password, setPassword] = createSignal("");
   const [confirmPassword, setConfirmPassword] = createSignal("");
 
@@ -25,8 +25,10 @@ export function InviteActivationForm(props: {
       : undefined,
   );
 
-  const actionError = () =>
-    submission.error ? parseWireError(submission.error).message : undefined;
+  const actionError = () => {
+    const error = submissions.at(-1)?.error;
+    return error ? parseWireError(error).message : undefined;
+  };
 
   return (
     <form
@@ -81,8 +83,7 @@ export function InviteActivationForm(props: {
       <Button
         type="submit"
         class={styles.full}
-        loading={submission.pending}
-        disabled={submission.pending || mismatchError() !== undefined}
+        disabled={mismatchError() !== undefined}
       >
         Activar cuenta
       </Button>

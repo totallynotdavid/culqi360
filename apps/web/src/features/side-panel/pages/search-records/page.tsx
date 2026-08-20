@@ -1,7 +1,8 @@
-import { useAction, useSubmission } from "@solidjs/router";
+import { useAction, useSubmissions } from "@solidjs/router";
 import { For, Match, Show, Switch, createMemo, createSignal } from "solid-js";
 
 import { useHotkey } from "~/browser/hotkey/use-hotkey";
+import { createActionPending } from "~/browser/ui/create-action-pending";
 import { Avatar } from "~/components/ui/display/avatar";
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
 import { MenuItem } from "~/components/ui/navigation/menu-item";
@@ -39,7 +40,8 @@ export function SearchRecordsPage() {
   const isMobile = useIsMobile();
 
   const executeSearch = useAction(searchDirectMutation);
-  const submission = useSubmission(searchDirectMutation);
+  const searches = useSubmissions(searchDirectMutation);
+  const searching = createActionPending(searchDirectMutation);
 
   // Keep results tied to the query that produced them.
   const [results, setResults] = createSignal<{
@@ -127,7 +129,7 @@ export function SearchRecordsPage() {
     <SidePanelPage>
       <div class={styles.content}>
         <Switch>
-          <Match when={submission.pending}>
+          <Match when={searching()}>
             <ListPageSkeleton />
           </Match>
 
@@ -135,7 +137,7 @@ export function SearchRecordsPage() {
             <EmptyState>Busca personas y empresas</EmptyState>
           </Match>
 
-          <Match when={submission.error}>
+          <Match when={searches.at(-1)?.error}>
             {(error) => (
               <p class={styles.error}>{actionErrorMessage(error())}</p>
             )}

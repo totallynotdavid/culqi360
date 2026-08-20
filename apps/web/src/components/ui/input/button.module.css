@@ -24,13 +24,29 @@
 }
 
 .loaderSlot {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
 }
 
-.loaderSlotHidden {
-  display: none;
+.button[data-loading] .loaderSlot,
+form[aria-busy] .button[type="submit"] .loaderSlot {
+  display: inline-flex;
+}
+
+form[aria-busy] .button[type="submit"] {
+  pointer-events: none;
+  box-shadow: none;
+}
+
+form[aria-busy] .primary[type="submit"],
+form[aria-busy] .secondary[type="submit"],
+form[aria-busy] .outline[type="submit"],
+form[aria-busy] .ghost[type="submit"],
+form[aria-busy] .destructive[type="submit"] {
+  background: var(--secondary);
+  border-color: var(--background-transparent-lighter);
+  color: var(--foreground-tertiary);
 }
 
 .content {

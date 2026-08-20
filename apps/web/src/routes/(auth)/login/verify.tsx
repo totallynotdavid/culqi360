@@ -1,4 +1,4 @@
-import { useSearchParams, useSubmission } from "@solidjs/router";
+import { useSearchParams, useSubmissions } from "@solidjs/router";
 import { createMemo, createSignal, Show, Loading } from "solid-js";
 
 import { Loader } from "~/components/feedback/spinner/loader";
@@ -22,7 +22,7 @@ import pageStyles from "~/features/auth/ui/login-page.module.css";
 export default function LoginVerifyPage() {
   useAuthPageView("login_verify");
   const [searchParams] = useSearchParams();
-  const totpSubmission = useSubmission(totpLoginMutation);
+  const totpSubmissions = useSubmissions(totpLoginMutation);
   const [totpCode, setTotpCode] = createSignal("");
   const flowId = () => parseLoginFlowId(searchParams.flow);
   const loginFlow = createMemo(() => {
@@ -31,8 +31,10 @@ export default function LoginVerifyPage() {
       ? loginFlowQuery(currentFlowId)
       : Promise.resolve(null);
   });
-  const submitError = () =>
-    totpSubmission.error ? parseWireError(totpSubmission.error) : undefined;
+  const submitError = () => {
+    const error = totpSubmissions.at(-1)?.error;
+    return error ? parseWireError(error) : undefined;
+  };
 
   const flowExpiredAtSubmit = () => {
     const submitFailure = submitError();
@@ -41,9 +43,6 @@ export default function LoginVerifyPage() {
 
   const totpFlow = createMemo(() => {
     const flow = loginFlow();
-    if (flow === undefined && flowId()) {
-      return undefined;
-    }
     if (flowExpiredAtSubmit()) {
       return null;
     }
@@ -115,11 +114,7 @@ export default function LoginVerifyPage() {
                     <a href="/login" class={linkStyles.passkeyLink}>
                       Usar otra cuenta
                     </a>
-                    <Button
-                      type="submit"
-                      class={styles.full}
-                      loading={totpSubmission.pending}
-                    >
+                    <Button type="submit" class={styles.full}>
                       Iniciar sesión
                     </Button>
                   </div>

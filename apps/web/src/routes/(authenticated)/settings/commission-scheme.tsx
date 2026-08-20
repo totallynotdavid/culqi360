@@ -2,7 +2,6 @@ import {
   type RouteDefinition,
   useAction,
   useSearchParams,
-  useSubmission,
 } from "@solidjs/router";
 import {
   Loading,
@@ -13,6 +12,7 @@ import {
 } from "solid-js";
 import { createStore, reconcile, snapshot } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/create-action-pending";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";
@@ -73,7 +73,7 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
   const [baseline, setBaseline] = createSignal(structuredClone(props.initial));
 
   const save = useAction(setCommissionSchemeMutation);
-  const saveSubmission = useSubmission(setCommissionSchemeMutation);
+  const saving = createActionPending(setCommissionSchemeMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
   const formId = createUniqueId();
   const { tab, setTab } = useCommissionTab();
@@ -117,12 +117,7 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
               Cancelar
             </Button>
 
-            <Button
-              type="submit"
-              form={formId}
-              size="sm"
-              loading={saveSubmission.pending}
-            >
+            <Button type="submit" form={formId} size="sm" loading={saving()}>
               Guardar
             </Button>
           </div>

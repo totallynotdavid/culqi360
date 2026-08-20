@@ -1,4 +1,4 @@
-import { revalidate, useAction, useSubmission } from "@solidjs/router";
+import { revalidate, useAction, useSubmissions } from "@solidjs/router";
 import {
   Errored,
   For,
@@ -8,6 +8,7 @@ import {
   Switch,
   createEffect,
   createMemo,
+  createOptimistic,
 } from "solid-js";
 
 import { createTopicState } from "~/browser/realtime/create-topic-state";
@@ -15,6 +16,7 @@ import { actionErrorMessage } from "~/contracts/errors";
 import {
   parseGpvSnapshotProgressMessage,
   type GpvSnapshotProgressEvent,
+  type GpvSnapshotView,
 } from "~/contracts/merchant-stats/imports";
 import { REALTIME_CHANNELS } from "~/contracts/realtime/channel";
 import { formatAppDateTime } from "~/domain/time/app-time";
@@ -28,15 +30,41 @@ import { formatInteger } from "../format";
 
 import styles from "./upload-report.module.css";
 
+// The boundaries live here so the card below only ever sees a settled view.
+// Keeping the realtime subscription and the revalidation effects inside the
+// card means their reads suspend to this Loading rather than to an ancestor.
 export function ImportStatus(props: { snapshotId: string }) {
   const snapshot = createMemo(() => gpvSnapshotQuery(props.snapshotId));
+
+  return (
+    <Errored
+      fallback={
+        <WidgetCardShell title="Importación GPV" status="error">
+          <span />
+        </WidgetCardShell>
+      }
+    >
+      <Loading fallback={<WidgetSkeleton />}>
+        <ImportSnapshotCard view={snapshot()} />
+      </Loading>
+    </Errored>
+  );
+}
+
+function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
   const resolveIssue = useAction(resolveGpvImportIssueMutation);
-  const resolution = useSubmission(resolveGpvImportIssueMutation);
-  let refreshedActiveSnapshotId: string | null = null;
+  const resolutions = useSubmissions(resolveGpvImportIssueMutation);
+
+  // Tentative for the action's lifetime, so it reverts on settle without a
+  // finally clause on either the success or the failure path.
+  const [resolving, setResolving] = createOptimistic(false);
+  resolveGpvImportIssueMutation.onSubmit(() => setResolving(true));
+
+  const resolutionError = () => resolutions.at(-1)?.error;
 
   // Terminal jobs no longer publish progress.
   const jobId = () => {
-    const job = snapshot()?.job;
+    const job = props.view.job;
 
     return !job || isTerminalJob(job.queueState) ? null : job.jobId;
   };
@@ -57,18 +85,17 @@ export function ImportStatus(props: { snapshotId: string }) {
     void revalidate(gpvSnapshotQuery.key);
   });
 
-  createEffect(() => {
-    const view = snapshot();
+  // A memo, not the effect's compute: effects re-run on every dependency
+  // change without comparing the computed value, so the dedupe that keeps
+  // this to one republish per snapshot has to happen here.
+  const publishedSnapshotId = createMemo(() =>
+    props.view.state === "active" ? props.view.snapshotId : null,
+  );
 
-    if (
-      view?.state !== "active" ||
-      refreshedActiveSnapshotId === view.snapshotId
-    ) {
-      return;
+  createEffect(publishedSnapshotId, (snapshotId) => {
+    if (snapshotId) {
+      void revalidate(PUBLISHED_GPV_QUERY_KEYS);
     }
-
-    refreshedActiveSnapshotId = view.snapshotId;
-    void revalidate(PUBLISHED_GPV_QUERY_KEYS);
   });
 
   async function submitDecision(
@@ -82,158 +109,131 @@ export function ImportStatus(props: { snapshotId: string }) {
     try {
       await resolveIssue({ issueId, resolution: choice });
     } catch {
-      // useSubmission renders the action error.
+      // A direct action call rethrows; the settled submission renders it.
     }
   }
 
   return (
-    <Errored
-      fallback={
-        <WidgetCardShell title="Importación GPV" status="error">
-          <span />
-        </WidgetCardShell>
+    <WidgetCardShell
+      title="Importación GPV"
+      action={
+        <span class={styles.status}>
+          Corte {formatAppDateTime(new Date(props.view.cutAt))}
+        </span>
       }
     >
-      <Loading fallback={<WidgetSkeleton />}>
-        <Show when={snapshot()}>
-          {(view) => (
-            <WidgetCardShell
-              title="Importación GPV"
-              action={
-                <span class={styles.status}>
-                  Corte {formatAppDateTime(new Date(view().cutAt))}
-                </span>
-              }
-            >
-              <div class={styles.panel}>
-                <Show when={resolution.error}>
-                  {(error) => (
-                    <p class={styles.statusError}>
-                      {actionErrorMessage(error())}
-                    </p>
-                  )}
-                </Show>
-
-                <Switch>
-                  <Match
-                    when={
-                      view().state === "queued" || view().state === "processing"
-                    }
-                  >
-                    <ImportProgress job={view().job} />
-
-                    <Show when={progress.connection() === "offline"}>
-                      <p class={styles.status}>Sin conexión. Reintentando...</p>
-                    </Show>
-
-                    <Show when={progress.connection() === "denied"}>
-                      <p class={styles.statusError}>
-                        Se perdió la conexión. Recarga la página.
-                      </p>
-                    </Show>
-                  </Match>
-
-                  <Match when={view().state === "needs_review"}>
-                    <p class={styles.statusError}>
-                      Esta actualización necesita una decisión antes de
-                      publicarse.
-                    </p>
-
-                    <For each={view().issues}>
-                      {(issue) => (
-                        <div class={styles.reviewIssue}>
-                          <p>{issue.detail}</p>
-
-                          <div class={styles.reviewActions}>
-                            <Show when={issue.type !== "row_rejected"}>
-                              <DecisionButton
-                                disabled={Boolean(resolution.pending)}
-                                onClick={() =>
-                                  void submitDecision(issue.id, "keep_previous")
-                                }
-                              >
-                                Mantener anterior
-                              </DecisionButton>
-
-                              <DecisionButton
-                                disabled={Boolean(resolution.pending)}
-                                onClick={() =>
-                                  void submitDecision(
-                                    issue.id,
-                                    "accept_candidate",
-                                  )
-                                }
-                              >
-                                {issue.type === "placement_missing"
-                                  ? "Aceptar ausencia"
-                                  : "Usar nuevo"}
-                              </DecisionButton>
-                            </Show>
-
-                            <Show when={issue.type === "row_rejected"}>
-                              <DecisionButton
-                                disabled={Boolean(resolution.pending)}
-                                onClick={() =>
-                                  void submitDecision(
-                                    issue.id,
-                                    "exclude_candidate",
-                                  )
-                                }
-                              >
-                                Omitir fila inválida
-                              </DecisionButton>
-                            </Show>
-
-                            <DecisionButton
-                              disabled={Boolean(resolution.pending)}
-                              onClick={() =>
-                                void submitDecision(issue.id, "reject_snapshot")
-                              }
-                            >
-                              Descartar actualización
-                            </DecisionButton>
-                          </div>
-                        </div>
-                      )}
-                    </For>
-                  </Match>
-
-                  <Match when={view().state === "active"}>
-                    <p class={styles.statusDone}>
-                      La actualización está publicada.
-                    </p>
-                  </Match>
-
-                  <Match when={view().state === "ready"}>
-                    <p class={styles.statusDone}>
-                      La actualización está lista para publicarse.
-                    </p>
-                  </Match>
-
-                  <Match when={view().state === "superseded"}>
-                    <p class={styles.status}>
-                      Esta actualización fue reemplazada por una más reciente.
-                    </p>
-                  </Match>
-
-                  <Match when={view().state === "rejected"}>
-                    <p class={styles.status}>
-                      La actualización fue descartada.
-                    </p>
-                  </Match>
-
-                  <Match when={view().state === "failed"}>
-                    <p class={styles.statusError}>
-                      {view().job?.errorMessage ?? "La importación falló."}
-                    </p>
-                  </Match>
-                </Switch>
-              </div>
-            </WidgetCardShell>
+      <div class={styles.panel}>
+        <Show when={resolutionError()}>
+          {(error) => (
+            <p class={styles.statusError}>{actionErrorMessage(error())}</p>
           )}
         </Show>
-      </Loading>
-    </Errored>
+
+        <Switch>
+          <Match
+            when={
+              props.view.state === "queued" || props.view.state === "processing"
+            }
+          >
+            <ImportProgress job={props.view.job} />
+
+            <Show when={progress.connection() === "offline"}>
+              <p class={styles.status}>Sin conexión. Reintentando...</p>
+            </Show>
+
+            <Show when={progress.connection() === "denied"}>
+              <p class={styles.statusError}>
+                Se perdió la conexión. Recarga la página.
+              </p>
+            </Show>
+          </Match>
+
+          <Match when={props.view.state === "needs_review"}>
+            <p class={styles.statusError}>
+              Esta actualización necesita una decisión antes de publicarse.
+            </p>
+
+            <For each={props.view.issues}>
+              {(issue) => (
+                <div class={styles.reviewIssue}>
+                  <p>{issue.detail}</p>
+
+                  <div class={styles.reviewActions}>
+                    <Show when={issue.type !== "row_rejected"}>
+                      <DecisionButton
+                        disabled={resolving()}
+                        onClick={() =>
+                          void submitDecision(issue.id, "keep_previous")
+                        }
+                      >
+                        Mantener anterior
+                      </DecisionButton>
+
+                      <DecisionButton
+                        disabled={resolving()}
+                        onClick={() =>
+                          void submitDecision(issue.id, "accept_candidate")
+                        }
+                      >
+                        {issue.type === "placement_missing"
+                          ? "Aceptar ausencia"
+                          : "Usar nuevo"}
+                      </DecisionButton>
+                    </Show>
+
+                    <Show when={issue.type === "row_rejected"}>
+                      <DecisionButton
+                        disabled={resolving()}
+                        onClick={() =>
+                          void submitDecision(issue.id, "exclude_candidate")
+                        }
+                      >
+                        Omitir fila inválida
+                      </DecisionButton>
+                    </Show>
+
+                    <DecisionButton
+                      disabled={resolving()}
+                      onClick={() =>
+                        void submitDecision(issue.id, "reject_snapshot")
+                      }
+                    >
+                      Descartar actualización
+                    </DecisionButton>
+                  </div>
+                </div>
+              )}
+            </For>
+          </Match>
+
+          <Match when={props.view.state === "active"}>
+            <p class={styles.statusDone}>La actualización está publicada.</p>
+          </Match>
+
+          <Match when={props.view.state === "ready"}>
+            <p class={styles.statusDone}>
+              La actualización está lista para publicarse.
+            </p>
+          </Match>
+
+          <Match when={props.view.state === "superseded"}>
+            <p class={styles.status}>
+              Esta actualización fue reemplazada por una más reciente.
+            </p>
+          </Match>
+
+          <Match when={props.view.state === "rejected"}>
+            <p class={styles.status}>La actualización fue descartada.</p>
+          </Match>
+
+          <Match when={props.view.state === "failed"}>
+            <p class={styles.statusError}>
+              {props.view.job?.errorMessage ?? "La importación falló."}
+            </p>
+          </Match>
+        </Switch>
+      </div>
+    </WidgetCardShell>
   );
 }
 

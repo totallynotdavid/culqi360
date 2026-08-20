@@ -1,7 +1,8 @@
-import { useAction, useSubmission } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
 import { For, Show, createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/create-action-pending";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import {
   CapacityLimitFields,
@@ -64,17 +65,18 @@ function MemberCapacityEditor(props: {
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
   const executiveId = () => props.detail().executive.id;
-  const searchGrantSubmission = useSubmission(
+
+  const grantingSearches = createActionPending(
     grantMoreSearchesMutation,
-    (input) => input[0] === executiveId(),
+    (userId) => userId === executiveId(),
   );
-  const refillGrantSubmission = useSubmission(
+  const grantingRefill = createActionPending(
     grantMoreLeadRefillMutation,
-    (input) => input[0] === executiveId(),
+    (userId) => userId === executiveId(),
   );
-  const overrideSubmission = useSubmission(
+  const savingOverride = createActionPending(
     updateExecutivePolicyOverrideMutation,
-    (input) => input[0].userId === executiveId(),
+    (input) => input.userId === executiveId(),
   );
 
   const [searchGrant, setSearchGrant] = createSignal("25");
@@ -208,7 +210,7 @@ function MemberCapacityEditor(props: {
                 type="submit"
                 size="sm"
                 variant="secondary"
-                loading={searchGrantSubmission.pending}
+                loading={grantingSearches()}
               >
                 Otorgar
               </Button>
@@ -237,7 +239,7 @@ function MemberCapacityEditor(props: {
                 type="submit"
                 size="sm"
                 variant="secondary"
-                loading={refillGrantSubmission.pending}
+                loading={grantingRefill()}
               >
                 Otorgar
               </Button>
@@ -257,16 +259,13 @@ function MemberCapacityEditor(props: {
             void saveOverride();
           }}
         >
-          <CapacityLimitFields
-            draft={override}
-            setValue={(key, value) => setOverride(key, value)}
-          />
+          <CapacityLimitFields draft={override} setDraft={setOverride} />
           <div class={styles.capacityActions}>
             <Button
               type="submit"
               size="sm"
               variant="secondary"
-              loading={overrideSubmission.pending}
+              loading={savingOverride()}
             >
               Guardar límite
             </Button>

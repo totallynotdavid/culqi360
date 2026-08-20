@@ -1,8 +1,8 @@
-import { Key } from "@solid-primitives/keyed";
-import { useAction, useSubmission } from "@solidjs/router";
-import { Loading, Show, createMemo, type Accessor } from "solid-js";
+import { useAction } from "@solidjs/router";
+import { For, Loading, createMemo, type Accessor } from "solid-js";
 import { createStore } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/create-action-pending";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Spinner } from "~/components/feedback/spinner/spinner";
 import {
@@ -31,10 +31,10 @@ function TeamPolicyRow(props: {
   const savePolicy = useAction(updateScopePolicyMutation);
 
   // Only this team's row shows the pending state.
-  const submission = useSubmission(
+  const saving = createActionPending(
     updateScopePolicyMutation,
     (input) =>
-      input[0].scopeType === "team" && input[0].scopeId === props.team().teamId,
+      input.scopeType === "team" && input.scopeId === props.team().teamId,
   );
 
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
@@ -85,18 +85,10 @@ function TeamPolicyRow(props: {
         </span>
       </div>
 
-      <CapacityLimitFields
-        draft={draft}
-        setValue={(key, value) => setDraft(key, value)}
-      />
+      <CapacityLimitFields draft={draft} setDraft={setDraft} />
 
       <div class={styles.formActions}>
-        <Button
-          type="submit"
-          size="sm"
-          variant="secondary"
-          loading={submission.pending}
-        >
+        <Button type="submit" size="sm" variant="secondary" loading={saving()}>
           Guardar
         </Button>
       </div>
@@ -109,9 +101,9 @@ function CapacityPoliciesEditor(props: {
 }) {
   const initialSnapshot = props.snapshot();
   const savePolicy = useAction(updateScopePolicyMutation);
-  const submission = useSubmission(
+  const saving = createActionPending(
     updateScopePolicyMutation,
-    (input) => input[0].scopeType === "branch",
+    (input) => input.scopeType === "branch",
   );
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
@@ -149,17 +141,14 @@ function CapacityPoliciesEditor(props: {
             void saveBranch();
           }}
         >
-          <CapacityLimitFields
-            draft={branchDraft}
-            setValue={(key, value) => setBranchDraft(key, value)}
-          />
+          <CapacityLimitFields draft={branchDraft} setDraft={setBranchDraft} />
 
           <div class={styles.formActions}>
             <Button
               type="submit"
               size="sm"
               variant="secondary"
-              loading={submission.pending}
+              loading={saving()}
             >
               Guardar
             </Button>
@@ -173,11 +162,11 @@ function CapacityPoliciesEditor(props: {
       >
         <div class={styles.teamList}>
           {/* Preserve each row's draft when query results are revalidated. */}
-          <Key each={props.snapshot().teams} by="teamId">
+          <For each={props.snapshot().teams} keyed={(team) => team.teamId}>
             {(team) => (
               <TeamPolicyRow team={team} branchDefaults={props.snapshot} />
             )}
-          </Key>
+          </For>
         </div>
       </SettingsSection>
     </>

@@ -1,4 +1,4 @@
-import { useSubmission } from "@solidjs/router";
+import { useSubmissions } from "@solidjs/router";
 import { Show } from "solid-js";
 
 import { EnterTransition } from "~/components/ui/animation/enter-transition";
@@ -17,11 +17,14 @@ import styles from "~/features/auth/ui/auth-shell.module.css";
 import pageStyles from "~/features/auth/ui/login-page.module.css";
 
 export function SetNewPasswordForm(props: { token: string }) {
-  const submission = useSubmission(resetPasswordMutation);
-  const succeeded = () => submission.result?.ok === true;
+  const submissions = useSubmissions(resetPasswordMutation);
+  const latest = () => submissions.at(-1);
+  const succeeded = () => latest()?.result?.ok === true;
 
-  const submitError = () =>
-    submission.error ? parseWireError(submission.error) : undefined;
+  const submitError = () => {
+    const error = latest()?.error;
+    return error ? parseWireError(error) : undefined;
+  };
 
   const tokenExpiredMessage = () => {
     const submitFailure = submitError();
@@ -71,11 +74,7 @@ export function SetNewPasswordForm(props: { token: string }) {
                     required
                   />
                   <LoginFeedback message={fieldError()} />
-                  <Button
-                    type="submit"
-                    class={styles.full}
-                    loading={submission.pending}
-                  >
+                  <Button type="submit" class={styles.full}>
                     Cambiar contraseña
                   </Button>
                   <a href="/login" class={linkStyles.passkeyLink}>

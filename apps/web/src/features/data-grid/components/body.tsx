@@ -1,5 +1,4 @@
-import { Key } from "@solid-primitives/keyed";
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 
 import type {
   DataGridActionRowConfig,
@@ -22,7 +21,7 @@ export function DataGridBody<T>(props: {
 }) {
   return (
     <>
-      <Key each={props.rows} by={props.rowId}>
+      <For each={props.rows} keyed={props.rowId}>
         {(row, index) => (
           <DataGridRow
             columns={props.columns}
@@ -35,7 +34,7 @@ export function DataGridBody<T>(props: {
             stickyColumnIndex={props.stickyColumnIndex}
           />
         )}
-      </Key>
+      </For>
 
       <Show when={props.actionRow}>
         {(action) => (
