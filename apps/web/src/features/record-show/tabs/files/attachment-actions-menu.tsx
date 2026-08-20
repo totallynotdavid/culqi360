@@ -80,7 +80,7 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
         size="icon"
         class={styles.actionsMenuTrigger}
         aria-haspopup="menu"
-        aria-expanded={isOpen()}
+        aria-expanded={isOpen() ? "true" : "false"}
         aria-label="Acciones de archivo"
         ref={(el) => (triggerRef = el)}
         onClick={() => {

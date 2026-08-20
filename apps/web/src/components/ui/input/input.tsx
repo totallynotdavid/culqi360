@@ -77,7 +77,7 @@ export function Input(props: InputProps) {
             aria-label={
               showPassword() ? "Ocultar contraseña" : "Mostrar contraseña"
             }
-            aria-pressed={showPassword()}
+            aria-pressed={showPassword() ? "true" : "false"}
             onClick={() => setShowPassword((v) => !v)}
           >
             {showPassword() ? (

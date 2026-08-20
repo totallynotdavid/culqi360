@@ -51,7 +51,11 @@ export function NavigationDrawerActionItem(
             onClick={props.onClick}
             disabled={props.unavailable}
             aria-expanded={
-              props.showChevron ? props.chevronExpanded : undefined
+              props.showChevron
+                ? props.chevronExpanded
+                  ? "true"
+                  : "false"
+                : undefined
             }
             style={frame.style()}
           >

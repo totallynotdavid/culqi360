@@ -108,7 +108,7 @@ export default function RateSimulatorPage() {
                 {(medio) => (
                   <Input
                     label={MEDIO_LABEL[medio]}
-                    inputMode="decimal"
+                    inputmode="decimal"
                     value={valueFor(form(), "mix", medio)}
                     onInput={(event) =>
                       updateField("mix", medio, event.currentTarget.value)
@@ -125,7 +125,7 @@ export default function RateSimulatorPage() {
                 {(medio) => (
                   <Input
                     label={MEDIO_LABEL[medio]}
-                    inputMode="decimal"
+                    inputmode="decimal"
                     value={valueFor(form(), "currentRates", medio)}
                     onInput={(event) =>
                       updateField(
@@ -146,7 +146,7 @@ export default function RateSimulatorPage() {
                 {(medio) => (
                   <Input
                     label={MEDIO_LABEL[medio]}
-                    inputMode="decimal"
+                    inputmode="decimal"
                     value={valueFor(form(), "proposalRates", medio)}
                     onInput={(event) =>
                       updateField(

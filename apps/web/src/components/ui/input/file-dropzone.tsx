@@ -131,7 +131,7 @@ export function FileDropzone(props: FileDropzoneProps) {
         class={styles.input}
         accept={props.accept}
         multiple={props.multiple}
-        tabIndex={-1}
+        tabindex={-1}
         aria-hidden="true"
         onChange={onInputChange}
       />

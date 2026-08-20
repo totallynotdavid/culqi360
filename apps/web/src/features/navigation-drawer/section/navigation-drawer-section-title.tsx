@@ -25,7 +25,7 @@ export function NavigationDrawerSectionTitle(props: Props) {
           type="button"
           class={styles.sectionTitle}
           onClick={onClick()}
-          aria-expanded={props.isOpen}
+          aria-expanded={props.isOpen ? "true" : "false"}
         >
           <SectionTitleContent label={props.label} isOpen={props.isOpen} />
         </button>

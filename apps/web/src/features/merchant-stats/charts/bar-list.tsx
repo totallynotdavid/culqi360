@@ -63,8 +63,7 @@ export function BarList(props: BarListProps) {
               </div>
               <div class={styles.track}>
                 <div
-                  class={styles.fill}
-                  classList={{ [styles.fillHit]: hitsTarget() }}
+                  class={[styles.fill, hitsTarget() && styles.fillHit]}
                   style={{ width: width() }}
                 />
                 <Show when={targetLeft()}>

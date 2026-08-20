@@ -134,7 +134,7 @@ export function DatePicker(props: DatePickerProps) {
           name={props.name}
           class={styles.control}
           type="text"
-          inputMode="numeric"
+          inputmode="numeric"
           autocomplete="off"
           spellcheck={false}
           placeholder={props.placeholder ?? "AAAA-MM-DD"}
@@ -157,7 +157,7 @@ export function DatePicker(props: DatePickerProps) {
           class={styles.iconButton}
           aria-label="Abrir calendario"
           aria-haspopup="dialog"
-          aria-expanded={isOpen()}
+          aria-expanded={isOpen() ? "true" : "false"}
           disabled={props.disabled}
           onClick={() => {
             if (isOpen()) {

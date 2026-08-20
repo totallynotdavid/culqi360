@@ -1,4 +1,4 @@
-import { For, Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { WidgetSkeleton } from "~/features/widgets/widget-skeleton";

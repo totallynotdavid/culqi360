@@ -54,10 +54,7 @@ export function TotpMethodCard(props: TotpMethodCardProps) {
           <p class={styles.methodDescription}>{props.description}</p>
         </div>
         <span
-          classList={{
-            [styles.statusPill]: true,
-            [styles.statusPillSuccess]: props.active,
-          }}
+          class={[styles.statusPill, props.active && styles.statusPillSuccess]}
         >
           {props.statusLabel}
         </span>

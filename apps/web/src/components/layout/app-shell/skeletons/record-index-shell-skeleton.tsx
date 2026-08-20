@@ -1,4 +1,4 @@
-import { For, Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { PageCardHeader } from "~/components/ui/layout/page-card/page-card-header";

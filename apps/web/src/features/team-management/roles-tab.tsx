@@ -63,7 +63,7 @@ export function RolesTab() {
               return (
                 <TableRow
                   clickable
-                  tabIndex={0}
+                  tabindex={0}
                   onClick={openRoleDetails}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {

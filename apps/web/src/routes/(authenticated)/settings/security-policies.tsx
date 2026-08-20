@@ -109,7 +109,7 @@ export default function SecurityPoliciesPage() {
               when={rows().length > 0}
               fallback={
                 <TableRow>
-                  <TableCell colSpan={5}>
+                  <TableCell colspan={5}>
                     <span class={styles.helperText}>
                       {policySnapshot() === undefined
                         ? "Cargando..."

@@ -43,10 +43,7 @@ export function OnboardingShell(props: OnboardingShellProps) {
         <div class={styles.headerRight} />
       </header>
 
-      <div
-        class={styles.stepPage}
-        classList={{ [styles.stepPageCentered]: props.centered }}
-      >
+      <div class={[styles.stepPage, props.centered && styles.stepPageCentered]}>
         {props.children}
       </div>
     </div>

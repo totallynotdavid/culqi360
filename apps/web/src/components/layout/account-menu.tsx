@@ -44,7 +44,7 @@ export function AccountMenu(props: AccountMenuProps) {
       <button
         type="button"
         aria-haspopup="menu"
-        aria-expanded={open()}
+        aria-expanded={open() ? "true" : "false"}
         onClick={() => setOpen((prev) => !prev)}
         class={clsx(styles.trigger, props.collapsed && styles.triggerCollapsed)}
       >

@@ -71,10 +71,7 @@ export function UploadReport() {
         }}
       >
         {(state) => (
-          <div
-            class={styles.dropzone}
-            classList={{ [styles.dragging]: state.dragging }}
-          >
+          <div class={[styles.dropzone, state.dragging && styles.dragging]}>
             <p class={styles.dropTitle}>
               Arrastra el reporte GPV (.xlsx) o haz clic para elegir
             </p>

@@ -128,7 +128,7 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
             type="button"
             class={styles.secondaryButton}
             aria-haspopup="menu"
-            aria-expanded={isOptionsOpen()}
+            aria-expanded={isOptionsOpen() ? "true" : "false"}
             ref={setTriggerRef}
             onClick={toggleOptions}
           >
@@ -157,10 +157,10 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
               {(option) => (
                 <button
                   type="button"
-                  classList={{
-                    [styles.optionsMenuItem]: true,
-                    [styles.optionsMenuItemDanger]: option.danger,
-                  }}
+                  class={[
+                    styles.optionsMenuItem,
+                    option.danger && styles.optionsMenuItemDanger,
+                  ]}
                   disabled={option.disabled}
                   onClick={() => {
                     if (option.disabled) {

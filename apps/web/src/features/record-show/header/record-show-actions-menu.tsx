@@ -129,13 +129,10 @@ export function RecordShowActionsMenu(props: RecordShowActionsMenuProps) {
                 {(item) => (
                   <button
                     type="button"
-                    classList={{
-                      [styles.item]: true,
-                      [styles.dangerItem]: item.danger,
-                    }}
+                    class={[styles.item, item.danger && styles.dangerItem]}
                     role="menuitem"
                     disabled={item.disabled}
-                    aria-disabled={item.disabled}
+                    aria-disabled={item.disabled ? "true" : "false"}
                     onClick={() => {
                       if (item.disabled) {
                         return;

@@ -11,9 +11,6 @@ export function RecordIndexTableContainer<T extends { id: string }>(props: {
   const actionRow = () => {
     const createAction = props.controller.definition.createAction;
 
-    // The inline create row belongs under existing rows; the empty state
-    // offers its own call to action. A rowless grid also covers the
-    // still-loading case, since the read suspends before it gets here.
     if (!createAction || source().rows.length === 0) {
       return undefined;
     }

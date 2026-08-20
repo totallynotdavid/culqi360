@@ -54,7 +54,7 @@ export function TopBarActionButton(props: TopBarActionButtonProps) {
             onClick={props.onClick}
             disabled={props.disabled}
             aria-label={props.ariaLabel}
-            aria-pressed={props.pressed}
+            aria-pressed={props.pressed ? "true" : "false"}
             data-testid={props.dataTestId}
             data-click-outside-id={props.dataClickOutsideId}
           >

@@ -139,7 +139,7 @@ function NestedNode(props: {
     }),
   );
   const children = (
-    <ul classList={{ [styles.list]: true, [styles.nested]: props.depth > 0 }}>
+    <ul class={[styles.list, props.depth > 0 && styles.nested]}>
       <Show
         when={props.entries.length > 0}
         fallback={

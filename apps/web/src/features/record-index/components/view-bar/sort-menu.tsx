@@ -94,7 +94,7 @@ export function SortMenu(props: SortMenuProps) {
               type="button"
               class={sharedStyles.menuItem}
               data-active={sortDirection() === "asc" ? "true" : "false"}
-              aria-pressed={sortDirection() === "asc"}
+              aria-pressed={sortDirection() === "asc" ? "true" : "false"}
               onClick={() => setSortDirection("asc")}
             >
               <span class={sharedStyles.menuItemIcon}>
@@ -106,7 +106,7 @@ export function SortMenu(props: SortMenuProps) {
               type="button"
               class={sharedStyles.menuItem}
               data-active={sortDirection() === "desc" ? "true" : "false"}
-              aria-pressed={sortDirection() === "desc"}
+              aria-pressed={sortDirection() === "desc" ? "true" : "false"}
               onClick={() => setSortDirection("desc")}
             >
               <span class={sharedStyles.menuItemIcon}>
@@ -138,7 +138,7 @@ export function SortMenu(props: SortMenuProps) {
                       type="button"
                       class={sharedStyles.menuItem}
                       data-active={isActive() ? "true" : "false"}
-                      aria-pressed={isActive()}
+                      aria-pressed={isActive() ? "true" : "false"}
                       onClick={() => selectSortField(fieldOption.prefix)}
                     >
                       <span class={sharedStyles.menuItemIcon}>

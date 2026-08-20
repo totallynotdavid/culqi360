@@ -36,7 +36,7 @@ export default function AppearanceSettingsPage() {
                     styles.themeCard,
                     selected() && styles.themeCardActive,
                   )}
-                  aria-pressed={selected()}
+                  aria-pressed={selected() ? "true" : "false"}
                   onClick={() => setTheme(option.value)}
                 >
                   <span

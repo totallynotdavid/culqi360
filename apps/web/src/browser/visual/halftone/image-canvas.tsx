@@ -124,7 +124,7 @@ export function HalftoneImageCanvas(
 
   return (
     <div
-      aria-hidden
+      aria-hidden="true"
       ref={(el) => {
         mountRef = el;
       }}

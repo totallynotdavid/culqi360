@@ -119,7 +119,7 @@ function CalendarDayButton(props: {
         props.cell.isSelected ? styles.daySelected : undefined,
       )}
       disabled={props.cell.isDisabled}
-      aria-pressed={props.cell.isSelected}
+      aria-pressed={props.cell.isSelected ? "true" : "false"}
       onClick={() => props.onSelect(props.cell.date)}
     >
       {props.cell.label}

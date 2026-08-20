@@ -37,6 +37,8 @@ export function RecordIndexHeader() {
             aria-expanded={
               recordIndex.definition.views
                 ? recordIndex.columns.openMenu() === "views"
+                  ? "true"
+                  : "false"
                 : undefined
             }
             aria-haspopup={recordIndex.definition.views ? "dialog" : undefined}

@@ -94,7 +94,7 @@ export function TeamTab() {
             when={filtered().length > 0}
             fallback={
               <TableRow>
-                <TableCell class={styles.rosterEmpty} colSpan={4}>
+                <TableCell class={styles.rosterEmpty} colspan={4}>
                   {filter()
                     ? "Ningún miembro coincide con tu búsqueda."
                     : "No hay miembros."}
@@ -109,7 +109,7 @@ export function TeamTab() {
                 return (
                   <TableRow
                     clickable={canOpen()}
-                    tabIndex={canOpen() ? 0 : undefined}
+                    tabindex={canOpen() ? 0 : undefined}
                     onClick={() => openMember(member)}
                     onKeyDown={(event) => {
                       if (

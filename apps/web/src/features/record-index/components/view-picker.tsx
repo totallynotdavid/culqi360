@@ -41,7 +41,7 @@ export function RecordIndexViewPicker(props: {
                       <button
                         type="button"
                         class={sharedStyles.menuItem}
-                        aria-pressed={isActive()}
+                        aria-pressed={isActive() ? "true" : "false"}
                         data-active={isActive() ? "true" : "false"}
                         onClick={() => {
                           recordIndex.view?.set(view.id);

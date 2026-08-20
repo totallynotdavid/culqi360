@@ -187,10 +187,10 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
           <button
             type="button"
             data-testid="tab-tab-more-button"
-            classList={{
-              [styles.moreTab]: true,
-              [styles.moreTabActive]: isActiveTabHidden(),
-            }}
+            class={[
+              styles.moreTab,
+              isActiveTabHidden() && styles.moreTabActive,
+            ]}
             onClick={() => setIsOverflowOpen((open) => !open)}
           >
             <span class={styles.moreTabContent}>
@@ -205,10 +205,10 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
                 {(tab) => (
                   <button
                     type="button"
-                    classList={{
-                      [styles.moreMenuItem]: true,
-                      [styles.moreMenuItemActive]: tab.id === props.activeTab,
-                    }}
+                    class={[
+                      styles.moreMenuItem,
+                      tab.id === props.activeTab && styles.moreMenuItemActive,
+                    ]}
                     onClick={() => {
                       props.onTabSelect(tab.id);
                       setIsOverflowOpen(false);
