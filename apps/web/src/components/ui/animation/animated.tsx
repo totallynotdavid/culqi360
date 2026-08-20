@@ -245,39 +245,49 @@ export function Animated(inputProps: AnimatedProps) {
     previousRect = nextRect;
   };
 
-  createRenderEffect(runLayoutAnimation);
+  // The layout pass has no reactive input of its own: it compares the
+  // element's box against the previous one, so it runs on every render.
+  createRenderEffect(
+    () => props.layout,
+    () => {
+      runLayoutAnimation();
+    },
+  );
 
-  createEffect(() => {
-    if (!el) {
-      return;
-    }
-
-    const currentPresent = isPresent();
-    const initialFromPresence = presenceContext?.initial;
-    const initialDef = props.initial ?? initialFromPresence;
-    const animateDef = props.animate;
-    const exitDef = props.exit;
-
-    if (!currentPresent) {
-      const exitTarget = resolveTarget(exitDef);
-      animateTo(exitTarget, undefined, () => safeToRemove?.());
-      return;
-    }
-
-    const animateTarget = resolveTarget(animateDef);
-    if (!didMount) {
-      didMount = true;
-      if (initialDef === false) {
-        applyTarget(animateTarget);
+  createEffect(
+    () => ({
+      present: isPresent(),
+      initial: props.initial ?? presenceContext?.initial,
+      animate: props.animate,
+      exit: props.exit,
+    }),
+    ({ present, initial, animate, exit }) => {
+      if (!el) {
         return;
       }
-      const initialTarget = resolveTarget(initialDef);
-      animateTo(animateTarget, initialTarget);
-      return;
-    }
 
-    animateTo(animateTarget);
-  });
+      if (!present) {
+        animateTo(resolveTarget(exit), undefined, () => safeToRemove?.());
+        return;
+      }
+
+      const animateTarget = resolveTarget(animate);
+
+      if (!didMount) {
+        didMount = true;
+
+        if (initial === false) {
+          applyTarget(animateTarget);
+          return;
+        }
+
+        animateTo(animateTarget, resolveTarget(initial));
+        return;
+      }
+
+      animateTo(animateTarget);
+    },
+  );
 
   onSettled(runLayoutAnimation);
   onCleanup(stopAnimation);

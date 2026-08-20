@@ -17,13 +17,14 @@ export function SelectableList(props: SelectableListProps) {
   );
 
   // Reset to the first item when the current selection disappears.
-  createEffect(() => {
-    const [firstId] = props.itemIds;
-
-    if (firstId !== undefined && selectedIndex() === -1) {
-      props.onSelect(firstId);
-    }
-  });
+  createEffect(
+    () => ({ firstId: props.itemIds[0], missing: selectedIndex() === -1 }),
+    ({ firstId, missing }) => {
+      if (firstId !== undefined && missing) {
+        props.onSelect(firstId);
+      }
+    },
+  );
 
   function move(key: string) {
     const action = getVerticalNavigationAction(key, {

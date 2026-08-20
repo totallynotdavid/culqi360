@@ -16,7 +16,12 @@ type EventLogDatePickerInputProps = {
 export function EventLogDatePickerInput(props: EventLogDatePickerInputProps) {
   const [draft, setDraft] = createSignal(props.value ?? "");
 
-  createEffect(() => setDraft(props.value ?? ""));
+  createEffect(
+    () => props.value ?? "",
+    (value) => {
+      setDraft(value);
+    },
+  );
 
   return (
     <DatePicker

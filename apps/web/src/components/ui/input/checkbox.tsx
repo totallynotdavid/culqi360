@@ -33,11 +33,14 @@ export function Checkbox(props: CheckboxProps) {
   const isOn = () => Boolean(props.checked) || Boolean(props.indeterminate);
   const hoverable = () => props.hoverable ?? true;
 
-  createEffect(() => {
-    if (input) {
-      input.indeterminate = Boolean(props.indeterminate);
-    }
-  });
+  createEffect(
+    () => Boolean(props.indeterminate),
+    (indeterminate) => {
+      if (input) {
+        input.indeterminate = indeterminate;
+      }
+    },
+  );
 
   return (
     <label

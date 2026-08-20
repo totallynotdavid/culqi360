@@ -4,10 +4,10 @@ export function useCssVariableEffect(
   cssVariableName: string,
   value: Accessor<string | number>,
 ) {
-  createEffect(() => {
-    document.documentElement.style.setProperty(
-      cssVariableName,
-      String(value()),
-    );
-  });
+  createEffect(
+    () => String(value()),
+    (next) => {
+      document.documentElement.style.setProperty(cssVariableName, next);
+    },
+  );
 }

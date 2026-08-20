@@ -18,8 +18,8 @@ export function NavigationDrawerBrowserEffects() {
     }
   });
 
-  createEffect(() => {
-    setIsMobile(isMobile());
+  createEffect(isMobile, (mobile) => {
+    setIsMobile(mobile);
   });
 
   return null;

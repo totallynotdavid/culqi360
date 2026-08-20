@@ -1,11 +1,5 @@
 import { Portal } from "@solidjs/web";
-import {
-  Show,
-  createEffect,
-  createSignal,
-  onCleanup,
-  onSettled,
-} from "solid-js";
+import { Show, createEffect, createSignal, onSettled } from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
 import type { LeadSaleProofFileView } from "~/contracts/workflow/results";
@@ -56,21 +50,26 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
       window.document.removeEventListener("pointerdown", handlePointerDown);
   });
 
-  createEffect(() => {
-    if (!isOpen()) {
-      return;
-    }
-    updateMenuPosition();
+  createEffect(
+    () => isOpen(),
+    (open) => {
+      if (!open) {
+        return;
+      }
 
-    const onViewportChange = () => updateMenuPosition();
-    window.addEventListener("resize", onViewportChange);
-    window.addEventListener("scroll", onViewportChange, true);
+      updateMenuPosition();
 
-    onCleanup(() => {
-      window.removeEventListener("resize", onViewportChange);
-      window.removeEventListener("scroll", onViewportChange, true);
-    });
-  });
+      const handleViewportChange = () => updateMenuPosition();
+
+      window.addEventListener("resize", handleViewportChange);
+      window.addEventListener("scroll", handleViewportChange, true);
+
+      return () => {
+        window.removeEventListener("resize", handleViewportChange);
+        window.removeEventListener("scroll", handleViewportChange, true);
+      };
+    },
+  );
 
   return (
     <div class={styles.actionsMenuRoot} ref={(el) => (rootRef = el)}>

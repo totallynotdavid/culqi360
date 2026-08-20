@@ -89,16 +89,17 @@ function OnboardingContent() {
 
   let initializedPhone = false;
 
-  createEffect(() => {
-    const value = snapshot()?.user.phone;
+  createEffect(
+    () => snapshot()?.user.phone,
+    (value) => {
+      if (initializedPhone || value === undefined) {
+        return;
+      }
 
-    if (initializedPhone || value === undefined) {
-      return;
-    }
-
-    initializedPhone = true;
-    setPhone(value ?? "");
-  });
+      initializedPhone = true;
+      setPhone(value ?? "");
+    },
+  );
 
   onSettled(() => {
     setPasskeySupported(isPasskeyRegistrationSupported());
@@ -114,8 +115,11 @@ function OnboardingContent() {
       : undefined;
   });
 
-  createEffect(() => {
-    if (step() !== "totp") {
+  // Only the step drives this. The enrollment guards are read in the effect
+  // phase, which is untracked, so writing them no longer re-runs the effect
+  // the way it did when every read was tracked.
+  createEffect(step, (currentStep) => {
+    if (currentStep !== "totp") {
       setTotpEnrollment(null);
       setTotpStartAttempted(false);
       return;

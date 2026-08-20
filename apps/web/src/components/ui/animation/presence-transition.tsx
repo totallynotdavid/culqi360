@@ -20,47 +20,48 @@ export function PresenceTransition(props: PresenceTransitionProps) {
   let el: HTMLDivElement | undefined;
   let anim: Animation | undefined;
 
-  createEffect(() => {
-    const show = props.show;
+  createEffect(
+    () => props.show,
+    (show) => {
+      if (show) {
+        setMounted(true);
 
-    if (show) {
-      setMounted(true);
-
-      if (prefersReducedMotion()) {
-        return;
-      }
-
-      // rAF ensures paint before animating (the el ref is set on mount).
-      requestAnimationFrame(() => {
-        if (!el) {
+        if (prefersReducedMotion()) {
           return;
         }
+
+        // rAF ensures paint before animating (the el ref is set on mount).
+        requestAnimationFrame(() => {
+          if (!el) {
+            return;
+          }
+          anim?.cancel();
+          el.style.opacity = "0";
+          anim = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+            duration: DURATION_MS,
+            easing: "ease",
+          });
+          anim.onfinish = () => {
+            if (el) {
+              el.style.opacity = "";
+            }
+          };
+        });
+      } else {
+        if (prefersReducedMotion() || !el) {
+          setMounted(false);
+          return;
+        }
+
         anim?.cancel();
-        el.style.opacity = "0";
-        anim = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+        anim = el.animate([{ opacity: 1 }, { opacity: 0 }], {
           duration: DURATION_MS,
           easing: "ease",
         });
-        anim.onfinish = () => {
-          if (el) {
-            el.style.opacity = "";
-          }
-        };
-      });
-    } else {
-      if (prefersReducedMotion() || !el) {
-        setMounted(false);
-        return;
+        anim.onfinish = () => setMounted(false);
       }
-
-      anim?.cancel();
-      anim = el.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: DURATION_MS,
-        easing: "ease",
-      });
-      anim.onfinish = () => setMounted(false);
-    }
-  });
+    },
+  );
 
   onCleanup(() => anim?.cancel());
 

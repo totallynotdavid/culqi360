@@ -1,6 +1,6 @@
 import { type JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect } from "solid-js";
 
 import { PresenceTransition } from "~/components/ui/animation/presence-transition";
 import { Button } from "~/components/ui/input/button";
@@ -22,18 +22,24 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog(props: ConfirmDialogProps) {
-  createEffect(() => {
-    if (!props.isOpen) {
-      return;
-    }
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !props.loading) {
-        props.onClose();
+  createEffect(
+    () => props.isOpen,
+    (isOpen) => {
+      if (!isOpen) {
+        return;
       }
-    };
-    document.addEventListener("keydown", handler);
-    onCleanup(() => document.removeEventListener("keydown", handler));
-  });
+
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && !props.loading) {
+          props.onClose();
+        }
+      };
+
+      document.addEventListener("keydown", handler);
+
+      return () => document.removeEventListener("keydown", handler);
+    },
+  );
 
   return (
     <Portal>

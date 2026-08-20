@@ -6,7 +6,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  onCleanup,
   onSettled,
 } from "solid-js";
 
@@ -97,22 +96,26 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
     setIsMac(/Mac/i.test(navigator.platform));
   });
 
-  createEffect(() => {
-    if (!isOptionsOpen()) {
-      return;
-    }
+  createEffect(
+    () => isOptionsOpen(),
+    (isOpen) => {
+      if (!isOpen) {
+        return;
+      }
 
-    updateMenuPosition();
+      updateMenuPosition();
 
-    const handleViewportChange = () => updateMenuPosition();
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
+      const handleViewportChange = () => updateMenuPosition();
 
-    onCleanup(() => {
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    });
-  });
+      window.addEventListener("resize", handleViewportChange);
+      window.addEventListener("scroll", handleViewportChange, true);
+
+      return () => {
+        window.removeEventListener("resize", handleViewportChange);
+        window.removeEventListener("scroll", handleViewportChange, true);
+      };
+    },
+  );
 
   useScopedHotkey("Mod+O", () => toggleOptions(), {
     allowInInputs: true,

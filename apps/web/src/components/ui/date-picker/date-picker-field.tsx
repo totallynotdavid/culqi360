@@ -95,8 +95,8 @@ export function DatePicker(props: DatePickerProps) {
     allowInInputs: true,
   });
 
-  createEffect(() => {
-    if (!isOpen()) {
+  createEffect(isOpen, (open) => {
+    if (!open) {
       syncViewMonth();
     }
   });

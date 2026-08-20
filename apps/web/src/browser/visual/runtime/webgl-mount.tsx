@@ -4,7 +4,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  onCleanup,
   onSettled,
 } from "solid-js";
 
@@ -113,28 +112,27 @@ export function WebGlMount(props: WebGlMountProps) {
   const wantsScene = createMemo(() => policy().allowed && hasBeenVisible());
   const wantsContextSlot = createMemo(() => wantsScene() && isMountReady());
 
-  createEffect(() => {
-    contextEpoch();
-    mountPriority();
+  // A new epoch or priority re-schedules the mount from scratch, so both are
+  // tracked even though only the priority is used below.
+  createEffect(
+    () => ({
+      epoch: contextEpoch(),
+      priority: mountPriority(),
+      wanted: wantsScene(),
+    }),
+    ({ priority, wanted }) => {
+      setIsMountReady(false);
 
-    setIsMountReady(false);
+      if (!wanted) {
+        return;
+      }
 
-    if (!wantsScene()) {
-      return;
-    }
+      return scheduleVisualMount(() => setIsMountReady(true), { priority });
+    },
+  );
 
-    const cancelScheduledMount = scheduleVisualMount(
-      () => setIsMountReady(true),
-      {
-        priority: mountPriority(),
-      },
-    );
-
-    onCleanup(cancelScheduledMount);
-  });
-
-  createEffect(() => {
-    if (!wantsContextSlot()) {
+  createEffect(wantsContextSlot, (wanted) => {
+    if (!wanted) {
       return;
     }
 
@@ -175,24 +173,24 @@ export function WebGlMount(props: WebGlMountProps) {
 
     tryAcquire();
 
-    createEffect(() => {
-      const inViewport = isInViewport();
+    // hasContextSlot is tracked so the handle is re-synced after acquisition,
+    // not only when the viewport changes.
+    createEffect(
+      () => ({ inViewport: isInViewport(), acquired: hasContextSlot() }),
+      ({ inViewport }) => {
+        if (!handle) {
+          return;
+        }
 
-      // Re-sync after acquisition as well as viewport changes.
-      hasContextSlot();
+        if (inViewport) {
+          handle.markActive();
+        } else {
+          handle.markInactive();
+        }
+      },
+    );
 
-      if (!handle) {
-        return;
-      }
-
-      if (inViewport) {
-        handle.markActive();
-      } else {
-        handle.markInactive();
-      }
-    });
-
-    onCleanup(() => {
+    return () => {
       unsubscribe?.();
       unsubscribe = null;
 
@@ -200,7 +198,7 @@ export function WebGlMount(props: WebGlMountProps) {
       handle = null;
 
       setHasContextSlot(false);
-    });
+    };
   });
 
   return (

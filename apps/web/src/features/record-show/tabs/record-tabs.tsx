@@ -18,12 +18,14 @@ export function RecordTabs(props: {
     tabs().find((tab) => tab.id === props.activeTab) ?? tabs()[0];
 
   // Stage changes can hide the persisted tab. Persist the visible fallback.
-  createEffect(() => {
-    const resolved = activeDefinition();
-    if (resolved && resolved.id !== props.activeTab) {
-      props.onTabSelect(resolved.id);
-    }
-  });
+  createEffect(
+    () => activeDefinition()?.id,
+    (resolvedId) => {
+      if (resolvedId !== undefined && resolvedId !== props.activeTab) {
+        props.onTabSelect(resolvedId);
+      }
+    },
+  );
 
   return (
     <>

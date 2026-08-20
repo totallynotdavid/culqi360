@@ -32,13 +32,9 @@ export function createRecordPageController(input: RecordPageControllerInput) {
     },
   });
 
-  let previousStatus: string | undefined;
-
-  createEffect(() => {
-    const status = sunatStatus();
+  createEffect(sunatStatus, (status, previousStatus) => {
     if (!status) {
       poller.stop();
-      previousStatus = status;
       return;
     }
 
@@ -47,6 +43,8 @@ export function createRecordPageController(input: RecordPageControllerInput) {
       : false;
     const isPolling = POLLING_STATUSES.has(status);
 
+    // The list shows the resolved SUNAT status, so it only needs a refresh on
+    // the polling-to-settled edge.
     if (wasPolling && !isPolling) {
       void input.revalidateLeadList();
     }
@@ -56,8 +54,6 @@ export function createRecordPageController(input: RecordPageControllerInput) {
     } else {
       poller.stop();
     }
-
-    previousStatus = status;
   });
 
   return {

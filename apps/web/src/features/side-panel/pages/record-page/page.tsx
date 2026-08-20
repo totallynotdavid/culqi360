@@ -48,15 +48,14 @@ export function RecordPage() {
   const canDeleteCompany = createMemo(() => currentUser().role === "superuser");
   const detailData = createMemo(() => leadDetailQuery(leadId()));
 
-  createEffect(() => {
-    const detail = detailData();
-
-    if (!detail) {
-      return;
-    }
-
-    setSubtitle(detail.lead.ruc);
-  });
+  createEffect(
+    () => detailData()?.lead.ruc,
+    (ruc) => {
+      if (ruc !== undefined) {
+        setSubtitle(ruc);
+      }
+    },
+  );
 
   createRecordPageController({
     leadId,

@@ -22,16 +22,14 @@ export function LeadActionPage() {
   const detailData = createMemo(() => leadDetailQuery(leadId()));
 
   // Leave an action page after the server stage changes.
-  createEffect(() => {
-    const detail = detailData();
-    if (!detail) {
-      return;
-    }
-
-    if (!isLeadActionStillRelevant(action(), detail)) {
-      goBack();
-    }
-  });
+  createEffect(
+    () => ({ detail: detailData(), currentAction: action() }),
+    ({ detail, currentAction }) => {
+      if (detail && !isLeadActionStillRelevant(currentAction, detail)) {
+        goBack();
+      }
+    },
+  );
 
   return (
     <SidePanelPage>

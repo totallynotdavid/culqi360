@@ -16,40 +16,43 @@ interface UseExtensionStateObserverOptions {
 export function useExtensionStateObserver(
   options: UseExtensionStateObserverOptions,
 ): void {
-  let prevState: ExecutiveStateSnapshot | null = null;
-  let prevError: string | null = null;
+  createEffect(
+    () => ({
+      state: options.extensionState(),
+      error: options.extensionErrorMessage(),
+    }),
+    (next, previous) => {
+      // The effect phase receives the previous computed value, so the two
+      // mutable prev* variables this used to carry are gone. Seeding a missing
+      // previous with nulls keeps the original first-run behaviour: an opening
+      // snapshot that is already null is not a change and fires nothing.
+      const prev = previous ?? { state: null, error: null };
 
-  createEffect(() => {
-    const currentState = options.extensionState?.();
-    const currentError = options.extensionErrorMessage?.();
+      if (next.state !== prev.state) {
+        options.onStateChange?.(next.state);
 
-    if (currentState !== prevState) {
-      options.onStateChange?.(currentState);
+        if (
+          next.state?.syncHealth === "reauth_required" &&
+          prev.state?.syncHealth !== "reauth_required"
+        ) {
+          options.onReauthRequired?.();
+        }
 
-      if (
-        currentState?.syncHealth === "reauth_required" &&
-        prevState?.syncHealth !== "reauth_required"
-      ) {
-        options.onReauthRequired?.();
+        if (
+          next.state?.syncHealth === "error" &&
+          prev.state?.syncHealth !== "error"
+        ) {
+          options.onSyncError?.();
+        }
+
+        if (next.state?.assignmentId !== prev.state?.assignmentId) {
+          options.onActiveAssignmentChange?.(next.state?.assignmentId ?? null);
+        }
       }
 
-      if (
-        currentState?.syncHealth === "error" &&
-        prevState?.syncHealth !== "error"
-      ) {
-        options.onSyncError?.();
+      if (next.error !== prev.error) {
+        options.onErrorChange?.(next.error);
       }
-
-      if (currentState?.assignmentId !== prevState?.assignmentId) {
-        options.onActiveAssignmentChange?.(currentState?.assignmentId ?? null);
-      }
-
-      prevState = currentState;
-    }
-
-    if (currentError !== prevError) {
-      options.onErrorChange?.(currentError);
-      prevError = currentError;
-    }
-  });
+    },
+  );
 }

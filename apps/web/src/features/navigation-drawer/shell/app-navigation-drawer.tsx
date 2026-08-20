@@ -12,18 +12,25 @@ export function AppNavigationDrawer() {
   const { isMobile, setCurrentMobileDrawer, expanded, setExpanded } =
     useNavigationDrawerState();
 
-  createEffect(() => {
-    if (isMobile()) {
-      if (isSettingsPage()) {
-        setCurrentMobileDrawer("settings");
+  createEffect(
+    () => ({
+      mobile: isMobile(),
+      settings: isSettingsPage(),
+      isExpanded: expanded(),
+    }),
+    ({ mobile, settings, isExpanded }) => {
+      if (mobile) {
+        if (settings) {
+          setCurrentMobileDrawer("settings");
+        }
+        return;
       }
-      return;
-    }
 
-    if (isSettingsPage() && !expanded()) {
-      setExpanded(true);
-    }
-  });
+      if (settings && !isExpanded) {
+        setExpanded(true);
+      }
+    },
+  );
 
   return (
     <>

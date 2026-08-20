@@ -1,4 +1,4 @@
-import { createEffect, onCleanup, type Accessor } from "solid-js";
+import { createEffect, type Accessor } from "solid-js";
 
 import { matchesEvent, parseCombo } from "./hotkey-utils";
 import type { HotkeyCombo } from "./types";
@@ -51,33 +51,38 @@ export function useHotkey(
 
   const parsed = parseCombo(combo);
 
-  createEffect(() => {
-    if (enabled && !enabled()) {
-      return;
-    }
-
-    const listener = (event: KeyboardEvent) => {
-      if (!allowInInputs && isTypingContext(event)) {
+  createEffect(
+    () => enabled?.() ?? true,
+    (isEnabled) => {
+      if (!isEnabled) {
         return;
       }
 
-      if (shouldHandleEvent && !shouldHandleEvent(event)) {
-        return;
-      }
+      const listener = (event: KeyboardEvent) => {
+        if (!allowInInputs && isTypingContext(event)) {
+          return;
+        }
 
-      if (!matchesEvent(event, parsed, { ignoreModifiers })) {
-        return;
-      }
+        if (shouldHandleEvent && !shouldHandleEvent(event)) {
+          return;
+        }
 
-      if (preventDefault) {
-        event.preventDefault();
-      }
+        if (!matchesEvent(event, parsed, { ignoreModifiers })) {
+          return;
+        }
 
-      handler(event);
-    };
+        if (preventDefault) {
+          event.preventDefault();
+        }
 
-    document.addEventListener("keydown", listener);
+        handler(event);
+      };
 
-    onCleanup(() => document.removeEventListener("keydown", listener));
-  });
+      document.addEventListener("keydown", listener);
+
+      // The effect phase's return value is the cleanup, so onCleanup is no
+      // longer needed to unbind before the next run.
+      return () => document.removeEventListener("keydown", listener);
+    },
+  );
 }

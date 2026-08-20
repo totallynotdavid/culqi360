@@ -51,18 +51,21 @@ export function PresenceChild(props: PresenceChildProps) {
     },
   }));
 
-  createEffect(() => {
-    if (!props.isPresent) {
-      if (presenceChildren.size === 0) {
-        props.onExitComplete?.();
+  createEffect(
+    () => props.isPresent,
+    (isPresent) => {
+      if (!isPresent) {
+        if (presenceChildren.size === 0) {
+          props.onExitComplete?.();
+        }
+        return;
       }
-      return;
-    }
 
-    presenceChildren.forEach((_, key) => {
-      presenceChildren.set(key, false);
-    });
-  });
+      presenceChildren.forEach((_, key) => {
+        presenceChildren.set(key, false);
+      });
+    },
+  );
 
   onCleanup(() => {
     presenceChildren.clear();

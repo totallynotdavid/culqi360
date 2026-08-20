@@ -36,17 +36,22 @@ export function TopBar(props: { isMobile: boolean }) {
     return SIDE_PANEL_PAGES_CONFIG[entry.page].showsSearch;
   };
 
-  createEffect(() => {
-    const entry = currentEntry();
+  // Tracking pageId, not the entry object, is what re-focuses when the same
+  // search page is opened again.
+  createEffect(
+    () => {
+      const entry = currentEntry();
 
-    if (!entry || !SIDE_PANEL_PAGES_CONFIG[entry.page].showsSearch) {
-      return;
-    }
-
-    // Re-focus when the same search page is opened again.
-    void entry.pageId;
-    inputRef?.focus();
-  });
+      return entry && SIDE_PANEL_PAGES_CONFIG[entry.page].showsSearch
+        ? entry.pageId
+        : null;
+    },
+    (searchPageId) => {
+      if (searchPageId !== null) {
+        inputRef?.focus();
+      }
+    },
+  );
 
   function handleKeyDown(event: KeyboardEvent) {
     if (event.isComposing) {

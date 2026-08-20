@@ -1,7 +1,7 @@
 import { type JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
 import { clsx } from "clsx";
-import { createEffect, onCleanup, onSettled, type Accessor } from "solid-js";
+import { createEffect, onSettled, type Accessor } from "solid-js";
 
 import styles from "./anchored-popover.module.css";
 
@@ -123,9 +123,7 @@ export function AnchoredPopover(props: {
     };
   });
 
-  createEffect(() => {
-    const anchorElement = anchor();
-
+  createEffect(anchor, (anchorElement) => {
     updatePosition();
 
     if (!panel || !anchorElement) {
@@ -137,7 +135,7 @@ export function AnchoredPopover(props: {
     observer.observe(panel);
     observer.observe(anchorElement);
 
-    onCleanup(() => observer.disconnect());
+    return () => observer.disconnect();
   });
 
   return (

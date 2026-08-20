@@ -4,7 +4,6 @@ import {
   Show,
   createEffect,
   createSignal,
-  onCleanup,
   onSettled,
   type Component,
 } from "solid-js";
@@ -82,23 +81,26 @@ export function RecordShowActionsMenu(props: RecordShowActionsMenuProps) {
       window.document.removeEventListener("pointerdown", handlePointerDown);
   });
 
-  createEffect(() => {
-    if (!open()) {
-      return;
-    }
+  createEffect(
+    () => open(),
+    (isOpen) => {
+      if (!isOpen) {
+        return;
+      }
 
-    updateMenuPosition();
+      updateMenuPosition();
 
-    const handleViewportChange = () => updateMenuPosition();
+      const handleViewportChange = () => updateMenuPosition();
 
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
+      window.addEventListener("resize", handleViewportChange);
+      window.addEventListener("scroll", handleViewportChange, true);
 
-    onCleanup(() => {
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    });
-  });
+      return () => {
+        window.removeEventListener("resize", handleViewportChange);
+        window.removeEventListener("scroll", handleViewportChange, true);
+      };
+    },
+  );
 
   return (
     <Show when={props.items.length > 0}>
