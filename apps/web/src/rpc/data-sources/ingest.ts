@@ -1,6 +1,6 @@
 import { query } from "@solidjs/router";
 
-import type { IngestJob, IngestSource } from "~/contracts/data-sources/ingest";
+import type { IngestSource } from "~/contracts/data-sources/ingest";
 import { getApplication } from "~/server/composition/application";
 import { executeSessionServerFunction } from "~/server/platform/action";
 import {
@@ -60,26 +60,5 @@ export async function registerDataSourceUpload(
         sizeBytes: input.sizeBytes,
         sha256: input.sha256,
       }),
-  });
-}
-
-export async function getDataSourceUploadJob(
-  jobId: unknown,
-): Promise<IngestJob> {
-  "use server";
-
-  return executeSessionServerFunction({
-    name: "data_sources.ingest.get_job",
-    access: { kind: "permission", permission: "data-source:import" },
-
-    parse: () =>
-      parseObject({ jobId }, validationFail, (r) => ({
-        jobId: r.str("jobId"),
-      })),
-
-    telemetry: (input) => ({ jobId: input.jobId }),
-
-    execute: (ctx, input) =>
-      getApplication().dataSourceUploads.getJob(input.jobId),
   });
 }

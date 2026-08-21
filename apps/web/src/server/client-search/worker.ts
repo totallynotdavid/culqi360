@@ -1,5 +1,6 @@
+import { QUERY_KEYS } from "~/contracts/query-keys";
 import type { SunatScraperClient } from "~/server/client-search/enrichment/sunat/contracts";
-import type { Overlay } from "~/server/client-search/model";
+import type { EnrichmentStatus, Overlay } from "~/server/client-search/model";
 import type {
   CompanyRegistryPort,
   OrganizationProjection,
@@ -9,7 +10,11 @@ import {
   processEnrichmentJob,
   overlayToPatch,
 } from "~/server/client-search/process";
+import { publishJobEvent } from "~/server/jobs/publish";
+import type { DatabaseExecutor } from "~/server/platform/database/executor";
 import { createJobQueue } from "~/server/platform/jobs/job-queue";
+
+import { buildEnrichmentJobEvent } from "./job-event";
 
 // SUNAT-unreachable fallback: supplies legal name + address only. The
 // degraded record expires quickly so the next refresh re-attempts the
@@ -19,10 +24,12 @@ type EngineFallback = (
 ) => Promise<{ legalName: string | null; address: string | null } | null>;
 
 type EnrichmentWorkerDeps = {
+  db: DatabaseExecutor;
   registry: CompanyRegistryPort;
   scraper: SunatScraperClient;
   engineFallback: EngineFallback;
   projectOrganization: (input: OrganizationProjection) => Promise<void>;
+  readStatus: (ruc: string) => Promise<EnrichmentStatus>;
 };
 
 const DEGRADED_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -82,6 +89,25 @@ export function createEnrichmentQueue(
     maxConcurrency: 3,
     workerId,
     store: registry.store,
+
+    // A settled scrape rewrites the organization behind every lead on this
+    // document, so both reads that show it are stale.
+    onSettled: async (job) => {
+      if (job.document_type !== "ruc") {
+        return;
+      }
+
+      const status = await deps.readStatus(job.document_value);
+
+      await publishJobEvent(
+        deps.db,
+        buildEnrichmentJobEvent(status, [
+          QUERY_KEYS.workflow.leadDetail,
+          QUERY_KEYS.workflow.leadList,
+        ]),
+      );
+    },
+
     handle: async (job, context) => {
       const result = await processEnrichmentJob(
         job,

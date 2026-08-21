@@ -26,7 +26,7 @@ function connect() {
   const states: ConnectionState[] = [];
 
   const dispose = startConnection({
-    channel: REALTIME_CHANNELS.recordImport,
+    channel: REALTIME_CHANNELS.jobs,
     id: "job-1",
     onMessage: (message) => received.push(message),
     setState: (state) => states.push(state),
@@ -72,7 +72,7 @@ describe("startConnection", () => {
     const connection = connect();
 
     expect(connection.latest().params.url).toBe(
-      "/api/realtime/records-import/job-1/stream",
+      "/api/realtime/jobs/job-1/stream",
     );
     expect(connection.latest().params.cursor).toBeNull();
 

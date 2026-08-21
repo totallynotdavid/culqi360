@@ -1,8 +1,7 @@
+import type { EnrichmentLifecycle } from "~/contracts/client-search/enrichment";
 import type { DocumentKind } from "~/domain/identity/document";
 
 import type { SunatEconomicActivity } from "./enrichment/sunat/contracts";
-
-type Lifecycle = "idle" | "queued" | "running" | "succeeded" | "failed";
 
 type Freshness = "fresh" | "stale" | "none";
 
@@ -29,7 +28,7 @@ export interface Overlay {
 export interface EnrichmentStatus {
   documentType: DocumentKind;
   documentValue: string;
-  lifecycle: Lifecycle;
+  lifecycle: EnrichmentLifecycle;
   freshness: Freshness;
   overlay: Overlay | null;
   lastError: string | null;

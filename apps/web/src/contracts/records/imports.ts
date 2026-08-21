@@ -1,52 +1,20 @@
-import { isQueueState, type QueueState } from "~/domain/jobs/queue-state";
-
 export type RecordImportType = "import_status" | "import_prioridad";
 
-export interface RecordImportProgressEvent {
-  type: "job_progress";
-  jobId: string;
+/** What the import is applying, which decides the wording of its progress. */
+export interface RecordImportDetail {
   importType: RecordImportType;
-  queueState: QueueState;
-  rowsApplied: number;
-  rowsFailed: number;
-  rowsTotal: number;
-  errorMessage: string | null;
 }
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isRecordImportProgressEvent(
+export function parseRecordImportDetail(
   value: unknown,
-): value is RecordImportProgressEvent {
-  if (!isObjectRecord(value)) {
-    return false;
-  }
-
-  return (
-    value.type === "job_progress" &&
-    typeof value.jobId === "string" &&
-    (value.importType === "import_status" ||
-      value.importType === "import_prioridad") &&
-    isQueueState(value.queueState) &&
-    typeof value.rowsApplied === "number" &&
-    typeof value.rowsFailed === "number" &&
-    typeof value.rowsTotal === "number" &&
-    (typeof value.errorMessage === "string" || value.errorMessage === null)
-  );
-}
-
-export function parseRecordImportProgressMessage(
-  raw: string,
-): RecordImportProgressEvent | null {
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
+): RecordImportDetail | null {
+  if (typeof value !== "object" || value === null || !("importType" in value)) {
     return null;
   }
 
-  return isRecordImportProgressEvent(parsed) ? parsed : null;
+  const { importType } = value;
+
+  return importType === "import_status" || importType === "import_prioridad"
+    ? { importType }
+    : null;
 }

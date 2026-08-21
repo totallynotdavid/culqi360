@@ -28,11 +28,6 @@ export type HalftoneSnapshotFn = (
   },
 ) => Promise<Blob | null>;
 
-export type HalftoneViewport = {
-  cssHeight: number;
-  cssWidth: number;
-};
-
 export type HalftoneRuntimeConfig = {
   geometry: BufferGeometry | null;
   imageFit: HalftoneImageFit;

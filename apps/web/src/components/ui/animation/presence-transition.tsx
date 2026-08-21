@@ -1,14 +1,9 @@
 import { type JSX } from "@solidjs/web";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 
-const DURATION_MS = 300;
+import { animate } from "./animate";
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
+const DURATION_MS = 300;
 
 interface PresenceTransitionProps {
   show: boolean;
@@ -26,10 +21,6 @@ export function PresenceTransition(props: PresenceTransitionProps) {
       if (show) {
         setMounted(true);
 
-        if (prefersReducedMotion()) {
-          return;
-        }
-
         // rAF ensures paint before animating (the el ref is set on mount).
         requestAnimationFrame(() => {
           if (!el) {
@@ -37,7 +28,7 @@ export function PresenceTransition(props: PresenceTransitionProps) {
           }
           anim?.cancel();
           el.style.opacity = "0";
-          anim = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+          anim = animate(el, [{ opacity: 0 }, { opacity: 1 }], {
             duration: DURATION_MS,
             easing: "ease",
           });
@@ -48,13 +39,13 @@ export function PresenceTransition(props: PresenceTransitionProps) {
           };
         });
       } else {
-        if (prefersReducedMotion() || !el) {
+        if (!el) {
           setMounted(false);
           return;
         }
 
         anim?.cancel();
-        anim = el.animate([{ opacity: 1 }, { opacity: 0 }], {
+        anim = animate(el, [{ opacity: 1 }, { opacity: 0 }], {
           duration: DURATION_MS,
           easing: "ease",
         });

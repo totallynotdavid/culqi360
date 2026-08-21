@@ -1,20 +1,19 @@
-import { createSignal } from "solid-js";
 import { createStore } from "solid-js";
 
-import type { IngestJob } from "~/contracts/data-sources/ingest";
 import { actionErrorMessage } from "~/contracts/errors";
-import {
-  getDataSourceUploadJob,
-  registerDataSourceUpload,
-} from "~/rpc/data-sources/ingest";
+import { registerDataSourceUpload } from "~/rpc/data-sources/ingest";
 
+/**
+ * Phases this browser is responsible for. Once the blob is accepted the engine
+ * owns the work, the server follows it, and the row reads its state from the job
+ * subscription instead of from anything here.
+ */
 export type UploadRowPhase =
   | "idle"
   | "hashing"
   | "registering"
   | "uploading"
-  | "polling"
-  | "done"
+  | "tracking"
   | "failed";
 
 export interface UploadRow {
@@ -24,11 +23,9 @@ export interface UploadRow {
   snapshotLabel: string;
   snapshotDate: string;
   phase: UploadRowPhase;
-  job: IngestJob | null;
+  jobId: string | null;
   error: string | null;
 }
-
-const POLL_INTERVAL_MS = 2000;
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -42,11 +39,14 @@ function createRow(defaultSourceKey: string): UploadRow {
     snapshotLabel: "",
     snapshotDate: todayIsoDate(),
     phase: "idle",
-    job: null,
+    jobId: null,
     error: null,
   };
 }
 
+// WebCrypto has no incremental digest, so the file is read whole. Data-source
+// dumps are the large files in this system; a streaming hash would need its own
+// implementation.
 async function sha256Hex(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", buffer);
@@ -62,10 +62,7 @@ async function uploadBlob(
 ): Promise<{ jobId: string }> {
   const response = await fetch(
     `/api/data-sources/uploads/${encodeURIComponent(uploadId)}/blob`,
-    {
-      method: "PUT",
-      body: file,
-    },
+    { method: "PUT", body: file },
   );
 
   if (!response.ok) {
@@ -84,9 +81,16 @@ async function uploadBlob(
 export function useDataSourceUpload() {
   // Preserve row identity so <For> does not rebuild inputs on every edit.
   const [store, setStore] = createStore<{ rows: UploadRow[] }>({ rows: [] });
-  const [isSubmitting, setIsSubmitting] = createSignal(false);
 
   const rows = () => store.rows;
+
+  const isSubmitting = () =>
+    store.rows.some(
+      (row) =>
+        row.phase === "hashing" ||
+        row.phase === "registering" ||
+        row.phase === "uploading",
+    );
 
   function patchRow(id: string, patch: Partial<UploadRow>): void {
     setStore((draft) => {
@@ -126,32 +130,6 @@ export function useDataSourceUpload() {
     patchRow(id, { snapshotDate });
   }
 
-  async function pollJob(rowId: string, jobId: string): Promise<void> {
-    for (;;) {
-      // Each poll depends on the previous result.
-      // eslint-disable-next-line no-await-in-loop
-      const job = await getDataSourceUploadJob(jobId);
-
-      patchRow(rowId, {
-        job,
-        phase:
-          job.outcome === "running"
-            ? "polling"
-            : job.outcome === "succeeded"
-              ? "done"
-              : "failed",
-        error: job.outcome === "failed" ? job.error : null,
-      });
-
-      if (job.outcome !== "running") {
-        return;
-      }
-
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-    }
-  }
-
   async function uploadRow(row: UploadRow): Promise<void> {
     if (!row.file) {
       return;
@@ -175,28 +153,20 @@ export function useDataSourceUpload() {
       patchRow(row.id, { phase: "uploading" });
       const { jobId } = await uploadBlob(uploadId, file);
 
-      void pollJob(row.id, jobId);
+      patchRow(row.id, { phase: "tracking", jobId });
     } catch (error) {
-      patchRow(row.id, {
-        phase: "failed",
-        error: actionErrorMessage(error),
-      });
+      patchRow(row.id, { phase: "failed", error: actionErrorMessage(error) });
     }
   }
 
   async function submitAll(): Promise<void> {
-    setIsSubmitting(true);
-
-    try {
-      for (const row of rows()) {
-        if (row.file && row.phase === "idle") {
-          // Uploads stay sequential; polling runs concurrently once queued.
-          // eslint-disable-next-line no-await-in-loop
-          await uploadRow(row);
-        }
+    for (const row of rows()) {
+      if (row.file && row.phase === "idle") {
+        // Sequential: each upload streams a whole file, and the engine gates on
+        // one snapshot at a time anyway.
+        // eslint-disable-next-line no-await-in-loop
+        await uploadRow(row);
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 

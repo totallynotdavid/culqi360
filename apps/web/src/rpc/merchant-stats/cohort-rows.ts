@@ -1,6 +1,7 @@
 import { query } from "@solidjs/router";
 
 import type { BookFilter, Page } from "~/contracts/merchant-stats/views";
+import { QUERY_KEYS } from "~/contracts/query-keys";
 import { getCohortRows } from "~/server/merchant-stats/ui/dashboard";
 
 export const cohortRowsQuery = query(
@@ -8,5 +9,5 @@ export const cohortRowsQuery = query(
     "use server";
     return getCohortRows(input);
   },
-  "merchant-stats.cohort-rows",
+  QUERY_KEYS.merchantStats.cohortRows,
 );

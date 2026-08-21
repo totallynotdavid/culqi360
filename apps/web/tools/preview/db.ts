@@ -15,10 +15,11 @@ import { migrateToLatest } from "~/server/platform/database/migrate";
 import { seedIfEmpty } from "~/server/platform/database/seed";
 
 import { withDatabase } from "../../tests/e2e/db";
+import { sourceFingerprint } from "../support/source-fingerprint";
 import { mintAllSessions } from "./roster";
 
 // Hardcoded so this tool cannot resolve to the development database.
-export const PREVIEW_DB_NAME = "crm_preview";
+const PREVIEW_DB_NAME = "crm_preview";
 
 const FINGERPRINT_FILE = resolve(process.cwd(), ".preview-db-fingerprint");
 
@@ -63,49 +64,15 @@ async function withMaintenance<T>(
   }
 }
 
-function sourceFingerprint(): string {
-  const hash = createHash("sha256");
-
-  function walk(path: string): void {
-    const stat = statSync(path, { throwIfNoEntry: false });
-
-    if (!stat) {
-      return;
-    }
-
-    if (stat.isDirectory()) {
-      for (const entry of readdirSync(path)) {
-        walk(join(path, entry));
-      }
-
-      return;
-    }
-
-    hash.update(path);
-    hash.update(String(stat.size));
-    hash.update(String(Math.trunc(stat.mtimeMs)));
-  }
-
-  for (const root of FINGERPRINT_ROOTS) {
-    walk(resolve(process.cwd(), root));
-  }
-
-  const lockfile = resolve(process.cwd(), "../../bun.lock");
-  const lockfileStat = statSync(lockfile, { throwIfNoEntry: false });
-
-  if (lockfileStat) {
-    hash.update(String(lockfileStat.mtimeMs));
-  }
-
-  return hash.digest("hex");
-}
-
 function isUpToDate(): boolean {
   if (!existsSync(FINGERPRINT_FILE)) {
     return false;
   }
 
-  return readFileSync(FINGERPRINT_FILE, "utf8") === sourceFingerprint();
+  return (
+    readFileSync(FINGERPRINT_FILE, "utf8") ===
+    sourceFingerprint(FINGERPRINT_ROOTS)
+  );
 }
 
 async function databaseExists(): Promise<boolean> {
@@ -144,7 +111,7 @@ async function rebuild(): Promise<void> {
     await db.destroy();
   }
 
-  writeFileSync(FINGERPRINT_FILE, sourceFingerprint());
+  writeFileSync(FINGERPRINT_FILE, sourceFingerprint(FINGERPRINT_ROOTS));
 }
 
 // Returns true when callers need to restart against the rebuilt database.

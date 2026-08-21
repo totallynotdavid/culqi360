@@ -26,9 +26,8 @@ export interface SnackBarItem {
   variant: SnackBarVariant;
   message: string;
   detailedMessage: string | null;
+  // Zero keeps the toast until something dismisses it.
   duration: number;
-  elapsed: number;
-  paused: boolean;
   dedupeKey: string | null;
   buttonLabel: string | null;
   buttonOnClick: (() => void) | null;

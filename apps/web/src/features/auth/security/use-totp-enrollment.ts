@@ -6,7 +6,7 @@ import {
   finishTotpEnrollment,
 } from "~/rpc/auth/security/totp";
 
-export interface TotpEnrollmentState {
+interface TotpEnrollmentState {
   qrCodeDataUrl: string;
   otpauthUri: string;
 }

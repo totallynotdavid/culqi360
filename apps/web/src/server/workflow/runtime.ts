@@ -1,7 +1,7 @@
 import type { FileRepos } from "~/server/files/service/contracts";
-import type { FileStorage } from "~/server/files/storage";
 import type { OrganizationEnrichmentQueue } from "~/server/organization/enrichment";
 import type { OrganizationEnrichment } from "~/server/organization/enrichment";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { ServerInfrastructure } from "~/server/platform/infrastructure";
 import type { OperationContext } from "~/server/platform/operation/context";
 import { createInquiry } from "~/server/workflow/inquiry/create-inquiry";
@@ -61,7 +61,7 @@ function bindWorkflowCommand<TInput, TOutput>(
 
 export function createWorkflowRuntime(
   serverInfrastructure: ServerInfrastructure,
-  files: { repo: FileRepos; storage: FileStorage },
+  files: { repo: FileRepos; storage: BlobStore },
   organizationEnrichment: OrganizationEnrichment,
   enrichmentQueue: OrganizationEnrichmentQueue,
 ) {

@@ -42,18 +42,7 @@ export async function getGpvSnapshotDetail(
     snapshotId: snapshot.id,
     state: snapshot.state,
     cutAt: snapshot.cut_at.toISOString(),
-    job:
-      snapshot.job_id && snapshot.queue_state
-        ? {
-            type: "gpv_snapshot_progress",
-            jobId: snapshot.job_id,
-            queueState: snapshot.queue_state,
-            rowsApplied: snapshot.rows_applied ?? 0,
-            rowsFailed: snapshot.rows_failed ?? 0,
-            rowsTotal: snapshot.rows_total ?? 0,
-            errorMessage: snapshot.error_message,
-          }
-        : null,
+    jobError: snapshot.error_message,
     issues: issues.map((issue) => ({
       id: issue.id,
       type: issue.issue_type,

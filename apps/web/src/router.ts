@@ -6,5 +6,3 @@ import { pageRoutes } from "virtual:file-routes";
 // data collector in server-config.ts. Route topology comes from src/routes,
 // scanned by the fileRoutes plugin in vite.config.ts.
 export const Router = createRouter({ routes: fileRoutes(pageRoutes) });
-
-export const { paths } = Router;

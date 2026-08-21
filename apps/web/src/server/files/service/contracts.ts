@@ -1,10 +1,10 @@
 import type { UserId } from "~/domain/ids";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 
 import type { createAssetsRepo } from "../repo/assets";
 import type { createRateRevisionFilesRepo } from "../repo/rate-revision";
 import type { createSalesRepo } from "../repo/sales";
 import type { createTokensRepo } from "../repo/tokens";
-import type { FileStorage } from "../storage";
 import type { FilePurpose } from "../types";
 
 export interface FileRepos {
@@ -34,7 +34,7 @@ export interface StoreGeneratedFileInput {
 
 export interface StoreFileDeps {
   repo: Pick<FileRepos, "assets">;
-  storage: FileStorage;
+  storage: BlobStore;
 }
 
 export interface DownloadTokenDeps {
@@ -43,5 +43,5 @@ export interface DownloadTokenDeps {
 
 export interface ExecuteDownloadDeps {
   repo: Pick<FileRepos, "tokens" | "assets">;
-  storage: FileStorage;
+  storage: BlobStore;
 }

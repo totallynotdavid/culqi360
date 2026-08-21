@@ -10,8 +10,8 @@ import Trash from "~/components/icons/trash";
 import X from "~/components/icons/x";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { actionErrorMessage } from "~/contracts/errors";
-import { createRecordPageController } from "~/features/record-show/record-page-controller";
 import { RecordTabs } from "~/features/record-show/tabs/record-tabs";
+import { useEnrichmentWatch } from "~/features/record-show/use-enrichment-watch";
 import { useLeadActions } from "~/features/record-show/use-record-actions";
 import {
   nextActionCta,
@@ -30,9 +30,6 @@ import { createLeadActionSidePanelPage } from "../../types/side-panel-page";
 import { useLeadRecordPageState } from "./state";
 
 import styles from "./page.module.css";
-
-const POLL_INTERVAL_MS = 3_500;
-const POLL_TIMEOUT_MS = 60_000;
 
 export function RecordPage() {
   const navigate = useNavigate();
@@ -56,12 +53,7 @@ export function RecordPage() {
     },
   );
 
-  createRecordPageController({
-    leadId,
-    detailData,
-    pollIntervalMs: POLL_INTERVAL_MS,
-    pollTimeoutMs: POLL_TIMEOUT_MS,
-  });
+  useEnrichmentWatch(() => detailData()?.lead.ruc);
 
   async function handleAddToFavorites() {
     const detail = detailData();

@@ -2,7 +2,7 @@ import type { Role } from "~/domain/auth/access/rbac";
 import type { ExecutiveCategory } from "~/domain/identity/executive-category";
 import type { CalendarDate } from "~/domain/time/calendar-date";
 
-export const CSV_COLUMNS = [
+const CSV_COLUMNS = [
   "FIRST_SURNAME",
   "SECOND_SURNAME",
   "NAMES",

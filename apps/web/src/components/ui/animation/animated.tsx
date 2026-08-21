@@ -9,6 +9,7 @@ import {
   useContext,
 } from "solid-js";
 
+import { animate as runAnimation } from "./animate";
 import { PresenceContext } from "./presence-context";
 import { usePresence } from "./use-presence";
 
@@ -193,7 +194,8 @@ export function Animated(inputProps: AnimatedProps) {
       if (!el) {
         return;
       }
-      activeAnimation = el.animate(
+      activeAnimation = runAnimation(
+        el,
         [{ ...fromComputed, ...fromFrame }, toFrame],
         transitionToOptions(props.transition),
       );
@@ -233,7 +235,8 @@ export function Animated(inputProps: AnimatedProps) {
       const dy = previousRect.top - nextRect.top;
       if (dx !== 0 || dy !== 0) {
         stopAnimation();
-        activeAnimation = el.animate(
+        activeAnimation = runAnimation(
+          el,
           [
             { transform: `translate(${dx}px, ${dy}px)` },
             { transform: "translate(0px, 0px)" },

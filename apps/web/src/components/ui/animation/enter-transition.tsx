@@ -1,6 +1,8 @@
 import { type JSX } from "@solidjs/web";
 import { onCleanup, onSettled } from "solid-js";
 
+import { animate } from "./animate";
+
 interface EnterTransitionProps {
   children: JSX.Element;
 }
@@ -16,9 +18,6 @@ export function EnterTransition(props: EnterTransitionProps) {
     if (typeof window === "undefined" || !containerRef) {
       return;
     }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
 
     const element = containerRef;
     const targetHeight = element.scrollHeight;
@@ -28,7 +27,8 @@ export function EnterTransition(props: EnterTransitionProps) {
     element.style.overflow = "hidden";
 
     requestAnimationFrame(() => {
-      animation = element.animate(
+      animation = animate(
+        element,
         [
           { opacity: 0, height: "0px" },
           { opacity: 1, height: `${targetHeight}px` },

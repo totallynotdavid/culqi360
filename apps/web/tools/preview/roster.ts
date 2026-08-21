@@ -1,6 +1,6 @@
 import { sql, type Kysely } from "kysely";
 
-import type { Role } from "~/domain/auth/access/rbac";
+import { isRole, type Role } from "~/domain/auth/access/rbac";
 import { UserId } from "~/domain/ids";
 import {
   hashSessionToken,
@@ -9,21 +9,6 @@ import {
 import type { Database } from "~/server/platform/database/types";
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-const ROLES = [
-  "executive",
-  "supervisor",
-  "back_office",
-  "sales_manager",
-  "logistics",
-  "hr",
-  "admin",
-  "superuser",
-] as const satisfies readonly Role[];
-
-export function isRole(value: string): value is Role {
-  return (ROLES as readonly string[]).includes(value);
-}
 
 export interface Persona {
   username: string;

@@ -1,9 +1,7 @@
-export type ObserveElementVisibilityOptions = IntersectionObserverInit;
-
 export function observeElementVisibility(
   element: Element,
   callback: (isIntersecting: boolean) => void,
-  options?: ObserveElementVisibilityOptions,
+  options?: IntersectionObserverInit,
 ): () => void {
   if (typeof IntersectionObserver !== "function") {
     callback(true);

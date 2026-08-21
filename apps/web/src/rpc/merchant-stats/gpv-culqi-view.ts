@@ -1,6 +1,7 @@
 import { query } from "@solidjs/router";
 
 import type { BookFilter } from "~/contracts/merchant-stats/views";
+import { QUERY_KEYS } from "~/contracts/query-keys";
 import { getGpvCulqi } from "~/server/merchant-stats/ui/dashboard";
 
 export const gpvCulqiViewQuery = query(
@@ -8,5 +9,5 @@ export const gpvCulqiViewQuery = query(
     "use server";
     return getGpvCulqi(input);
   },
-  "merchant-stats.gpv-culqi",
+  QUERY_KEYS.merchantStats.gpvCulqi,
 );

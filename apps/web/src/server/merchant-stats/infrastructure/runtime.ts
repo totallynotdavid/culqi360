@@ -1,5 +1,4 @@
 import type { CommissionManagerView } from "~/contracts/merchant-stats/commission-views";
-import type { GpvSnapshotProgressEvent } from "~/contracts/merchant-stats/imports";
 import type {
   BookFilter,
   CohortSaleRow,
@@ -12,12 +11,7 @@ import type {
 } from "~/contracts/merchant-stats/views";
 import type { QualityIssue } from "~/contracts/merchant-stats/vocabulary";
 import type { DomainError } from "~/domain/errors";
-import type {
-  GpvSnapshotId,
-  GpvSnapshotIssueId,
-  GpvSnapshotJobId,
-  UserId,
-} from "~/domain/ids";
+import type { GpvSnapshotId, GpvSnapshotIssueId, UserId } from "~/domain/ids";
 import type { CommissionSchemeRules } from "~/domain/merchant-stats/commission";
 import type { GpvSnapshotIssueResolution } from "~/domain/merchant-stats/snapshot";
 import { appCalendarDateAt } from "~/domain/time/app-time";
@@ -25,10 +19,10 @@ import type {
   FileOperationContext,
   FileRepos,
 } from "~/server/files/service/contracts";
-import type { FileStorage } from "~/server/files/storage";
 import { createGpvSnapshotQueue } from "~/server/merchant-stats/snapshot/queue";
 import { createGpvSnapshotJobRepo } from "~/server/merchant-stats/snapshot/repo";
 import type { DatabaseExecutor } from "~/server/platform/database/executor";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { OperationContext } from "~/server/platform/operation/context";
 import type { Result } from "~/shared/result";
 
@@ -55,7 +49,7 @@ import { readPublishedGpvPage } from "../read/published-page";
 import { getQualityRows } from "../read/quality";
 import { getMerchantStatsForViewer } from "../read/ruc-stats";
 import { getGpvSnapshotDetail } from "../read/snapshot-detail";
-import { buildGpvSnapshotProgressEvent } from "../snapshot/progress";
+import { buildGpvSnapshotJobEvent } from "../snapshot/progress";
 import { resolveGpvSnapshotIssue } from "../snapshot/resolve-issue";
 import { submitGpvSnapshot } from "../snapshot/submit";
 
@@ -63,7 +57,7 @@ interface MerchantStatsRuntimeDeps {
   db: DatabaseExecutor;
   files: {
     repo: FileRepos;
-    storage: FileStorage;
+    storage: BlobStore;
   };
 }
 
@@ -144,11 +138,10 @@ export function createMerchantStatsRuntime(deps: MerchantStatsRuntimeDeps) {
         operation: OperationContext,
       ) =>
         submitGpvSnapshot(input, { db: deps.db, files: deps.files }, operation),
-      progress: async (
-        jobId: GpvSnapshotJobId,
-      ): Promise<GpvSnapshotProgressEvent | null> => {
-        const job = await jobs.findById(jobId);
-        return job ? buildGpvSnapshotProgressEvent(job) : null;
+      jobEvent: async (snapshotId: GpvSnapshotId) => {
+        const job = await jobs.findBySnapshotId(snapshotId);
+
+        return job ? buildGpvSnapshotJobEvent(job) : null;
       },
       snapshot: (snapshotId: GpvSnapshotId) =>
         getGpvSnapshotDetail(deps.db, snapshotId),

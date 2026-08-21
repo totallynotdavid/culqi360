@@ -2,16 +2,18 @@
   "$schema": "https://schema.fallow.tools/.fallowrc.json",
   "extends": "../../.fallowrc.json",
   "entry": [
-    "src/app.tsx",
-    "src/entry-client.tsx",
-    "src/entry-server.tsx",
+    "src/App.tsx",
+    "src/Document.tsx",
     "src/middleware.ts",
+    "src/server-config.ts",
     "src/workers/maintenance-runner.ts",
     "src/routes/**/*.{ts,tsx}",
     "src/rpc/**/*.{ts,tsx}",
     "src/server/platform/database/migrate-cli.ts",
     "src/server/platform/database/seed.ts",
+    "server.ts",
     "tools/e2e/prepare.ts",
+    "tools/preview/cli.ts",
     "vite.config.ts",
     "tracer.ts",
     "vitest.bench.config.ts"
@@ -194,6 +196,16 @@
         ]
       },
       {
+        "from": "server/client-search",
+        "allow": [
+          "contracts",
+          "domain",
+          "server/jobs",
+          "server/platform",
+          "shared"
+        ]
+      },
+      {
         "from": "server/contact-assignments",
         "allow": [
           "contracts",
@@ -201,6 +213,17 @@
           "server/capacity",
           "server/integrations",
           "server/organization",
+          "server/platform",
+          "shared"
+        ]
+      },
+      {
+        "from": "server/data-source-uploads",
+        "allow": [
+          "contracts",
+          "domain",
+          "server/integrations",
+          "server/jobs",
           "server/platform",
           "shared"
         ]
@@ -232,6 +255,7 @@
         "allow": [
           "contracts",
           "domain",
+          "server/jobs",
           "server/notifications",
           "server/records",
           "server/users",
@@ -253,6 +277,17 @@
         ]
       },
       {
+        "comment": "The job fabric every producer publishes onto. It owns the channel and the wire shape, so it reaches realtime; nothing about a specific job kind lives here.",
+        "from": "server/jobs",
+        "allow": [
+          "contracts",
+          "domain",
+          "server/realtime",
+          "server/platform",
+          "shared"
+        ]
+      },
+      {
         "from": "server/merchant-stats",
         "allow": [
           "contracts",
@@ -260,6 +295,7 @@
           "server/csv",
           "server/event-logs",
           "server/files",
+          "server/jobs",
           "server/realtime",
           "server/platform",
           "shared"
@@ -321,8 +357,23 @@
           "domain",
           "server/csv",
           "server/integrations",
+          "server/jobs",
           "server/realtime",
           "server/workflow",
+          "server/platform",
+          "shared"
+        ]
+      },
+      {
+        "comment": "Mirrors search-workflow: search meters an executive's allowance through capacity and runs the lookup through the engine client.",
+        "from": "server/search",
+        "allow": [
+          "contracts",
+          "domain",
+          "server/capacity",
+          "server/integrations",
+          "server/search-workflow",
+          "server/security",
           "server/platform",
           "shared"
         ]
