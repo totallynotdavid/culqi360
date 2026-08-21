@@ -1,10 +1,5 @@
-import {
-  createSignal,
-  onCleanup,
-  onMount,
-  type JSX,
-  type ParentProps,
-} from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { createSignal, onSettled, type ParentProps } from "solid-js";
 
 import styles from "./overflow-tooltip.module.css";
 
@@ -38,7 +33,7 @@ export function OverflowingText(props: OverflowingTextProps) {
     );
   }
 
-  onMount(() => {
+  onSettled(() => {
     measure();
 
     const observer = new ResizeObserver(measure);
@@ -48,7 +43,7 @@ export function OverflowingText(props: OverflowingTextProps) {
       observer.observe(element);
     }
 
-    onCleanup(() => observer.disconnect());
+    return () => observer.disconnect();
   });
 
   return (

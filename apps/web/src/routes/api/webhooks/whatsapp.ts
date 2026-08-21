@@ -1,11 +1,12 @@
-import type { ApiRequestEvent } from "~/routes/api/request-event";
+import type { APIEvent } from "filesystem-routing/api";
+
 import { getApplication } from "~/server/composition/application";
 import { getRequestOperation } from "~/server/platform/http/request-context-storage";
 import { createLogger } from "~/shared/observability/runtime-logger";
 
 const logger = createLogger("whatsapp-webhook");
 
-export function GET(event: ApiRequestEvent): Response {
+export function GET(event: APIEvent): Response {
   const url = new URL(event.request.url);
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
@@ -26,7 +27,7 @@ export function GET(event: ApiRequestEvent): Response {
   return new Response("Forbidden", { status: 403 });
 }
 
-export async function POST(event: ApiRequestEvent): Promise<Response> {
+export async function POST(event: APIEvent): Promise<Response> {
   try {
     const result = await getApplication().notifications.webhooks.receiveKapso(
       {

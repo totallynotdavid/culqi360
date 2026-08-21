@@ -1,5 +1,5 @@
+import { Dynamic } from "@solidjs/web";
 import { For } from "solid-js";
-import { Dynamic } from "solid-js/web";
 
 import Activity from "~/components/icons/activity";
 import ChartColumn from "~/components/icons/chart-column";

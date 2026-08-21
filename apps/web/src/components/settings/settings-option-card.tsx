@@ -1,6 +1,7 @@
+import { type JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import { clsx } from "clsx";
-import { Show, type JSX, type ParentProps } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Show, type ParentProps } from "solid-js";
 
 import { Toggle } from "~/components/ui/input/toggle";
 import { OverflowingText } from "~/components/ui/overflow-tooltip/overflow-tooltip";

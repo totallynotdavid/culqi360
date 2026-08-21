@@ -1,8 +1,8 @@
 import { responsiveImagesPlugin } from "@crm/images/vite";
 import mdx from "@mdx-js/rollup";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
-import { solidStart } from "@solidjs/start/config";
-import { nitro } from "nitro/vite";
+import solid from "@solidjs/vite-plugin";
+import { fileRoutes } from "filesystem-routing/vite";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { bundleAnalyzerPlugin } from "rolldown/experimental";
@@ -16,6 +16,10 @@ import {
 } from "./tracer.ts";
 
 const requestTraceConfig = resolveRequestTraceConfig(process.env);
+
+// Route files carry MDX alongside TSX: the updates feed and the legal and
+// docs pages are authored as content, not components.
+const ROUTE_EXTENSIONS = ["js", "jsx", "ts", "tsx", "md", "mdx"];
 
 function shouldUploadSourceMaps(command: string): boolean {
   return (
@@ -38,20 +42,27 @@ export default defineConfig(({ command }) => {
       sourcemap: uploadSourceMaps,
     },
 
-    optimizeDeps: {
-      include: ["@solid-primitives/keyed"],
-    },
-
     resolve: {
-      dedupe: ["solid-js", "solid-js/web"],
+      // Start mode does not define SolidStart's `~` alias; the app owns it.
+      alias: { ...appAlias },
+      dedupe: ["solid-js", "@solidjs/web"],
     },
 
-    // SolidStart replaces `server-only` during Vite processing.
     ssr: {
-      noExternal: ["server-only"],
+      // Native addon: it cannot be bundled into the server output.
+      external: ["@node-rs/argon2"],
     },
 
     server: {
+      // The preview CLI pins the dev server to a fixed origin so the links the
+      // app generates match where it is served. Plain Vite does not read
+      // PORT/HOST the way the removed Nitro dev server did, and silently
+      // walking to the next free port is what makes a mismatch hard to see, so
+      // a requested port is strict.
+      port: process.env.PORT ? Number(process.env.PORT) : undefined,
+      strictPort: Boolean(process.env.PORT),
+      host: process.env.HOST,
+
       // Initialize the CSS-module cache for cold SSR renders.
       // See vitejs/vite#19606.
       perEnvironmentStartEndDuringDev: true,
@@ -69,47 +80,31 @@ export default defineConfig(({ command }) => {
         ...mdx({
           include: /\.mdx?$/,
           jsx: true,
-          jsxImportSource: "solid-js",
-          providerImportSource: "solid-mdx",
+          jsxImportSource: "@solidjs/web",
           remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter],
         }),
       },
 
-      solidStart({
-        middleware: "./src/middleware.ts",
-        extensions: ["md", "mdx"],
-        serialization: {
-          mode: "json",
+      solid({
+        start: {
+          middleware: "./src/middleware.ts",
         },
+        ssr: true,
         serverFunctions: {
           filter: {
             include: ["src/rpc/**/*.ts"],
           },
-          onError: "./src/server-function-error.ts",
+          configure: "./src/server-config.ts",
         },
+        // `.jsx`/`.tsx` cover the `?pick=` route ids emitted by fileRoutes;
+        // the MDX entries are content routes the transform must also accept.
+        extensions: [".jsx", ".tsx", ".md", ".mdx"],
       }),
 
-      nitro({
-        alias: { ...appAlias },
-        plugins: ["./src/server/entrypoints/nitro/realtime-lifecycle.ts"],
-
-        // Nitro does not inherit Vite's sourcemap setting.
-        sourcemap: uploadSourceMaps,
-
-        rollupConfig: {
-          external: [/^@node-rs\/argon2/],
-        },
-        prerender: {
-          autoSubfolderIndex: true,
-          routes: [
-            "/legal/privacy",
-            "/legal/terms",
-            "/updates",
-            "/docs/",
-            "/docs/getting-started",
-          ],
-        },
-        preset: "bun",
+      fileRoutes({
+        httpMethods: true,
+        extensions: ROUTE_EXTENSIONS,
+        types: true,
       }),
 
       visualizer(),

@@ -1,5 +1,5 @@
 import { useAction, useParams } from "@solidjs/router";
-import { createMemo, ErrorBoundary, Suspense } from "solid-js";
+import { createMemo, Errored, Loading } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import Building2 from "~/components/icons/building-2";
@@ -17,7 +17,6 @@ import {
 import type { QualityRow } from "~/contracts/merchant-stats/views";
 import { isQualityIssue } from "~/contracts/merchant-stats/vocabulary";
 import { DataGrid } from "~/features/data-grid/components/grid";
-import type { DataGridSource } from "~/features/data-grid/model/source";
 import type { DataGridColumn } from "~/features/data-grid/model/types";
 import { qualityRowsQuery } from "~/rpc/merchant-stats/quality-rows";
 
@@ -140,19 +139,20 @@ export function QualityPage() {
 
   const renderDataGrid = (
     label: string,
-    source: DataGridSource<QualityRow>,
+    rows: ReadonlyArray<QualityRow>,
+    emptyState: string,
   ) => (
     <DataGrid
       ariaLabel={label}
       columns={columns}
-      emptyState="No hay comercios pendientes en esta cola."
+      emptyState={emptyState}
       loadMore={{
         hasMore: grid.hasMore(),
         loading: grid.loading(),
         onLoadMore: grid.onLoadMore,
       }}
       rowId={(row) => `${row.ruc}:${row.month}`}
-      source={source}
+      source={{ rows }}
     />
   );
 
@@ -174,24 +174,23 @@ export function QualityPage() {
             <>
               <h1 class={styles.title}>{label()}</h1>
 
-              <ErrorBoundary
-                fallback={renderDataGrid(label(), {
-                  status: "error",
-                  rows: [],
-                })}
+              <Loading
+                fallback={renderDataGrid(label(), [], "Cargando cola...")}
               >
-                <Suspense
-                  fallback={renderDataGrid(label(), {
-                    status: "pending",
-                    rows: [],
-                  })}
+                <Errored
+                  fallback={renderDataGrid(
+                    label(),
+                    [],
+                    "No se pudo cargar la cola.",
+                  )}
                 >
-                  {renderDataGrid(label(), {
-                    status: "ready",
-                    rows: grid.rows(),
-                  })}
-                </Suspense>
-              </ErrorBoundary>
+                  {renderDataGrid(
+                    label(),
+                    grid.rows(),
+                    "No hay comercios pendientes en esta cola.",
+                  )}
+                </Errored>
+              </Loading>
             </>
           );
         }}

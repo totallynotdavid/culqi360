@@ -1,3 +1,4 @@
+import type { ActionSuccess } from "~/contracts/common";
 import { fail, type DomainError } from "~/domain/errors";
 import type { ContactAssignmentsRepo } from "~/server/contact-assignments/infrastructure/assignment-repo";
 import type { InteractionLogsRepo } from "~/server/contact-assignments/infrastructure/interaction-logs-repo";
@@ -5,10 +6,7 @@ import type { AppUow } from "~/server/platform/database/uow";
 import type { OperationContext } from "~/server/platform/operation/context";
 import { Err, Ok, type Result } from "~/shared/result";
 
-import type {
-  CompleteContactAssignmentCallCommand,
-  CompleteContactAssignmentCallResult,
-} from "./contracts";
+import type { CompleteContactAssignmentCallCommand } from "./contracts";
 
 type CompleteContactAssignmentCallTxRepos = {
   contactAssignments: Pick<
@@ -22,7 +20,7 @@ async function completeAssignmentInteraction(
   input: CompleteContactAssignmentCallCommand,
   repos: CompleteContactAssignmentCallTxRepos,
   operation: OperationContext,
-): Promise<Result<CompleteContactAssignmentCallResult, DomainError>> {
+): Promise<Result<ActionSuccess, DomainError>> {
   const assignment = await repos.contactAssignments.findActiveByIdForUser(
     input.assignmentId,
     input.actorUserId,
@@ -52,7 +50,7 @@ export function completeContactAssignmentCall(
   input: CompleteContactAssignmentCallCommand,
   uow: AppUow<CompleteContactAssignmentCallTxRepos>,
   operation: OperationContext,
-): Promise<Result<CompleteContactAssignmentCallResult, DomainError>> {
+): Promise<Result<ActionSuccess, DomainError>> {
   return uow.run((repos) =>
     completeAssignmentInteraction(input, repos, operation),
   );

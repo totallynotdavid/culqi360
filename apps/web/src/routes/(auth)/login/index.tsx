@@ -1,5 +1,5 @@
 import { useSearchParams } from "@solidjs/router";
-import { onMount } from "solid-js";
+import { onSettled } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { useAuthPageView } from "~/features/auth/services/use-auth-analytics";
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const { enqueueErrorSnackBar } = useSnackBar();
 
-  onMount(() => {
+  onSettled(() => {
     if (searchParams.error === "google_not_linked") {
       enqueueErrorSnackBar("Tu cuenta no tiene Google vinculado.");
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { For, Suspense } from "solid-js";
+import { For, Loading } from "solid-js";
 
 import { Select } from "~/components/ui/input/select";
 import { FilterBar } from "~/components/ui/layout/filter-bar";
@@ -23,7 +23,7 @@ export function GpvFilterBar(props: { view: GpvView }) {
   const filter = props.view.filter;
 
   return (
-    <Suspense fallback={<FilterBar class={styles.bar} />}>
+    <Loading fallback={<FilterBar class={styles.bar} />}>
       <FilterBar class={styles.bar}>
         <div class={styles.filter}>
           <Select
@@ -94,6 +94,6 @@ export function GpvFilterBar(props: { view: GpvView }) {
           </Select>
         </div>
       </FilterBar>
-    </Suspense>
+    </Loading>
   );
 }

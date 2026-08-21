@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 /* oxlint-disable jsx-a11y/no-noninteractive-element-to-interactive-role */
-import { Show, type JSX } from "solid-js";
+import { Show } from "solid-js";
 
 import { useDataGrid } from "../context/instance-context";
 import {
@@ -11,7 +12,6 @@ import { DataGridBody } from "./body";
 import { DataGridEditorLayer } from "./editor-layer";
 import { DataGridHeader } from "./header";
 import { DataGridLoadMoreSentinel } from "./load-more-sentinel";
-import { DataGridLoadingState } from "./loading-state";
 
 import styles from "../styles/table.module.css";
 
@@ -34,9 +34,6 @@ function SurfaceMessage(props: { content: JSX.Element }) {
 export function DataGridSurface<T>(props: DataGridSurfaceProps<T>) {
   const grid = useDataGrid();
   const rows = () => props.source.rows;
-  const isLoading = () => props.source.status === "pending";
-  const isError = () => props.source.status === "error";
-  const errorState = () => props.errorState ?? "No se pudo cargar la tabla.";
   const paginationStart = () =>
     (props.pagination?.currentPage ?? 0) * (props.pagination?.pageSize ?? 0) +
     1;
@@ -93,44 +90,29 @@ export function DataGridSurface<T>(props: DataGridSurfaceProps<T>) {
               stickyColumnIndex={props.stickyColumnIndex}
             />
 
-            <Show when={!isLoading()} fallback={<DataGridLoadingState />}>
-              <Show
-                when={!isError()}
-                fallback={
-                  <div class={styles.emptyStateSurface} role="row">
-                    <div role="gridcell">
-                      <SurfaceMessage content={errorState()} />
-                    </div>
+            <Show
+              when={rows().length > 0}
+              fallback={
+                <div class={styles.emptyStateSurface} role="row">
+                  <div role="gridcell">
+                    <SurfaceMessage content={props.emptyState} />
                   </div>
-                }
-              >
-                <Show
-                  when={rows().length > 0}
-                  fallback={
-                    <div class={styles.emptyStateSurface} role="row">
-                      <div role="gridcell">
-                        <SurfaceMessage content={props.emptyState} />
-                      </div>
-                    </div>
-                  }
-                >
-                  <DataGridBody
-                    actionRow={props.actionRow}
-                    columns={props.columns}
-                    onRowOpen={props.onRowOpen}
-                    rowId={props.rowId}
-                    rowOpenIndicator={props.rowOpenIndicator}
-                    rowIndexOffset={rowIndexOffset()}
-                    rows={rows()}
-                    totalRowCount={dataRowCount()}
-                    stickyColumnIndex={props.stickyColumnIndex}
-                  />
-                  <Show when={props.loadMore}>
-                    {(loadMore) => (
-                      <DataGridLoadMoreSentinel config={loadMore()} />
-                    )}
-                  </Show>
-                </Show>
+                </div>
+              }
+            >
+              <DataGridBody
+                actionRow={props.actionRow}
+                columns={props.columns}
+                onRowOpen={props.onRowOpen}
+                rowId={props.rowId}
+                rowOpenIndicator={props.rowOpenIndicator}
+                rowIndexOffset={rowIndexOffset()}
+                rows={rows()}
+                totalRowCount={dataRowCount()}
+                stickyColumnIndex={props.stickyColumnIndex}
+              />
+              <Show when={props.loadMore}>
+                {(loadMore) => <DataGridLoadMoreSentinel config={loadMore()} />}
               </Show>
             </Show>
             <DataGridEditorLayer

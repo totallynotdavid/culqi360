@@ -1,32 +1,29 @@
-import { REALTIME_CHANNELS } from "~/contracts/realtime/channel";
-import { parseRecordImportProgressMessage } from "~/contracts/records/imports";
+import { JOB_KINDS } from "~/contracts/jobs/job-event";
 import { hasPermission } from "~/domain/auth/access/rbac";
 import { IntegrationJobId } from "~/domain/ids";
-import { defineRealtimeChannel } from "~/server/realtime/channel";
+import { defineJobProjector } from "~/server/jobs/projector";
 import { isErr } from "~/shared/result";
 
-import { RECORDS_IMPORT_PROGRESS_CHANNEL } from "./progress-events";
-import { buildRecordImportProgressEvent } from "./progress-events";
+import { buildRecordImportJobEvent } from "./progress-events";
 import type { createRecordImportsRuntime } from "./runtime";
 
-export function createRecordImportChannel(
+export function createRecordImportProjector(
   recordImports: Pick<
     ReturnType<typeof createRecordImportsRuntime>,
     "find" | "canAccess"
   >,
 ) {
-  return defineRealtimeChannel({
-    name: REALTIME_CHANNELS.recordImport,
-    pgChannel: RECORDS_IMPORT_PROGRESS_CHANNEL,
+  return defineJobProjector({
+    kind: JOB_KINDS.recordImport,
 
-    parseId: (raw) => {
+    parseSubjectId: (raw) => {
       const parsed = IntegrationJobId.parse(raw);
 
       return isErr(parsed) ? null : parsed.value;
     },
 
-    // The job provides both access control and the initial progress snapshot.
-    open: async (session, jobId) => {
+    // The job provides both access control and the opening state.
+    read: async (session, jobId) => {
       if (!hasPermission(session.role, "integration:manage")) {
         return null;
       }
@@ -46,14 +43,7 @@ export function createRecordImportChannel(
         job,
       );
 
-      if (!canAccess) {
-        return null;
-      }
-
-      return [{ data: JSON.stringify(buildRecordImportProgressEvent(job)) }];
+      return canAccess ? buildRecordImportJobEvent(job) : null;
     },
-
-    topicIdOfPayload: (payload) =>
-      parseRecordImportProgressMessage(payload)?.jobId ?? null,
   });
 }

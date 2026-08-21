@@ -7,8 +7,6 @@ import type { AppContext } from "./context";
 // payloads (which may carry PII or bank data) cannot be assigned here.
 export type TelemetryFields = Record<string, string | number | boolean | null>;
 
-export type TelemetryRow = RecordActionObservationInput;
-
 export type TelemetryContext = {
   actionName: string;
   ctx: AppContext;
@@ -19,7 +17,7 @@ export type TelemetryContext = {
 
 function baseRow(
   t: TelemetryContext,
-): Omit<TelemetryRow, "status" | "errorCode" | "errorMessage"> {
+): Omit<RecordActionObservationInput, "status" | "errorCode" | "errorMessage"> {
   return {
     traceId: t.ctx.traceId,
     requestId: t.ctx.requestId,
@@ -38,11 +36,14 @@ function baseRow(
   };
 }
 
-export function successRow(t: TelemetryContext): TelemetryRow {
+export function successRow(t: TelemetryContext): RecordActionObservationInput {
   return { ...baseRow(t), status: "ok", errorCode: null, errorMessage: null };
 }
 
-export function errorRow(t: TelemetryContext, error: WireError): TelemetryRow {
+export function errorRow(
+  t: TelemetryContext,
+  error: WireError,
+): RecordActionObservationInput {
   return {
     ...baseRow(t),
     status: "error",

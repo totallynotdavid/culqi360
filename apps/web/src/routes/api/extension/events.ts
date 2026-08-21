@@ -1,10 +1,11 @@
+import type { APIEvent } from "filesystem-routing/api";
+
 import { getApplication } from "~/server/composition/application";
 import { isExtensionRuntimeEventEnvelope } from "~/server/extension/contracts";
 import { toWire } from "~/server/platform/action/domain-error";
 import { getRequestOperation } from "~/server/platform/http/request-context-storage";
 import { isErr } from "~/shared/result";
 
-import type { ApiRequestEvent } from "../request-event";
 import { readJsonBody } from "./json-body";
 
 function getBearerToken(request: Request): string | null {
@@ -19,7 +20,7 @@ function getBearerToken(request: Request): string | null {
   return token === "" ? null : token;
 }
 
-export async function POST(event: ApiRequestEvent): Promise<Response> {
+export async function POST(event: APIEvent): Promise<Response> {
   try {
     const sessionToken = getBearerToken(event.request);
 

@@ -1,5 +1,4 @@
-import { A, createAsync } from "@solidjs/router";
-import { For, Show } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import {
@@ -43,8 +42,8 @@ function groupByStep(rows: FulfillmentQueueRowView[]): Group[] {
 }
 
 export default function FulfillmentQueuePage() {
-  const queue = createAsync(() => fulfillmentQueueQuery(), {
-    initialValue: { rows: [], evaluatedAt: 0 },
+  const queue = createMemo(() => fulfillmentQueueQuery(), {
+    loadingValue: { rows: [], evaluatedAt: 0 },
   });
   const groups = () => groupByStep(queue().rows);
 
@@ -71,9 +70,10 @@ export default function FulfillmentQueuePage() {
                 <ul class={styles.queue}>
                   <For each={group.rows}>
                     {(row) => (
-                      <A
+                      <a
                         href={`/records/${row.leadId}`}
                         class={styles.row}
+                        aria-label={`Abrir ${row.legalName ?? `RUC ${row.ruc}`}`}
                         data-state={
                           queue().evaluatedAt - row.waitingSince >
                           STALE_AFTER_MS
@@ -105,7 +105,7 @@ export default function FulfillmentQueuePage() {
                             )}
                           </span>
                         </div>
-                      </A>
+                      </a>
                     )}
                   </For>
                 </ul>

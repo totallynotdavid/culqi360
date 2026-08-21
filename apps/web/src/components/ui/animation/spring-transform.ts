@@ -1,4 +1,6 @@
-import { createEffect, onCleanup, type Accessor } from "solid-js";
+import { createEffect, type Accessor } from "solid-js";
+
+import { prefersReducedMotion } from "./animate";
 
 const SPRING = {
   stiffness: 300,
@@ -35,10 +37,9 @@ export function springTransform(
   transform: Accessor<string>,
 ): (element: Element) => void {
   return (element: Element) => {
-    createEffect(() => {
-      const cancel = animateSpringTransform(element, transform());
-      onCleanup(cancel);
-    });
+    // The effect phase's return value is its cleanup, so a new transform
+    // cancels the in-flight animation before starting the next one.
+    createEffect(transform, (next) => animateSpringTransform(element, next));
   };
 }
 
@@ -258,10 +259,6 @@ function createSpringConstants(delta: number) {
     dampingRatio,
     coefficient: (dampingRatio * omega0 * delta) / omegaD,
   };
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function formatNumber(value: number): string {

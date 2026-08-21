@@ -1,5 +1,5 @@
-import { Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
+import { Show, createEffect, createSignal, onSettled } from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
 import type { LeadSaleProofFileView } from "~/contracts/workflow/results";
@@ -30,7 +30,7 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
     });
   }
 
-  onMount(() => {
+  onSettled(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!isOpen()) {
         return;
@@ -46,26 +46,30 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
     };
 
     window.document.addEventListener("pointerdown", handlePointerDown);
-    onCleanup(() =>
-      window.document.removeEventListener("pointerdown", handlePointerDown),
-    );
+    return () =>
+      window.document.removeEventListener("pointerdown", handlePointerDown);
   });
 
-  createEffect(() => {
-    if (!isOpen()) {
-      return;
-    }
-    updateMenuPosition();
+  createEffect(
+    () => isOpen(),
+    (open) => {
+      if (!open) {
+        return;
+      }
 
-    const onViewportChange = () => updateMenuPosition();
-    window.addEventListener("resize", onViewportChange);
-    window.addEventListener("scroll", onViewportChange, true);
+      updateMenuPosition();
 
-    onCleanup(() => {
-      window.removeEventListener("resize", onViewportChange);
-      window.removeEventListener("scroll", onViewportChange, true);
-    });
-  });
+      const handleViewportChange = () => updateMenuPosition();
+
+      window.addEventListener("resize", handleViewportChange);
+      window.addEventListener("scroll", handleViewportChange, true);
+
+      return () => {
+        window.removeEventListener("resize", handleViewportChange);
+        window.removeEventListener("scroll", handleViewportChange, true);
+      };
+    },
+  );
 
   return (
     <div class={styles.actionsMenuRoot} ref={(el) => (rootRef = el)}>
@@ -75,7 +79,7 @@ export function AttachmentActionsMenu(props: AttachmentActionsMenuProps) {
         size="icon"
         class={styles.actionsMenuTrigger}
         aria-haspopup="menu"
-        aria-expanded={isOpen()}
+        aria-expanded={isOpen() ? "true" : "false"}
         aria-label="Acciones de archivo"
         ref={(el) => (triggerRef = el)}
         onClick={() => {

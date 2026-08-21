@@ -1,4 +1,4 @@
-import { Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 
@@ -10,9 +10,9 @@ export function RecordPageSkeleton() {
   return (
     <div class={styles.root}>
       <div class={styles.tabStrip}>
-        <Index each={TABS}>
+        <For keyed={false} each={TABS}>
           {() => <Skeleton width={72} height={20} radius={6} />}
-        </Index>
+        </For>
       </div>
       <div class={styles.section}>
         <Skeleton width="50%" height={13} />

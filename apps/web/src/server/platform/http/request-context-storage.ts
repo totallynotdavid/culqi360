@@ -1,4 +1,4 @@
-import { getRequestEvent } from "solid-js/web";
+import { getRequestEvent } from "@solidjs/web";
 
 import type { AuthSession } from "~/domain/auth/access/session-types";
 import type { OperationContext } from "~/server/platform/operation/context";

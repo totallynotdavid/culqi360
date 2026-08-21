@@ -1,4 +1,4 @@
-import type { HalftonePose, HalftoneStudioSettings } from "./state";
+import type { HalftonePose } from "./state";
 
 export type HalftoneInteractionState = {
   activePointerId: number | null;
@@ -55,30 +55,3 @@ export const createHalftoneInteractionState = (
   velocityX: 0,
   velocityY: 0,
 });
-
-export const resetHalftoneInteractionState = (
-  interactionState: HalftoneInteractionState,
-  animation: HalftoneStudioSettings["animation"],
-) => {
-  interactionState.activePointerId = null;
-  interactionState.dragging = false;
-  interactionState.hoverStrength = 0;
-  interactionState.mouseX = 0.5;
-  interactionState.mouseY = 0.5;
-  interactionState.pointerInside = false;
-  interactionState.pointerVelocityX = 0;
-  interactionState.pointerVelocityY = 0;
-  interactionState.smoothedMouseX = 0.5;
-  interactionState.smoothedMouseY = 0.5;
-  interactionState.targetRotationX = 0;
-  interactionState.targetRotationY = 0;
-  interactionState.velocityX = 0;
-  interactionState.velocityY = 0;
-  interactionState.rotationVelocityX = 0;
-  interactionState.rotationVelocityY = 0;
-  interactionState.rotationVelocityZ = 0;
-
-  if (animation.autoRotateEnabled) {
-    interactionState.autoElapsed = 0;
-  }
-};

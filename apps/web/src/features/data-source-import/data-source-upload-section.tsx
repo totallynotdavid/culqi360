@@ -1,15 +1,20 @@
-import { createAsync } from "@solidjs/router";
-import { For, Show } from "solid-js";
+import { Errored, For, Loading, Show, createMemo } from "solid-js";
 
+import { createJob } from "~/browser/jobs/create-job";
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";
+import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { Button } from "~/components/ui/input/button";
 import { FileInput } from "~/components/ui/input/file-input";
 import { Input } from "~/components/ui/input/input";
 import { Select } from "~/components/ui/input/select";
-import type { IngestJobStep } from "~/contracts/data-sources/ingest";
+import {
+  parseIngestJobDetail,
+  type IngestJobStep,
+} from "~/contracts/data-sources/ingest";
 import { actionErrorMessage } from "~/contracts/errors";
+import { JOB_KINDS } from "~/contracts/jobs/job-event";
 import { listDataSourceKeysQuery } from "~/rpc/data-sources/ingest";
 
 import {
@@ -30,35 +35,60 @@ const STEP_LABELS: Record<IngestJobStep, string> = {
   complete: "Completado",
 };
 
-const LOCAL_PHASE_LABELS: Partial<Record<UploadRowPhase, string>> = {
+const LOCAL_PHASE_LABELS: Record<UploadRowPhase, string> = {
   idle: "Pendiente",
   hashing: "Calculando hash…",
   registering: "Registrando…",
   uploading: "Subiendo archivo…",
+  tracking: "En cola",
+  failed: "Error",
 };
 
-function describeRow(row: UploadRow): string {
-  if (row.phase === "failed") {
-    return row.error ? `Error: ${row.error}` : "Error";
-  }
-
-  if (row.job) {
-    return row.job.outcome === "succeeded"
-      ? "Completado"
-      : STEP_LABELS[row.job.step];
-  }
-
-  return LOCAL_PHASE_LABELS[row.phase] ?? row.phase;
+// Only the browser's own phases block removal. A tracked row can be dropped:
+// the engine keeps working and the server keeps following it either way.
+function isRemovable(phase: UploadRowPhase): boolean {
+  return phase === "idle" || phase === "tracking" || phase === "failed";
 }
 
-function isRemovable(phase: UploadRowPhase): boolean {
-  return phase === "idle" || phase === "done" || phase === "failed";
+function UploadRowStatus(props: { row: UploadRow }) {
+  const job = createJob({
+    kind: JOB_KINDS.dataSourceIngest,
+    subjectId: () => props.row.jobId,
+    parseDetail: parseIngestJobDetail,
+  });
+
+  const label = () => {
+    if (props.row.phase === "failed") {
+      return props.row.error ? `Error: ${props.row.error}` : "Error";
+    }
+
+    const event = job();
+
+    if (!event) {
+      return LOCAL_PHASE_LABELS[props.row.phase];
+    }
+
+    if (event.state === "failed") {
+      return event.errorMessage ? `Error: ${event.errorMessage}` : "Error";
+    }
+
+    return event.state === "done"
+      ? "Completado"
+      : STEP_LABELS[event.detail.step];
+  };
+
+  const failed = () =>
+    props.row.phase === "failed" || job()?.state === "failed";
+
+  return (
+    <p class={styles.status} data-error={failed() ? "true" : undefined}>
+      {label()}
+    </p>
+  );
 }
 
 export function DataSourceUploadSection() {
-  const sources = createAsync(() => listDataSourceKeysQuery(), {
-    initialValue: [],
-  });
+  const sources = createMemo(() => listDataSourceKeysQuery());
   const upload = useDataSourceUpload();
   const { enqueueErrorSnackBar } = useSnackBar();
 
@@ -75,129 +105,138 @@ export function DataSourceUploadSection() {
       title="Fuentes de datos"
       description="Sube archivos CSV de fuentes externas (OSIPTEL, RUC, operadoras) para actualizar el motor de búsqueda."
     >
-      <Show
-        when={sources().length > 0}
-        fallback={
-          <EmptyState
-            title="Sin fuentes disponibles"
-            description="No hay fuentes de datos configuradas en el motor."
-          />
-        }
-      >
-        <div class={styles.rows}>
-          <For
-            each={upload.rows()}
+      <Loading fallback={<Skeleton height={96} />}>
+        <Errored
+          fallback={
+            <EmptyState
+              title="El motor no responde"
+              description="No se pudieron leer las fuentes de datos. Intenta de nuevo en unos minutos."
+            />
+          }
+        >
+          <Show
+            when={sources().length > 0}
             fallback={
-              <p class={styles.hint}>Agrega un archivo para comenzar.</p>
+              <EmptyState
+                title="Sin fuentes disponibles"
+                description="No hay fuentes de datos configuradas en el motor."
+              />
             }
           >
-            {(row) => {
-              const locked = () => row.phase !== "idle";
+            <div class={styles.rows}>
+              <For
+                each={upload.rows()}
+                fallback={
+                  <p class={styles.hint}>Agrega un archivo para comenzar.</p>
+                }
+              >
+                {(row) => {
+                  const locked = () => row.phase !== "idle";
 
-              return (
-                <div class={styles.row}>
-                  <div class={styles.fields}>
-                    <Select
-                      label="Fuente"
-                      value={row.sourceKey}
-                      disabled={locked()}
-                      onInput={(event) =>
-                        upload.setSourceKey(row.id, event.currentTarget.value)
-                      }
-                    >
-                      <For each={sources()}>
-                        {(source) => (
-                          <option value={source.source_key}>
-                            {source.source_name}
-                          </option>
-                        )}
-                      </For>
-                    </Select>
+                  return (
+                    <div class={styles.row}>
+                      <div class={styles.fields}>
+                        <Select
+                          label="Fuente"
+                          value={row.sourceKey}
+                          disabled={locked()}
+                          onInput={(event) =>
+                            upload.setSourceKey(
+                              row.id,
+                              event.currentTarget.value,
+                            )
+                          }
+                        >
+                          <For each={sources()}>
+                            {(source) => (
+                              <option value={source.source_key}>
+                                {source.source_name}
+                              </option>
+                            )}
+                          </For>
+                        </Select>
 
-                    <Input
-                      label="Etiqueta"
-                      value={row.snapshotLabel}
-                      disabled={locked()}
-                      onInput={(event) =>
-                        upload.setSnapshotLabel(
-                          row.id,
-                          event.currentTarget.value,
-                        )
-                      }
-                    />
+                        <Input
+                          label="Etiqueta"
+                          value={row.snapshotLabel}
+                          disabled={locked()}
+                          onInput={(event) =>
+                            upload.setSnapshotLabel(
+                              row.id,
+                              event.currentTarget.value,
+                            )
+                          }
+                        />
 
-                    <Input
-                      type="date"
-                      label="Fecha"
-                      value={row.snapshotDate}
-                      disabled={locked()}
-                      onInput={(event) =>
-                        upload.setSnapshotDate(
-                          row.id,
-                          event.currentTarget.value,
-                        )
-                      }
-                    />
+                        <Input
+                          type="date"
+                          label="Fecha"
+                          value={row.snapshotDate}
+                          disabled={locked()}
+                          onInput={(event) =>
+                            upload.setSnapshotDate(
+                              row.id,
+                              event.currentTarget.value,
+                            )
+                          }
+                        />
 
-                    <FileInput
-                      label="Archivo CSV"
-                      accept=".csv"
-                      disabled={locked()}
-                      onChange={(event) =>
-                        upload.setFile(
-                          row.id,
-                          event.currentTarget.files?.[0] ?? null,
-                        )
-                      }
-                    />
-                  </div>
+                        <FileInput
+                          label="Archivo CSV"
+                          accept=".csv"
+                          disabled={locked()}
+                          onChange={(event) =>
+                            upload.setFile(
+                              row.id,
+                              event.currentTarget.files?.[0] ?? null,
+                            )
+                          }
+                        />
+                      </div>
 
-                  <div class={styles.rowFooter}>
-                    <p
-                      class={styles.status}
-                      data-error={row.phase === "failed" ? "true" : undefined}
-                    >
-                      {describeRow(row)}
-                    </p>
+                      <div class={styles.rowFooter}>
+                        <UploadRowStatus row={row} />
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={!isRemovable(row.phase)}
-                      onClick={() => upload.removeRow(row.id)}
-                    >
-                      Quitar
-                    </Button>
-                  </div>
-                </div>
-              );
-            }}
-          </For>
-        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!isRemovable(row.phase)}
+                          onClick={() => upload.removeRow(row.id)}
+                        >
+                          Quitar
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
 
-        <div class={styles.actions}>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => upload.addRow(sources()[0]?.source_key ?? "")}
-          >
-            Añadir archivo
-          </Button>
+            <div class={styles.actions}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => upload.addRow(sources()[0]?.source_key ?? "")}
+              >
+                Añadir archivo
+              </Button>
 
-          <Button
-            type="button"
-            disabled={
-              upload.isSubmitting() ||
-              !upload.rows().some((row) => row.file && row.phase === "idle")
-            }
-            loading={upload.isSubmitting()}
-            onClick={() => void handleSubmit()}
-          >
-            Subir todo
-          </Button>
-        </div>
-      </Show>
+              <Button
+                type="button"
+                disabled={
+                  upload.isSubmitting() ||
+                  !upload.rows().some((row) => row.file && row.phase === "idle")
+                }
+                loading={upload.isSubmitting()}
+                onClick={() => void handleSubmit()}
+              >
+                Subir todo
+              </Button>
+            </div>
+          </Show>
+        </Errored>
+      </Loading>
     </SettingsSection>
   );
 }

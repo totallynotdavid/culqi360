@@ -1,9 +1,8 @@
-import { createAsync } from "@solidjs/router";
 import {
-  createEffect,
   createMemo,
   createSignal,
-  on,
+  isPending,
+  latest,
   type Accessor,
 } from "solid-js";
 
@@ -20,6 +19,9 @@ import { eventLogsQuery } from "~/rpc/event-logs/event-logs";
 import { hasEventLogFilters } from "../model/event-log-location";
 
 const MAX_LIVE_RECORDS = 200;
+
+/** The first page has no cursor; every later page starts at the one before it. */
+type PageCursor = string | undefined;
 
 function queryKey(input: EventLogQueryInput): string {
   return JSON.stringify(input);
@@ -57,44 +59,34 @@ export function createEventLogQuery(options: {
 }) {
   const activeKey = createMemo(() => queryKey(options.input()));
 
-  const firstPage = createAsync(async () => {
+  // Writable memo: paging appends a cursor, a new filter set recomputes back to
+  // the first page. The trail is the state and the pages below are derived from
+  // it, so an abandoned filter takes its in-flight tail with it.
+  const [cursors, setCursors] = createSignal<readonly PageCursor[]>(() => {
+    activeKey();
+
+    return [undefined];
+  });
+
+  const pages = createMemo(async () => {
     const input = options.input();
-    const key = queryKey(input);
-    const page = await eventLogsQuery(input);
 
-    return { key, page };
+    // Cursors already loaded resolve from the router query cache, so appending
+    // one is a single request rather than a refetch of the whole trail.
+    return Promise.all(
+      cursors().map((after) =>
+        eventLogsQuery(after ? { ...input, after } : input),
+      ),
+    );
   });
 
-  const [extraPages, setExtraPages] = createSignal<EventLogQueryResult[]>([]);
-  const [loadingMore, setLoadingMore] = createSignal(false);
-
-  let requestGeneration = 0;
-
-  createEffect(
-    on(activeKey, () => {
-      requestGeneration += 1;
-      setExtraPages([]);
-      setLoadingMore(false);
-    }),
-  );
-
-  const currentFirstPage = createMemo(() => {
-    const result = firstPage();
-
-    return result?.key === activeKey() ? result.page : undefined;
-  });
-
-  const pages = createMemo(() => {
-    const initialPage = currentFirstPage();
-
-    return initialPage ? [initialPage, ...extraPages()] : extraPages();
-  });
+  // Blocks on the first page so callers render it behind a Loading boundary,
+  // then holds the committed pages while the next one is in flight.
+  const loadedPages = createMemo(() => latest(pages));
 
   const snapshotRecords = createMemo(() =>
-    pages().flatMap((page) => page.records),
+    loadedPages().flatMap((page) => page.records),
   );
-
-  const lastPage = createMemo(() => pages().at(-1));
 
   // Live updates are only available for unfiltered views.
   const liveTable = createMemo(() => {
@@ -121,7 +113,9 @@ export function createEventLogQuery(options: {
 
   const liveRecords = live.records;
 
-  const records = createMemo(() => collectRecords(pages(), liveRecords()));
+  const records = createMemo(() =>
+    collectRecords(loadedPages(), liveRecords()),
+  );
 
   const liveOnlyCount = createMemo(() => {
     const snapshotIds = new Set(snapshotRecords().map(recordKey));
@@ -134,40 +128,26 @@ export function createEventLogQuery(options: {
     return liveOnlyIds.size;
   });
 
-  async function loadMore(): Promise<void> {
-    const page = lastPage();
-    const cursor = page?.pageInfo.endCursor;
+  function loadMore(): void {
+    const pageInfo = latest(loadedPages).at(-1)?.pageInfo;
+    const cursor = pageInfo?.endCursor;
 
-    if (!page?.pageInfo.hasNextPage || !cursor || loadingMore()) {
+    if (!pageInfo?.hasNextPage || !cursor) {
       return;
     }
 
-    const input = options.input();
-    const key = queryKey(input);
-    const generation = ++requestGeneration;
-
-    setLoadingMore(true);
-
-    try {
-      const nextPage = await eventLogsQuery({ ...input, after: cursor });
-
-      if (generation !== requestGeneration || key !== activeKey()) {
-        return;
-      }
-
-      setExtraPages((previous) => [...previous, nextPage]);
-    } finally {
-      if (generation === requestGeneration) {
-        setLoadingMore(false);
-      }
-    }
+    // The committed trail still ends at the previous cursor while a page is in
+    // flight, so refusing a duplicate is what stops a double click.
+    setCursors((current) =>
+      current.includes(cursor) ? current : [...current, cursor],
+    );
   }
 
   return {
     records,
-    totalCount: () => (currentFirstPage()?.totalCount ?? 0) + liveOnlyCount(),
-    hasNextPage: () => lastPage()?.pageInfo.hasNextPage ?? false,
-    loading: () => currentFirstPage() === undefined || loadingMore(),
+    totalCount: () => (loadedPages()[0]?.totalCount ?? 0) + liveOnlyCount(),
+    hasNextPage: () => loadedPages().at(-1)?.pageInfo.hasNextPage ?? false,
+    loadingMore: () => isPending(loadedPages),
     connection: live.connection,
     loadMore,
   };

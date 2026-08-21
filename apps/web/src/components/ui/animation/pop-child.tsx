@@ -1,4 +1,5 @@
-import { createEffect, createUniqueId, onCleanup, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { createEffect, createUniqueId, onCleanup } from "solid-js";
 
 interface PopChildProps {
   children: JSX.Element;
@@ -54,47 +55,55 @@ export function PopChild(props: PopChildProps) {
     return { width, height, top, left, right, bottom, direction };
   };
 
-  createEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-    if (props.pop === false) {
-      return;
-    }
-    if (!containerRef) {
-      return;
-    }
+  createEffect(
+    () => ({
+      pop: props.pop,
+      isPresent: props.isPresent,
+      anchorX: props.anchorX,
+      anchorY: props.anchorY,
+      root: props.root,
+    }),
+    ({ pop, isPresent, anchorX, anchorY, root }) => {
+      if (typeof document === "undefined") {
+        return;
+      }
+      if (pop === false) {
+        return;
+      }
+      if (!containerRef) {
+        return;
+      }
 
-    removeInjectedStyle();
+      removeInjectedStyle();
 
-    if (props.isPresent) {
-      return;
-    }
+      if (isPresent) {
+        return;
+      }
 
-    const measured = measure();
-    if (!measured || !measured.width || !measured.height) {
-      return;
-    }
+      const measured = measure();
+      if (!measured || !measured.width || !measured.height) {
+        return;
+      }
 
-    const isRTL = measured.direction === "rtl";
-    const x =
-      (props.anchorX ?? "left") === "left"
-        ? isRTL
-          ? `right: ${measured.right}px`
-          : `left: ${measured.left}px`
-        : isRTL
-          ? `left: ${measured.left}px`
-          : `right: ${measured.right}px`;
-    const y =
-      (props.anchorY ?? "top") === "bottom"
-        ? `bottom: ${measured.bottom}px`
-        : `top: ${measured.top}px`;
+      const isRTL = measured.direction === "rtl";
+      const x =
+        (anchorX ?? "left") === "left"
+          ? isRTL
+            ? `right: ${measured.right}px`
+            : `left: ${measured.left}px`
+          : isRTL
+            ? `left: ${measured.left}px`
+            : `right: ${measured.right}px`;
+      const y =
+        (anchorY ?? "top") === "bottom"
+          ? `bottom: ${measured.bottom}px`
+          : `top: ${measured.top}px`;
 
-    containerRef.dataset.motionPopId = id;
-    styleTag = document.createElement("style");
-    const parent = props.root ?? document.head;
-    parent.appendChild(styleTag);
-    styleTag.textContent = `
+      containerRef.dataset.motionPopId = id;
+      styleTag = document.createElement("style");
+      const parent = root ?? document.head;
+      parent.appendChild(styleTag);
+      styleTag.textContent = `
 [data-motion-pop-id="${id}"] {
   position: absolute !important;
   width: ${measured.width}px !important;
@@ -102,7 +111,8 @@ export function PopChild(props: PopChildProps) {
   ${x} !important;
   ${y} !important;
 }`;
-  });
+    },
+  );
 
   onCleanup(removeInjectedStyle);
 

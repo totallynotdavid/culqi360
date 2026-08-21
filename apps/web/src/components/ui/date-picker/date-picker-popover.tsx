@@ -1,11 +1,5 @@
-import {
-  Show,
-  createEffect,
-  createSignal,
-  onCleanup,
-  type Accessor,
-} from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
+import { Show, createEffect, createSignal, type Accessor } from "solid-js";
 
 import type { CalendarDate } from "~/domain/time/calendar-date";
 
@@ -39,49 +33,53 @@ export function DatePickerPopover(props: DatePickerPopoverProps) {
   const [position, setPosition] = createSignal({ top: 0, left: 0 });
   let popoverRef: HTMLDialogElement | undefined;
 
-  createEffect(() => {
-    if (!props.isOpen()) {
-      return;
-    }
-
-    const updatePosition = () => {
-      const anchor = props.anchor();
-      if (!anchor || typeof window === "undefined") {
+  createEffect(
+    () => props.isOpen(),
+    (isOpen) => {
+      if (!isOpen) {
         return;
       }
 
-      const rect = anchor.getBoundingClientRect();
-      const popoverWidth = popoverRef?.offsetWidth ?? POPOVER_FALLBACK_WIDTH;
-      const popoverHeight = popoverRef?.offsetHeight ?? POPOVER_FALLBACK_HEIGHT;
-      const left = Math.min(
-        rect.left,
-        window.innerWidth - popoverWidth - VIEWPORT_PADDING,
-      );
-      const fitsBelow =
-        rect.bottom + VIEWPORT_PADDING + popoverHeight <=
-        window.innerHeight - VIEWPORT_PADDING;
-      const top = fitsBelow
-        ? rect.bottom + VIEWPORT_PADDING
-        : Math.max(
-            VIEWPORT_PADDING,
-            rect.top - popoverHeight - VIEWPORT_PADDING,
-          );
+      const updatePosition = () => {
+        const anchor = props.anchor();
+        if (!anchor || typeof window === "undefined") {
+          return;
+        }
 
-      setPosition({
-        top,
-        left: Math.max(VIEWPORT_PADDING, left),
-      });
-    };
+        const rect = anchor.getBoundingClientRect();
+        const popoverWidth = popoverRef?.offsetWidth ?? POPOVER_FALLBACK_WIDTH;
+        const popoverHeight =
+          popoverRef?.offsetHeight ?? POPOVER_FALLBACK_HEIGHT;
+        const left = Math.min(
+          rect.left,
+          window.innerWidth - popoverWidth - VIEWPORT_PADDING,
+        );
+        const fitsBelow =
+          rect.bottom + VIEWPORT_PADDING + popoverHeight <=
+          window.innerHeight - VIEWPORT_PADDING;
+        const top = fitsBelow
+          ? rect.bottom + VIEWPORT_PADDING
+          : Math.max(
+              VIEWPORT_PADDING,
+              rect.top - popoverHeight - VIEWPORT_PADDING,
+            );
 
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
+        setPosition({
+          top,
+          left: Math.max(VIEWPORT_PADDING, left),
+        });
+      };
 
-    onCleanup(() => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    });
-  });
+      updatePosition();
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    },
+  );
 
   return (
     <Show when={props.isOpen()}>

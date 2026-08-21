@@ -11,7 +11,7 @@ const session = makeAuthSession({ role: "admin" });
 
 function testChannel(options: { authorized: boolean }) {
   return defineRealtimeChannel({
-    name: REALTIME_CHANNELS.recordImport,
+    name: REALTIME_CHANNELS.jobs,
     pgChannel: "test-channel",
     parseId: (raw) => (raw.startsWith("job-") ? raw : null),
     open: async (_session, id, cursor) =>
@@ -31,7 +31,7 @@ describe("defineRealtimeChannel", () => {
   it("binds the opening read to the parsed id", async () => {
     const entry = testChannel({ authorized: true }).entry("job-7", session);
 
-    expect(entry?.topic).toBe("records-import.job-7");
+    expect(entry?.topic).toBe("jobs.job-7");
     expect(await entry?.open("cursor-9")).toEqual([{ data: "job-7:cursor-9" }]);
   });
 
@@ -47,7 +47,7 @@ describe("defineRealtimeChannel", () => {
     const channel = testChannel({ authorized: true });
 
     expect(channel.topicOfPayload(JSON.stringify({ jobId: "job-7" }))).toBe(
-      "records-import.job-7",
+      "jobs.job-7",
     );
     expect(channel.topicOfPayload(JSON.stringify({ other: 1 }))).toBeNull();
   });

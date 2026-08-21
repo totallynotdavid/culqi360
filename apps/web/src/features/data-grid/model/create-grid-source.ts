@@ -1,70 +1,40 @@
-import { createAsync } from "@solidjs/router";
+import { createMemo } from "solid-js";
 
 import type { DataGridSource } from "./source";
 
-type Loaded<TData> = { ok: true; data: TData } | { ok: false };
-
 export type GridSource<TData, TRow> = {
   source: () => DataGridSource<TRow>;
-  data: () => TData | undefined;
+  data: () => TData;
 };
 
+/**
+ * Projects an async query into grid rows.
+ *
+ * The promise enters the reactive graph on creation, so both accessors read a
+ * plain settled value. Readiness and failure belong to the `Loading` and
+ * `Errored` boundaries the page puts around the grid, which is why nothing here
+ * catches or reports either.
+ */
 export function createGridSource<TData, TRow>(
   fetcher: () => Promise<TData>,
   project: (data: TData) => {
     rows: readonly TRow[];
     totalCount?: number;
   },
-  options?: {
-    overlay?: (rows: readonly TRow[]) => readonly TRow[];
-  },
 ): GridSource<TData, TRow> {
-  const state = createAsync<Loaded<TData>>(async () => {
-    try {
-      return { ok: true, data: await fetcher() };
-    } catch (error) {
-      // Redirects and not-found responses are framework control flow.
-      if (error instanceof Response) {
-        throw error;
-      }
+  const data = createMemo(() => fetcher());
 
-      return { ok: false };
-    }
-  });
-
-  const overlay = options?.overlay ?? ((rows: readonly TRow[]) => rows);
-
-  const data = () => {
-    const value = state.latest;
-
-    return value?.ok ? value.data : undefined;
-  };
-
-  const source = (): DataGridSource<TRow> => {
-    const value = state.latest;
-
-    if (value === undefined) {
-      // Show optimistic rows before the first server response.
-      const rows = overlay([]);
-
-      return rows.length > 0
-        ? { status: "ready", rows, totalCount: rows.length }
-        : { status: "pending", rows: [] };
-    }
-
-    if (!value.ok) {
-      return { status: "error", rows: [] };
-    }
-
-    const projected = project(value.data);
-    const rows = overlay(projected.rows);
+  // Memoized like the read above it: the grid reads the source from several
+  // places per render, and projecting thousands of rows on each of those was
+  // work nobody asked for.
+  const source = createMemo<DataGridSource<TRow>>(() => {
+    const projected = project(data());
 
     return {
-      status: "ready",
-      rows,
-      totalCount: projected.totalCount ?? rows.length,
+      rows: projected.rows,
+      totalCount: projected.totalCount ?? projected.rows.length,
     };
-  };
+  });
 
   return { source, data };
 }

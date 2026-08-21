@@ -1,4 +1,5 @@
-import { Show, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
 import LinkIcon from "~/components/icons/link";

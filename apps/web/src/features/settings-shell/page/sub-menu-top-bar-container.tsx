@@ -1,5 +1,6 @@
 import { Title } from "@solidjs/meta";
-import type { JSX, ParentProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import type { ParentProps } from "solid-js";
 
 import { PageCardHeader } from "~/components/ui/layout/page-card/page-card-header";
 import { PageCardLayout } from "~/components/ui/layout/page-card/page-card-layout";

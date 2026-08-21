@@ -1,16 +1,15 @@
 import { For } from "solid-js";
 
-import {
-  NavigationBarItem,
-  type NavigationBarIcon,
-} from "./navigation-bar-item";
+import type { IconComponent } from "~/components/icons/icon-base";
+
+import { NavigationBarItem } from "./navigation-bar-item";
 
 import styles from "./navigation-bar.module.css";
 
 export type NavigationBarItemDef = {
   name: string;
   label: string;
-  Icon: NavigationBarIcon;
+  Icon: IconComponent;
   onClick: () => void;
 };
 

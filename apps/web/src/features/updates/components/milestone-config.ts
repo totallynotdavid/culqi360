@@ -1,12 +1,12 @@
 import type { ImageSource } from "@crm/images";
 
 import milestoneSources from "~/assets/images/updates/milestone.jpg?responsive";
-import { normalizeHalftoneStudioSettings } from "~/browser/visual/halftone/state";
-import type { HalftonePose } from "~/browser/visual/halftone/state";
-import type { HalftoneStudioSettings } from "~/browser/visual/halftone/state";
-import type { HalftoneStudioSettingsOverrides } from "~/browser/visual/halftone/state";
-
-export type MilestoneSettingsOverrides = HalftoneStudioSettingsOverrides;
+import {
+  normalizeHalftoneStudioSettings,
+  type HalftonePose,
+  type HalftoneStudioSettings,
+  type HalftoneStudioSettingsOverrides,
+} from "~/browser/visual/halftone/state";
 
 export const MILESTONE_IMAGE_SOURCES: ImageSource = milestoneSources;
 export const MILESTONE_IMAGE_FIT = "cover";
@@ -111,7 +111,7 @@ const BASE_MILESTONE_SETTINGS = normalizeHalftoneStudioSettings({
 });
 
 export const buildMilestoneSettings = (
-  overrides?: MilestoneSettingsOverrides,
+  overrides?: HalftoneStudioSettingsOverrides,
 ): HalftoneStudioSettings =>
   normalizeHalftoneStudioSettings({
     ...BASE_MILESTONE_SETTINGS,

@@ -1,13 +1,12 @@
 import {
-  createAsync,
   revalidate,
   type RouteDefinition,
   useAction,
   useNavigate,
-  useSubmission,
 } from "@solidjs/router";
-import { Show, Suspense, createSignal } from "solid-js";
+import { Show, Loading, createMemo, createSignal } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { SettingsSection } from "~/components/settings/SettingsSection";
@@ -136,30 +135,30 @@ export default function SecurityPage() {
   const disableTotpDialog = useConfirmDialog();
   const regenerateRecoveryDialog = useConfirmDialog();
 
-  const recoveryStatus = createAsync(() => recoveryCodesStatusQuery());
+  const recoveryStatus = createMemo(() => recoveryCodesStatusQuery());
 
   const removePasskeys = useAction(removeAllPasskeysMutation);
-  const removePasskeysSubmission = useSubmission(removeAllPasskeysMutation);
+  const removingPasskeys = createActionPending(removeAllPasskeysMutation);
 
   const disableTotp = useAction(disableTotpMutation);
-  const disableTotpSubmission = useSubmission(disableTotpMutation);
+  const disablingTotp = createActionPending(disableTotpMutation);
 
   const regenerateRecovery = useAction(regenerateRecoveryCodesMutation);
-  const regenerateRecoverySubmission = useSubmission(
+  const regeneratingRecovery = createActionPending(
     regenerateRecoveryCodesMutation,
   );
 
   const acknowledgeRecovery = useAction(acknowledgeRecoveryCodesMutation);
-  const acknowledgeRecoverySubmission = useSubmission(
+  const acknowledgingRecovery = createActionPending(
     acknowledgeRecoveryCodesMutation,
   );
 
   const changePassword = useAction(changePasswordMutation);
-  const changePasswordSubmission = useSubmission(changePasswordMutation);
+  const changingPassword = createActionPending(changePasswordMutation);
 
   function showFreshRecoveryCodes(codes: string[]) {
     setFreshRecoveryCodes(codes);
-    void revalidate(recoveryCodesStatusQuery.key);
+    revalidate(recoveryCodesStatusQuery.key);
   }
 
   const passkeyEnrollment = usePasskeyEnrollment({
@@ -256,7 +255,7 @@ export default function SecurityPage() {
         title="Eliminar claves de acceso"
         description="Se eliminarán todas las claves registradas en esta cuenta."
         confirmLabel="Eliminar"
-        loading={Boolean(removePasskeysSubmission.pending)}
+        loading={removingPasskeys()}
         onConfirm={() => void handleRemovePasskeys()}
         onClose={removePasskeysDialog.close}
       />
@@ -266,7 +265,7 @@ export default function SecurityPage() {
         title="Desactivar autenticación en dos pasos"
         description="Se desactivará el segundo paso con código para esta cuenta."
         confirmLabel="Desactivar"
-        loading={Boolean(disableTotpSubmission.pending)}
+        loading={disablingTotp()}
         onConfirm={() => void handleDisableTotp()}
         onClose={disableTotpDialog.close}
       />
@@ -276,7 +275,7 @@ export default function SecurityPage() {
         title="Regenerar códigos de recuperación"
         description="Los códigos actuales dejarán de funcionar. Recibirás nuevos códigos."
         confirmLabel="Regenerar"
-        loading={Boolean(regenerateRecoverySubmission.pending)}
+        loading={regeneratingRecovery()}
         onConfirm={() => void handleRegenerateRecovery()}
         onClose={regenerateRecoveryDialog.close}
       />
@@ -314,7 +313,7 @@ export default function SecurityPage() {
               type="submit"
               size="sm"
               variant="secondary"
-              loading={Boolean(changePasswordSubmission.pending)}
+              loading={changingPassword()}
             >
               Guardar
             </Button>
@@ -406,7 +405,7 @@ export default function SecurityPage() {
         </div>
       </SettingsSection>
 
-      <Suspense>
+      <Loading>
         <Show
           when={
             freshRecoveryCodes().length > 0 || recoveryStatus()?.hasActiveSet
@@ -450,7 +449,7 @@ export default function SecurityPage() {
                     type="button"
                     size="sm"
                     variant="secondary"
-                    loading={Boolean(acknowledgeRecoverySubmission.pending)}
+                    loading={acknowledgingRecovery()}
                     onClick={() => void handleAcknowledgeRecovery()}
                   >
                     Ya los guardé
@@ -460,7 +459,7 @@ export default function SecurityPage() {
             </div>
           </SettingsSection>
         </Show>
-      </Suspense>
+      </Loading>
     </SettingsPageLayout>
   );
 }

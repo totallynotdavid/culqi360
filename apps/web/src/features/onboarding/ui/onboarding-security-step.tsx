@@ -33,7 +33,7 @@ export function OnboardingSecurityStep(props: OnboardingSecurityStepProps) {
           <button
             type="button"
             class={styles.choiceCard}
-            aria-pressed={props.hasPasskey}
+            aria-pressed={props.hasPasskey ? "true" : "false"}
             onClick={props.onSelectPasskey}
           >
             <div class={styles.choiceCardHeader}>
@@ -49,7 +49,7 @@ export function OnboardingSecurityStep(props: OnboardingSecurityStepProps) {
           <button
             type="button"
             class={styles.choiceCard}
-            aria-pressed={props.totpEnabled}
+            aria-pressed={props.totpEnabled ? "true" : "false"}
             onClick={props.onSelectTotp}
           >
             <div class={styles.choiceCardHeader}>

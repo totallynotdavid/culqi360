@@ -1,11 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import {
-  createSignal,
-  createUniqueId,
-  Show,
-  type JSX,
-  splitProps,
-} from "solid-js";
+import { createSignal, createUniqueId, Show, omit } from "solid-js";
 
 import { InputErrorHelper } from "./input-error-helper";
 import { InputHint } from "./input-hint";
@@ -21,7 +16,8 @@ export interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Input(props: InputProps) {
-  const [local, others] = splitProps(props, [
+  const others = omit(
+    props,
     "label",
     "error",
     "hint",
@@ -29,29 +25,29 @@ export function Input(props: InputProps) {
     "class",
     "id",
     "type",
-  ]);
+  );
   const generatedId = createUniqueId();
-  const inputId = () => local.id || generatedId;
+  const inputId = () => props.id || generatedId;
   const errorId = () => `${inputId()}-error`;
   const hintId = () => `${inputId()}-hint`;
   const describedBy = () => {
     const existing = others["aria-describedby"];
     const ids = [
       typeof existing === "string" && existing.length > 0 ? existing : null,
-      local.error ? errorId() : null,
-      !local.error && local.hint ? hintId() : null,
+      props.error ? errorId() : null,
+      !props.error && props.hint ? hintId() : null,
     ].filter((value): value is string => Boolean(value));
 
     return ids.length > 0 ? ids.join(" ") : undefined;
   };
-  const isPassword = () => local.type === "password";
+  const isPassword = () => props.type === "password";
   const [showPassword, setShowPassword] = createSignal(false);
 
   return (
     <div class={styles.field}>
-      {local.label && (
+      {props.label && (
         <InputLabel for={inputId()}>
-          {local.label}
+          {props.label}
           {props.required && (
             <span aria-hidden="true" class={styles.required}>
               *
@@ -64,13 +60,13 @@ export function Input(props: InputProps) {
           id={inputId()}
           aria-describedby={describedBy()}
           type={
-            isPassword() ? (showPassword() ? "text" : "password") : local.type
+            isPassword() ? (showPassword() ? "text" : "password") : props.type
           }
           class={clsx(
             styles.control,
             isPassword() ? styles.controlWithReveal : undefined,
-            local.error ? styles.errorControl : undefined,
-            local.class,
+            props.error ? styles.errorControl : undefined,
+            props.class,
           )}
           {...others}
         />
@@ -81,7 +77,7 @@ export function Input(props: InputProps) {
             aria-label={
               showPassword() ? "Ocultar contraseña" : "Mostrar contraseña"
             }
-            aria-pressed={showPassword()}
+            aria-pressed={showPassword() ? "true" : "false"}
             onClick={() => setShowPassword((v) => !v)}
           >
             {showPassword() ? (
@@ -121,11 +117,11 @@ export function Input(props: InputProps) {
           </button>
         </Show>
       </div>
-      <Show when={local.hint && !local.error}>
-        <InputHint id={hintId()}>{local.hint}</InputHint>
+      <Show when={props.hint && !props.error}>
+        <InputHint id={hintId()}>{props.hint}</InputHint>
       </Show>
-      <Show when={local.error && !local.noErrorHelper}>
-        <InputErrorHelper id={errorId()}>{local.error}</InputErrorHelper>
+      <Show when={props.error && !props.noErrorHelper}>
+        <InputErrorHelper id={errorId()}>{props.error}</InputErrorHelper>
       </Show>
     </div>
   );

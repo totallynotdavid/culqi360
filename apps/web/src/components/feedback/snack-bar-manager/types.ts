@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export type SnackBarVariant =
   | "default"
@@ -26,9 +26,8 @@ export interface SnackBarItem {
   variant: SnackBarVariant;
   message: string;
   detailedMessage: string | null;
+  // Zero keeps the toast until something dismisses it.
   duration: number;
-  elapsed: number;
-  paused: boolean;
   dedupeKey: string | null;
   buttonLabel: string | null;
   buttonOnClick: (() => void) | null;

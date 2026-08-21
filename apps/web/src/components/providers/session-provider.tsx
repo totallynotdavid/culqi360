@@ -1,9 +1,7 @@
-import { createAsync, revalidate } from "@solidjs/router";
+import { revalidate } from "@solidjs/router";
 import {
   createContext,
-  createEffect,
-  createSignal,
-  on,
+  createOptimistic,
   type ParentProps,
   useContext,
 } from "solid-js";
@@ -12,53 +10,54 @@ import type { CurrentUserView } from "~/contracts/auth";
 import { meQuery } from "~/rpc/auth/me";
 
 interface SessionContextValue {
-  user: () => CurrentUserView | null | undefined;
+  /** `null` means signed out. There is no "not loaded yet" value: an
+   * unsettled read suspends to the nearest `Loading` boundary instead. */
+  user: () => CurrentUserView | null;
   updateCurrentUser: (
     update: (current: CurrentUserView) => CurrentUserView,
   ) => void;
-  refreshCurrentUser: () => Promise<CurrentUserView | null | undefined>;
+  /** Marks the session query stale. `user` picks up the refetch on its own. */
+  refreshCurrentUser: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue>();
 
 export function SessionProvider(props: ParentProps) {
-  const remote = createAsync(() => meQuery());
-  const [overlay, setOverlay] = createSignal<CurrentUserView>();
-
-  // Drop the optimistic overlay once authoritative session data arrives.
-  createEffect(on(remote, () => setOverlay(undefined), { defer: true }));
-
-  const user = () => overlay() ?? remote();
+  // A write here is visible for the lifetime of the surrounding action and
+  // reverts to the query's value when it settles, or rolls back if it throws.
+  const [user, setUser] = createOptimistic(() => meQuery());
 
   const updateCurrentUser = (
     update: (current: CurrentUserView) => CurrentUserView,
   ) => {
-    const current = overlay() ?? remote.latest;
-    if (current) {
-      setOverlay(update(current));
+    const current = user();
+
+    if (!current) {
+      return;
     }
+
+    setUser(update(current));
   };
 
   return (
-    <SessionContext.Provider
+    <SessionContext
       value={{
         user,
         updateCurrentUser,
-        refreshCurrentUser: async () => {
-          await revalidate(meQuery.key);
-          return user();
-        },
+        refreshCurrentUser: () => revalidate(meQuery.key),
       }}
     >
       {props.children}
-    </SessionContext.Provider>
+    </SessionContext>
   );
 }
 
 export function useSession() {
   const context = useContext(SessionContext);
+
   if (!context) {
     throw new Error("useSession must be used within SessionProvider");
   }
+
   return context;
 }

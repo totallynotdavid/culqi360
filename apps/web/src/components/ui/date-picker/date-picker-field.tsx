@@ -4,8 +4,7 @@ import {
   createMemo,
   createSignal,
   createUniqueId,
-  onCleanup,
-  onMount,
+  onSettled,
 } from "solid-js";
 
 import { useHotkey } from "~/browser/hotkey/use-hotkey";
@@ -65,7 +64,7 @@ export function DatePicker(props: DatePickerProps) {
     setIsOpen(true);
   };
 
-  onMount(() => {
+  onSettled(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!isOpen()) {
         return;
@@ -86,9 +85,9 @@ export function DatePicker(props: DatePickerProps) {
 
     document.addEventListener("pointerdown", handlePointerDown);
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
-    });
+    };
   });
 
   useHotkey("Escape", closePicker, {
@@ -96,8 +95,8 @@ export function DatePicker(props: DatePickerProps) {
     allowInInputs: true,
   });
 
-  createEffect(() => {
-    if (!isOpen()) {
+  createEffect(isOpen, (open) => {
+    if (!open) {
       syncViewMonth();
     }
   });
@@ -135,7 +134,7 @@ export function DatePicker(props: DatePickerProps) {
           name={props.name}
           class={styles.control}
           type="text"
-          inputMode="numeric"
+          inputmode="numeric"
           autocomplete="off"
           spellcheck={false}
           placeholder={props.placeholder ?? "AAAA-MM-DD"}
@@ -158,7 +157,7 @@ export function DatePicker(props: DatePickerProps) {
           class={styles.iconButton}
           aria-label="Abrir calendario"
           aria-haspopup="dialog"
-          aria-expanded={isOpen()}
+          aria-expanded={isOpen() ? "true" : "false"}
           disabled={props.disabled}
           onClick={() => {
             if (isOpen()) {

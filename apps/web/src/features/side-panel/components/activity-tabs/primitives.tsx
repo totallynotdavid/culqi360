@@ -1,5 +1,6 @@
+import type { JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import type { JSX, ParentProps } from "solid-js";
+import type { ParentProps } from "solid-js";
 import { children, Show } from "solid-js";
 
 import styles from "./primitives.module.css";

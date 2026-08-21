@@ -1,11 +1,5 @@
-import { createAsync, useNavigate } from "@solidjs/router";
-import {
-  createMemo,
-  createSignal,
-  ErrorBoundary,
-  Show,
-  Suspense,
-} from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { createMemo, createSignal, Errored, Show, Loading } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import Building2 from "~/components/icons/building-2";
@@ -50,17 +44,17 @@ const DAY_MS = 86_400_000;
 type StatusFilter = "all" | "attention";
 
 export function ExecutiveGpvProgress() {
-  const portfolio = createAsync(() => executiveGpvProgressQuery());
+  const portfolio = createMemo(() => executiveGpvProgressQuery());
 
   return (
     <AppPageBody>
-      <ErrorBoundary fallback={<PortfolioError />}>
-        <Suspense fallback={<PortfolioLoading />}>
+      <Loading fallback={<PortfolioLoading />}>
+        <Errored fallback={<PortfolioError />}>
           <Show when={portfolio()}>
             {(data) => <PortfolioContent portfolio={data()} />}
           </Show>
-        </Suspense>
-      </ErrorBoundary>
+        </Errored>
+      </Loading>
     </AppPageBody>
   );
 }
@@ -225,10 +219,7 @@ function PortfolioContent(props: { portfolio: ExecutiveGpvProgressView }) {
         }
         rowId={(merchant) => merchant.ruc}
         rowOpenIndicator="route"
-        source={{
-          status: "ready",
-          rows: filteredMerchants(),
-        }}
+        source={{ rows: filteredMerchants() }}
         onRowOpen={(merchant) =>
           navigate(
             merchant.leadId

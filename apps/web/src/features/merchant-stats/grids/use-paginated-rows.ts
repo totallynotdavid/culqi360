@@ -1,5 +1,10 @@
-import { createAsync, useIsRouting } from "@solidjs/router";
-import { createMemo, createSignal, type Accessor } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  isPending,
+  latest,
+  type Accessor,
+} from "solid-js";
 
 import type { Page, PublishedPage } from "~/contracts/merchant-stats/views";
 
@@ -11,12 +16,6 @@ interface PaginatedRowsConfig<Row> {
   load: (page: Page) => Promise<PublishedPage<Row>>;
 }
 
-interface LoadedPage<Row> {
-  key: string;
-  publicationId: string | null;
-  rows: ReadonlyArray<Row>;
-}
-
 interface PaginatedRows<Row> {
   rows: Accessor<ReadonlyArray<Row>>;
   loading: Accessor<boolean>;
@@ -24,95 +23,60 @@ interface PaginatedRows<Row> {
   onLoadMore: () => void;
 }
 
+/**
+ * Every page comes from a separate request, so a snapshot published mid scroll
+ * gives the later ones a different publication. Offsets are only comparable
+ * within one publication, so the trail stops at the first page that disagrees
+ * with the one it started from.
+ */
+function consistentPrefix<Row>(
+  pages: ReadonlyArray<PublishedPage<Row>>,
+): ReadonlyArray<PublishedPage<Row>> {
+  const drift = pages.findIndex(
+    (page) => page.publicationId !== pages[0]?.publicationId,
+  );
+
+  return drift === -1 ? pages : pages.slice(0, drift);
+}
+
 export function usePaginatedRows<Row>(
   config: PaginatedRowsConfig<Row>,
 ): PaginatedRows<Row> {
-  const isRouting = useIsRouting();
-  const [extraPages, setExtraPages] = createSignal<LoadedPage<Row>[]>([]);
-  const [loadingKey, setLoadingKey] = createSignal<string | null>(null);
-  const [loadError, setLoadError] = createSignal<{
-    key: string;
-    error: unknown;
-  }>();
+  // Writable memo: load-more raises the count, a new filter set recomputes back
+  // to one page.
+  const [pageCount, setPageCount] = createSignal<number>(() => {
+    config.resetKey();
 
-  const firstPage = createAsync(async () => {
-    const key = config.resetKey();
-    const page = await config.load({ limit: config.pageSize, offset: 0 });
-    return { key, ...page } satisfies LoadedPage<Row>;
+    return 1;
   });
 
-  const currentPages = createMemo<ReadonlyArray<LoadedPage<Row>>>(() => {
-    const key = config.resetKey();
-    const first = firstPage();
-    if (first?.key !== key) {
-      return [];
-    }
-
-    return [
-      first,
-      ...extraPages().filter(
-        (page) =>
-          page.key === key && page.publicationId === first.publicationId,
+  const pages = createMemo(async () =>
+    Promise.all(
+      Array.from({ length: pageCount() }, (_, index) =>
+        config.load({
+          limit: config.pageSize,
+          offset: index * config.pageSize,
+        }),
       ),
-    ];
-  });
+    ),
+  );
 
-  const rows = (): ReadonlyArray<Row> => {
-    const failure = loadError();
-    if (failure?.key === config.resetKey()) {
-      throw failure.error;
-    }
-    return currentPages().flatMap((page) => page.rows);
-  };
+  // Blocks on the first page so callers render it behind a Loading boundary,
+  // then holds the committed pages while the next one is in flight.
+  const loadedPages = createMemo(() => consistentPrefix(latest(pages)));
 
-  const hasMore = () => {
-    const last = currentPages().at(-1);
-    return last?.rows.length === config.pageSize;
-  };
+  const rows = createMemo(() => loadedPages().flatMap((page) => page.rows));
 
-  async function loadMore(): Promise<void> {
-    const key = config.resetKey();
-    const publicationId = firstPage()?.publicationId;
-    if (loadingKey() === key || !hasMore()) {
-      return;
-    }
-
-    const offset = rows().length;
-    setLoadingKey(key);
-    setLoadError(undefined);
-
-    try {
-      const nextPage = await config.load({
-        limit: config.pageSize,
-        offset,
-      });
-      if (
-        key !== config.resetKey() ||
-        nextPage.publicationId !== publicationId
-      ) {
-        return;
-      }
-      setExtraPages((pages) => [
-        ...pages.filter(
-          (page) => page.key === key && page.publicationId === publicationId,
-        ),
-        { key, ...nextPage },
-      ]);
-    } catch (caught: unknown) {
-      if (key === config.resetKey()) {
-        setLoadError({ key, error: caught });
-      }
-    } finally {
-      if (loadingKey() === key) {
-        setLoadingKey(null);
-      }
-    }
-  }
+  const hasMore = () => loadedPages().at(-1)?.rows.length === config.pageSize;
 
   return {
     rows,
-    loading: () => loadingKey() === config.resetKey() || isRouting(),
+    loading: () => isPending(loadedPages),
     hasMore,
-    onLoadMore: () => void loadMore(),
+    onLoadMore: () => {
+      if (hasMore()) {
+        setPageCount((count) => count + 1);
+      }
+    },
   };
 }

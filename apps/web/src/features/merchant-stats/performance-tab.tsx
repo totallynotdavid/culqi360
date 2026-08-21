@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { createMemo, ErrorBoundary, Index, Show, Suspense } from "solid-js";
+import { For, createMemo, Errored, Show, Loading } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import type { GpvPerformanceView } from "~/contracts/merchant-stats/views";
@@ -41,7 +40,7 @@ const CHART_SPANS = [
 ] satisfies readonly WidgetSpan[];
 
 export function PerformanceTab(props: { view: GpvView }) {
-  const performance = createAsync(() =>
+  const performance = createMemo(() =>
     gpvPerformanceViewQuery({ filter: props.view.filter() }),
   );
 
@@ -52,8 +51,8 @@ export function PerformanceTab(props: { view: GpvView }) {
   };
 
   return (
-    <ErrorBoundary fallback={<TabError />}>
-      <Suspense fallback={<TabSkeleton />}>
+    <Loading fallback={<TabSkeleton />}>
+      <Errored fallback={<TabError />}>
         <Show
           when={readyPerformance()}
           fallback={
@@ -65,8 +64,8 @@ export function PerformanceTab(props: { view: GpvView }) {
         >
           {(view) => <PerformanceContent view={view()} />}
         </Show>
-      </Suspense>
-    </ErrorBoundary>
+      </Errored>
+    </Loading>
   );
 }
 
@@ -208,23 +207,23 @@ function TabSkeleton() {
   return (
     <WidgetCanvas>
       <WidgetGrid>
-        <Index each={STAT_SPANS}>
+        <For keyed={false} each={STAT_SPANS}>
           {(span) => (
             <WidgetGridItem span={span()}>
               <WidgetSkeleton />
             </WidgetGridItem>
           )}
-        </Index>
+        </For>
       </WidgetGrid>
 
       <WidgetGrid>
-        <Index each={CHART_SPANS}>
+        <For keyed={false} each={CHART_SPANS}>
           {(span) => (
             <WidgetGridItem span={span()}>
               <WidgetSkeleton />
             </WidgetGridItem>
           )}
-        </Index>
+        </For>
       </WidgetGrid>
     </WidgetCanvas>
   );

@@ -1,6 +1,7 @@
 import { query } from "@solidjs/router";
 
 import type { BookFilter } from "~/contracts/merchant-stats/views";
+import { QUERY_KEYS } from "~/contracts/query-keys";
 import { getGpvPerformance } from "~/server/merchant-stats/ui/dashboard";
 
 export const gpvPerformanceViewQuery = query(
@@ -8,5 +9,5 @@ export const gpvPerformanceViewQuery = query(
     "use server";
     return getGpvPerformance(input);
   },
-  "merchant-stats.gpv-performance",
+  QUERY_KEYS.merchantStats.gpvPerformance,
 );

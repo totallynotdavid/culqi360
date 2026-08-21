@@ -1,4 +1,4 @@
-import { Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 
@@ -17,14 +17,14 @@ export function CompactDetailPageSkeleton() {
         </div>
       </div>
 
-      <Index each={SECTIONS}>
+      <For keyed={false} each={SECTIONS}>
         {() => (
           <div class={styles.section}>
             <Skeleton width={64} height={11} />
             <Skeleton width="90%" height={13} />
           </div>
         )}
-      </Index>
+      </For>
     </div>
   );
 }

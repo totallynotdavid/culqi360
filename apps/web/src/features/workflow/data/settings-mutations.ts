@@ -1,4 +1,5 @@
-import { action, json } from "@solidjs/router";
+import { action } from "@solidjs/router";
+import { respond } from "@solidjs/web";
 
 import { pendingQuotationPolicyQuery } from "~/rpc/workflow/pending-quotation-policy";
 import { rateProposalPolicyQuery } from "~/rpc/workflow/rate-proposal-policy";
@@ -11,7 +12,7 @@ import { saveRateProposalPolicy } from "~/rpc/workflow/settings/rate-proposal-po
 export const updateRateProposalPolicyMutation = action(
   async (input: { validityDays: number }) => {
     const result = await saveRateProposalPolicy(input);
-    return json(result, {
+    return respond(result, {
       revalidate: [rateProposalPolicyQuery.key],
     });
   },
@@ -21,7 +22,7 @@ export const updateRateProposalPolicyMutation = action(
 export const updatePendingQuotationPolicyMutation = action(
   async (input: SavePendingQuotationPolicyInput) => {
     const result = await savePendingQuotationPolicy(input);
-    return json(result, {
+    return respond(result, {
       revalidate: [pendingQuotationPolicyQuery.key],
     });
   },

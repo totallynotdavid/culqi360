@@ -1,4 +1,4 @@
-import { Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { PageCardHeader } from "~/components/ui/layout/page-card/page-card-header";
@@ -28,19 +28,19 @@ export function RecordIndexShellSkeleton() {
 
       <div class={styles.table}>
         <div class={styles.row}>
-          <Index each={COLUMN_WIDTHS}>
+          <For keyed={false} each={COLUMN_WIDTHS}>
             {(width) => <Skeleton width={width()} height={12} />}
-          </Index>
+          </For>
         </div>
-        <Index each={BODY_ROWS}>
+        <For keyed={false} each={BODY_ROWS}>
           {() => (
             <div class={styles.row}>
-              <Index each={COLUMN_WIDTHS}>
+              <For keyed={false} each={COLUMN_WIDTHS}>
                 {(width) => <Skeleton width={width()} height={14} />}
-              </Index>
+              </For>
             </div>
           )}
-        </Index>
+        </For>
       </div>
     </div>
   );

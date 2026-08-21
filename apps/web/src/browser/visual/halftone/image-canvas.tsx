@@ -1,10 +1,10 @@
+import { type JSX } from "@solidjs/web";
 import {
   createEffect,
   createMemo,
-  createResource,
+  latest,
   onCleanup,
-  onMount,
-  type JSX,
+  onSettled,
 } from "solid-js";
 import { PlaneGeometry } from "three";
 
@@ -42,23 +42,17 @@ const DEFAULT_VIRTUAL_RENDER_HEIGHT = 768;
 export function HalftoneImageCanvas(
   props: HalftoneImageCanvasProps,
 ): JSX.Element {
-  const [imageElement] = createResource(
-    () => ({
+  const imageElement = createMemo(() =>
+    loadVisualImage(props.imageUrl, {
       crossOrigin: props.crossOrigin,
-      imageUrl: props.imageUrl,
+      label: "halftone image",
     }),
-    ({ crossOrigin, imageUrl }) =>
-      loadVisualImage(imageUrl, {
-        crossOrigin,
-        label: "halftone image",
-      }),
   );
 
   if (import.meta.env.DEV) {
-    createEffect(() => {
-      if (imageElement.error) {
-        console.error(imageElement.error);
-      }
+    createEffect(() => imageElement(), {
+      effect: () => {},
+      error: (thrown) => console.error(thrown),
     });
   }
 
@@ -86,7 +80,7 @@ export function HalftoneImageCanvas(
   let mountRef: HTMLDivElement | undefined;
   let runtime: HalftoneRuntime | null = null;
 
-  onMount(() => {
+  onSettled(() => {
     const host = mountRef;
 
     if (!host) {
@@ -99,7 +93,7 @@ export function HalftoneImageCanvas(
       const createdRuntime = await createHalftoneRuntime({
         host,
         getConfig: () => runtimeConfig(),
-        getImageElement: () => imageElement.latest ?? null,
+        getImageElement: () => latest(() => imageElement()) ?? null,
       });
 
       if (cancelled) {
@@ -121,16 +115,16 @@ export function HalftoneImageCanvas(
       }
     })();
 
-    onCleanup(() => {
+    return () => {
       cancelled = true;
       runtime?.dispose();
       runtime = null;
-    });
+    };
   });
 
   return (
     <div
-      aria-hidden
+      aria-hidden="true"
       ref={(el) => {
         mountRef = el;
       }}

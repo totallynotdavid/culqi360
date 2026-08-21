@@ -131,6 +131,18 @@ Anti-patterns to check before implementing:
 - Signals are functions. Access with `count()`, not `count`.
 - Use `<For>` for reference-keyed objects and `<Index>` for primitive lists.
 - Side effects belong in `createEffect` or `onMount`, never during render.
+- Nest `<Errored>` _inside_ `<Loading>`, never outside. A read that rejects
+  while the pending boundary is still waiting never reaches an error boundary
+  placed outside it: neither fallback renders and the subtree comes out empty.
+  Measured on `/settings/data-sources` with the engine unreachable.
+- Never write an effect whose only job is resetting state when a key changes.
+  `createSignal(fn)` is a _writable memo_: it recomputes (and so resets) when
+  its dependencies change, and takes local writes in between. That is the
+  primitive for a draft seeded from a prop, a pagination trail scoped to a
+  filter, or a flag scoped to the value it was raised for.
+- A DOM node an effect depends on belongs in a signal, not a `ref` variable. A
+  plain `let` is invisible to the effect, so it cannot re-run once the node
+  exists.
 
 ## Standards
 

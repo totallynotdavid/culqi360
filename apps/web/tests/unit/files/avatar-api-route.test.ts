@@ -2,16 +2,46 @@ import { makeAuthSession } from "@tests/support/unit/factories";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UserId } from "~/domain/ids";
-import { respondToAvatarRequest } from "~/server/users/avatar-http";
 import type { AvatarService } from "~/server/users/avatar-service";
 
-const getMock = vi.fn<AvatarService["get"]>();
-const session = makeAuthSession({ userId: UserId.trust("7") });
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn<() => Promise<unknown>>(),
+  get: vi.fn<AvatarService["get"]>(),
+}));
+
+vi.mock("~/server/platform/action/session", () => ({
+  getSession: mocks.getSession,
+}));
+
+vi.mock("~/server/composition/application", () => ({
+  getApplication: () => ({ users: { avatars: { get: mocks.get } } }),
+}));
+
+const { respondWithAvatar } = await import("~/server/users/avatar-http");
+const { GET: getOwnAvatar } = await import("~/routes/api/me/avatar");
+const { GET: getUserAvatar } =
+  await import("~/routes/api/users/[userId]/avatar");
+
+const userId = UserId.trust("7");
+const teammateId = "00000000-0000-4000-8000-000000000009";
 
 function requestAvatar(
   request = new Request("http://localhost/api/me/avatar"),
 ) {
-  return respondToAvatarRequest(request, session, { get: getMock });
+  return respondWithAvatar(request, userId, { get: mocks.get });
+}
+
+function storedAvatar(version: number) {
+  return {
+    ok: true as const,
+    value: {
+      storageKey: "7/avatar.png",
+      mimeType: "image/png",
+      version,
+      updatedAt: new Date(),
+      bytes: new Uint8Array([1, 2, 3]),
+    },
+  };
 }
 
 describe("avatar response", () => {
@@ -19,19 +49,8 @@ describe("avatar response", () => {
     vi.clearAllMocks();
   });
 
-  it("rejects unauthenticated requests", async () => {
-    const response = await respondToAvatarRequest(
-      new Request("http://localhost/api/me/avatar"),
-      null,
-      { get: getMock },
-    );
-
-    expect(response.status).toBe(401);
-    expect(getMock).not.toHaveBeenCalled();
-  });
-
   it("reports a missing avatar", async () => {
-    getMock.mockResolvedValue({
+    mocks.get.mockResolvedValue({
       ok: false,
       error: { code: "avatar_not_found" },
     });
@@ -43,7 +62,7 @@ describe("avatar response", () => {
   });
 
   it("reports unavailable avatar storage", async () => {
-    getMock.mockResolvedValue({
+    mocks.get.mockResolvedValue({
       ok: false,
       error: { code: "storage_unavailable" },
     });
@@ -57,16 +76,7 @@ describe("avatar response", () => {
   });
 
   it("honors a matching ETag", async () => {
-    getMock.mockResolvedValue({
-      ok: true,
-      value: {
-        storageKey: "7/avatar.png",
-        mimeType: "image/png",
-        version: 3,
-        updatedAt: new Date(),
-        bytes: new Uint8Array([1, 2, 3]),
-      },
-    });
+    mocks.get.mockResolvedValue(storedAvatar(3));
 
     const response = await requestAvatar(
       new Request("http://localhost/api/me/avatar", {
@@ -79,16 +89,7 @@ describe("avatar response", () => {
   });
 
   it("returns the stored avatar", async () => {
-    getMock.mockResolvedValue({
-      ok: true,
-      value: {
-        storageKey: "7/avatar.png",
-        mimeType: "image/png",
-        version: 4,
-        updatedAt: new Date(),
-        bytes: new Uint8Array([1, 2, 3]),
-      },
-    });
+    mocks.get.mockResolvedValue(storedAvatar(4));
 
     const response = await requestAvatar();
 
@@ -101,7 +102,10 @@ describe("avatar response", () => {
   });
 
   it("reports a missing user", async () => {
-    getMock.mockResolvedValue({ ok: false, error: { code: "user_not_found" } });
+    mocks.get.mockResolvedValue({
+      ok: false,
+      error: { code: "user_not_found" },
+    });
 
     const response = await requestAvatar();
 
@@ -110,7 +114,7 @@ describe("avatar response", () => {
   });
 
   it("reports an unavailable avatar repository", async () => {
-    getMock.mockResolvedValue({
+    mocks.get.mockResolvedValue({
       ok: false,
       error: { code: "repository_unavailable" },
     });
@@ -118,5 +122,63 @@ describe("avatar response", () => {
     const response = await requestAvatar();
 
     expect(response.status).toBe(503);
+  });
+});
+
+describe("avatar routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects unauthenticated requests for your own avatar", async () => {
+    mocks.getSession.mockResolvedValue(null);
+
+    const response = await getOwnAvatar({
+      request: new Request("http://localhost/api/me/avatar"),
+    });
+
+    expect(response.status).toBe(401);
+    expect(mocks.get).not.toHaveBeenCalled();
+  });
+
+  it("rejects unauthenticated requests for a teammate's avatar", async () => {
+    mocks.getSession.mockResolvedValue(null);
+
+    const response = await getUserAvatar({
+      request: new Request("http://localhost/api/users/7/avatar"),
+      params: { userId: "7" },
+    });
+
+    expect(response.status).toBe(401);
+    expect(mocks.get).not.toHaveBeenCalled();
+  });
+
+  it("rejects a teammate's avatar without team:read", async () => {
+    mocks.getSession.mockResolvedValue(
+      makeAuthSession({ userId, role: "executive" }),
+    );
+
+    const response = await getUserAvatar({
+      request: new Request(`http://localhost/api/users/${teammateId}/avatar`),
+      params: { userId: teammateId },
+    });
+
+    expect(response.status).toBe(403);
+    expect(mocks.get).not.toHaveBeenCalled();
+  });
+
+  it("serves a teammate's avatar to a permitted reader", async () => {
+    mocks.getSession.mockResolvedValue(
+      makeAuthSession({ userId, role: "superuser" }),
+    );
+    mocks.get.mockResolvedValue(storedAvatar(2));
+
+    const response = await getUserAvatar({
+      request: new Request(`http://localhost/api/users/${teammateId}/avatar`),
+      params: { userId: teammateId },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("etag")).toBe(`"avatar-${teammateId}-v2"`);
   });
 });

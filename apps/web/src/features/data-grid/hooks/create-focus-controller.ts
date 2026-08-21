@@ -47,44 +47,50 @@ export function createDataGridFocusController(options: {
   const [focusedCell, setFocusedCell] = createSignal<DataGridCellAddress>();
   const [editingCell, setEditingCell] = createSignal<DataGridEditingCell>();
 
-  createEffect(() => {
-    const rowIds = options.rowIds();
-    const columnKeys = options.columnKeys();
-    const activeRow = activeRowId();
-    const editing = editingCell();
-    const focused = focusedCell();
+  // Prunes focus, editing and active row whenever the grid's rows or columns
+  // change under them. It reads the same signals it writes; the writes settle
+  // because each guard only fires when the value is actually stale.
+  createEffect(
+    () => ({
+      rowIds: options.rowIds(),
+      columnKeys: options.columnKeys(),
+      activeRow: activeRowId(),
+      editing: editingCell(),
+      focused: focusedCell(),
+    }),
+    ({ rowIds, columnKeys, activeRow, editing, focused }) => {
+      if (activeRow && !rowIds.includes(activeRow)) {
+        setActiveRowId(undefined);
+      }
 
-    if (activeRow && !rowIds.includes(activeRow)) {
-      setActiveRowId(undefined);
-    }
+      if (
+        editing &&
+        (!rowIds.includes(editing.rowId) ||
+          !columnKeys.includes(editing.columnKey))
+      ) {
+        setEditingCell(undefined);
+      }
 
-    if (
-      editing &&
-      (!rowIds.includes(editing.rowId) ||
-        !columnKeys.includes(editing.columnKey))
-    ) {
-      setEditingCell(undefined);
-    }
+      if (rowIds.length === 0 || columnKeys.length === 0) {
+        setFocusedCell(undefined);
+        return;
+      }
 
-    if (rowIds.length === 0 || columnKeys.length === 0) {
-      setFocusedCell(undefined);
-      return;
-    }
+      const firstRowId = rowIds[0];
+      const firstColumnKey = columnKeys[0];
+      if (!firstRowId || !firstColumnKey) {
+        return;
+      }
 
-    const firstRowId = rowIds[0];
-    const firstColumnKey = columnKeys[0];
-    if (!firstRowId || !firstColumnKey) {
-      return;
-    }
-
-    if (
-      !focused ||
-      !rowIds.includes(focused.rowId) ||
-      !columnKeys.includes(focused.columnKey)
-    ) {
-      setFocusedCell({ rowId: firstRowId, columnKey: firstColumnKey });
-    }
-  });
+      if (
+        !focused ||
+        !rowIds.includes(focused.rowId) ||
+        !columnKeys.includes(focused.columnKey)
+      ) {
+        setFocusedCell({ rowId: firstRowId, columnKey: firstColumnKey });
+      }
+    },
+  );
 
   function findCellElement(rowId: string, columnKey: string) {
     return Array.from(

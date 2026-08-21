@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { createUniqueId, type JSX, splitProps } from "solid-js";
+import { createUniqueId, omit } from "solid-js";
 
 import { InputErrorHelper } from "./input-error-helper";
 import { InputLabel } from "./input-label";
@@ -12,21 +13,15 @@ export interface SelectProps extends JSX.SelectHTMLAttributes<HTMLSelectElement>
 }
 
 export function Select(props: SelectProps) {
-  const [local, others] = splitProps(props, [
-    "label",
-    "error",
-    "class",
-    "id",
-    "children",
-  ]);
+  const others = omit(props, "label", "error", "class", "id", "children");
   const generatedId = createUniqueId();
-  const selectId = () => local.id || generatedId;
+  const selectId = () => props.id || generatedId;
 
   return (
     <div class={styles.field}>
-      {local.label && (
+      {props.label && (
         <InputLabel for={selectId()}>
-          {local.label}
+          {props.label}
           {props.required && (
             <span aria-hidden="true" class={styles.required}>
               *
@@ -38,14 +33,14 @@ export function Select(props: SelectProps) {
         id={selectId()}
         class={clsx(
           styles.control,
-          local.error ? styles.errorControl : undefined,
-          local.class,
+          props.error ? styles.errorControl : undefined,
+          props.class,
         )}
         {...others}
       >
-        {local.children}
+        {props.children}
       </select>
-      {local.error && <InputErrorHelper>{local.error}</InputErrorHelper>}
+      {props.error && <InputErrorHelper>{props.error}</InputErrorHelper>}
     </div>
   );
 }

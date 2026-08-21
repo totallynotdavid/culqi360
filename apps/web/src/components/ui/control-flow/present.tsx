@@ -1,4 +1,5 @@
-import { Show, type Accessor, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show, type Accessor } from "solid-js";
 
 interface PresentProps<T> {
   when: T | null | undefined;

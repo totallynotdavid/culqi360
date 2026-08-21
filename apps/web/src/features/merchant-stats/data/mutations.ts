@@ -1,5 +1,11 @@
-import { action, json } from "@solidjs/router";
+import { action } from "@solidjs/router";
+import { respond } from "@solidjs/web";
 
+import {
+  ATTRIBUTED_GPV_KEYS,
+  PUBLISHED_GPV_KEYS,
+  QUERY_KEYS,
+} from "~/contracts/query-keys";
 import {
   adjustMonthCredit,
   setMerchantTarget,
@@ -10,26 +16,19 @@ import {
   setCommissionScheme,
 } from "~/rpc/merchant-stats/commission-scheme";
 import { requestMerchantGpvExportDownloadToken } from "~/rpc/merchant-stats/dashboard";
-import { gpvSnapshotQuery } from "~/rpc/merchant-stats/gpv-snapshot";
 import {
   resolveGpvImportIssue,
   uploadMerchantReport,
 } from "~/rpc/merchant-stats/imports";
-import { merchantFilterOptionsQuery } from "~/rpc/merchant-stats/merchant-filter-options";
-
-import {
-  ATTRIBUTION_GPV_QUERY_KEYS,
-  PUBLISHED_GPV_QUERY_KEYS,
-} from "./revalidation";
 
 export const adjustMonthCreditMutation = action(
   async (input: Parameters<typeof adjustMonthCredit>[0]) => {
     const result = await adjustMonthCredit(input);
 
-    return json(result, {
+    return respond(result, {
       revalidate: [
-        ...ATTRIBUTION_GPV_QUERY_KEYS,
-        merchantFilterOptionsQuery.key,
+        ...ATTRIBUTED_GPV_KEYS,
+        QUERY_KEYS.merchantStats.filterOptions,
       ],
     });
   },
@@ -40,7 +39,7 @@ export const setMerchantTargetMutation = action(
   async (input: Parameters<typeof setMerchantTarget>[0]) => {
     const result = await setMerchantTarget(input);
 
-    return json(result, { revalidate: ATTRIBUTION_GPV_QUERY_KEYS });
+    return respond(result, { revalidate: [...ATTRIBUTED_GPV_KEYS] });
   },
   "setMerchantGpvTarget",
 );
@@ -49,7 +48,7 @@ export const setCommissionSchemeMutation = action(
   async (input: Parameters<typeof setCommissionScheme>[0]) => {
     const result = await setCommissionScheme(input);
 
-    return json(result, {
+    return respond(result, {
       revalidate: [
         commissionSchemeDraftQuery.key,
         commissionManagerDashboardQuery.key,
@@ -67,13 +66,13 @@ export const uploadMerchantReportMutation = action(
 export const resolveGpvImportIssueMutation = action(
   async (input: Parameters<typeof resolveGpvImportIssue>[0]) => {
     const result = await resolveGpvImportIssue(input);
-    const revalidate = [gpvSnapshotQuery.key];
+    const revalidate: string[] = [QUERY_KEYS.merchantStats.gpvSnapshot];
 
     if (result.activated) {
-      revalidate.push(...PUBLISHED_GPV_QUERY_KEYS);
+      revalidate.push(...PUBLISHED_GPV_KEYS);
     }
 
-    return json(result, { revalidate });
+    return respond(result, { revalidate });
   },
   "resolveMerchantGpvImportIssue",
 );

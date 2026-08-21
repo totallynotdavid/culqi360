@@ -1,9 +1,9 @@
-import { Show, createSignal, onCleanup, onMount } from "solid-js";
+import { Show, createSignal, onSettled } from "solid-js";
 
 import { scheduleVisualMount } from "~/browser/visual/runtime/visual-mount-scheduler";
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
+import { preloadSidePanelEntryPages } from "~/features/side-panel/registry/lazy-pages";
 
-import { preloadSidePanelEntryPages } from "../registry/page-registry";
 import { Router } from "../router/router";
 import { DesktopSidePanelContent } from "./desktop-content";
 import { DesktopSidePanelFrame } from "./desktop-frame";
@@ -16,7 +16,7 @@ export function SidePanelHost() {
   // Desktop is rendered on the server; mobile waits for hydration because it portals.
   const isDesktopInteractive = () => isHydrated() && !isMobile();
 
-  onMount(() => {
+  onSettled(() => {
     setIsHydrated(true);
 
     // Preload the cold entry pages before the first panel open.
@@ -24,7 +24,7 @@ export function SidePanelHost() {
       priority: "priority",
     });
 
-    onCleanup(cancelPreload);
+    return cancelPreload;
   });
 
   return (

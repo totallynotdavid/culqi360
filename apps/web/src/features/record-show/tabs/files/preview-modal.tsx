@@ -1,5 +1,5 @@
-import { createEffect, Match, onCleanup, Show, Switch } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
+import { createEffect, Match, Show, Switch } from "solid-js";
 
 import { PresenceTransition } from "~/components/ui/animation/presence-transition";
 import { Button } from "~/components/ui/input/button";
@@ -27,18 +27,24 @@ type PreviewModalProps = {
 };
 
 export function PreviewModal(props: PreviewModalProps) {
-  createEffect(() => {
-    if (!props.state) {
-      return;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        props.onClose();
+  createEffect(
+    () => Boolean(props.state),
+    (isOpen) => {
+      if (!isOpen) {
+        return;
       }
-    };
-    window.document.addEventListener("keydown", onKeyDown);
-    onCleanup(() => window.document.removeEventListener("keydown", onKeyDown));
-  });
+
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          props.onClose();
+        }
+      };
+
+      window.document.addEventListener("keydown", onKeyDown);
+
+      return () => window.document.removeEventListener("keydown", onKeyDown);
+    },
+  );
 
   const category = () =>
     props.state

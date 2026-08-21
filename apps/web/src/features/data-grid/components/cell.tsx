@@ -1,4 +1,5 @@
-import { splitProps, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { omit } from "solid-js";
 
 import styles from "../styles/table.module.css";
 
@@ -7,18 +8,14 @@ type DataGridCellProps = JSX.HTMLAttributes<HTMLDivElement> & {
 };
 
 export function DataGridCell(props: DataGridCellProps) {
-  const [local, elementProps] = splitProps(props, [
-    "children",
-    "class",
-    "sticky",
-  ]);
+  const elementProps = omit(props, "children", "class", "sticky");
 
   return (
     <div
       {...elementProps}
-      class={`${styles.bodyCell}${local.class ? ` ${local.class}` : ""}${local.sticky ? ` ${styles.stickyCell}` : ""}`}
+      class={[styles.bodyCell, props.class, props.sticky && styles.stickyCell]}
     >
-      {local.children}
+      {props.children}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import Building2 from "~/components/icons/building-2";
 import ChartColumn from "~/components/icons/chart-column";

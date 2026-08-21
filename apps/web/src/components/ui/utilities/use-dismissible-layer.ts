@@ -1,4 +1,4 @@
-import { onCleanup, onMount } from "solid-js";
+import { onSettled } from "solid-js";
 
 import { useHotkey } from "~/browser/hotkey/use-hotkey";
 
@@ -32,10 +32,10 @@ export function useDismissibleLayer(options: UseDismissibleLayerOptions) {
     allowInInputs: true,
   });
 
-  onMount(() => {
+  onSettled(() => {
     document.addEventListener("pointerdown", handlePointerDown);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
-    });
+    };
   });
 }

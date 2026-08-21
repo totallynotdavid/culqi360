@@ -1,4 +1,5 @@
-import { createEffect, onCleanup, type Accessor, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { onSettled, type Accessor } from "solid-js";
 
 import { AnchoredPopover } from "~/components/ui/overlay/anchored-popover";
 
@@ -12,7 +13,9 @@ export function DataGridCellEditor(props: {
 }) {
   let editor: HTMLDivElement | undefined;
 
-  createEffect(() => {
+  // Nothing reactive here: the listener is installed once and reads props
+  // when it fires, so this is a mount-time subscription, not an effect.
+  onSettled(() => {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (editor && target instanceof Node && !editor.contains(target)) {
@@ -21,9 +24,9 @@ export function DataGridCellEditor(props: {
     };
 
     document.addEventListener("pointerdown", handlePointerDown, true);
-    onCleanup(() =>
-      document.removeEventListener("pointerdown", handlePointerDown, true),
-    );
+
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown, true);
   });
 
   return (

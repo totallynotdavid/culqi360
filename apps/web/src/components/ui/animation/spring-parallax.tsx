@@ -1,4 +1,7 @@
-import { onCleanup, onMount, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { onSettled } from "solid-js";
+
+import { prefersReducedMotion } from "./animate";
 
 interface SpringParallaxProps {
   children: JSX.Element;
@@ -17,11 +20,13 @@ export function SpringParallax(props: SpringParallaxProps) {
   let containerRef: HTMLDivElement | null = null;
   let rafId: number | undefined;
 
-  onMount(() => {
+  onSettled(() => {
+    // A rAF spring, not a WAAPI animation, so there is no duration to collapse:
+    // under reduced motion the element simply stays put.
     if (typeof window === "undefined" || !containerRef) {
       return;
     }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion()) {
       return;
     }
 
@@ -85,13 +90,13 @@ export function SpringParallax(props: SpringParallaxProps) {
     window.addEventListener("mousemove", onMouseMove);
     window.document.addEventListener("mouseleave", onMouseLeave);
 
-    onCleanup(() => {
+    return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.document.removeEventListener("mouseleave", onMouseLeave);
       if (rafId != null) {
         cancelAnimationFrame(rafId);
       }
-    });
+    };
   });
 
   return (

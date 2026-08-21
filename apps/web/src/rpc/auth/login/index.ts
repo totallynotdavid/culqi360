@@ -1,4 +1,4 @@
-import { redirect } from "@solidjs/router";
+import { redirect } from "@solidjs/web";
 
 import type { PasskeyLoginFlowState } from "~/domain/auth/passkey/types";
 import { fail, internal } from "~/domain/errors";

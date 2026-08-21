@@ -1,4 +1,5 @@
 import { createResizeObserver } from "@solid-primitives/resize-observer";
+import { type JSX } from "@solidjs/web";
 import {
   For,
   Show,
@@ -7,10 +8,9 @@ import {
   createMemo,
   createSignal,
   onCleanup,
-  onMount,
-  type JSX,
+  onSettled,
 } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import ChevronDown from "~/components/icons/chevron-down";
 import {
@@ -101,13 +101,16 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
     setMoreButtonWidth(width);
   });
 
-  createEffect(() => {
-    if (!hasHiddenTabs() && isOverflowOpen()) {
-      setIsOverflowOpen(false);
-    }
-  });
+  createEffect(
+    () => hasHiddenTabs(),
+    (hasHidden) => {
+      if (!hasHidden) {
+        setIsOverflowOpen(false);
+      }
+    },
+  );
 
-  onMount(() => {
+  onSettled(() => {
     const handleDocumentPointerDown = (event: PointerEvent) => {
       if (!isOverflowOpen()) {
         return;
@@ -128,9 +131,9 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
 
     document.addEventListener("pointerdown", handleDocumentPointerDown);
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
-    });
+    };
   });
 
   return (
@@ -141,11 +144,15 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
             const [element, setElement] = createSignal<HTMLDivElement>();
 
             createResizeObserver(element, ({ width }) => {
-              setTabWidths(tab.id, width);
+              setTabWidths((widths) => {
+                widths[tab.id] = width;
+              });
             });
 
             onCleanup(() => {
-              setTabWidths(tab.id, undefined);
+              setTabWidths((widths) => {
+                widths[tab.id] = undefined;
+              });
             });
 
             return (
@@ -187,10 +194,10 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
           <button
             type="button"
             data-testid="tab-tab-more-button"
-            classList={{
-              [styles.moreTab]: true,
-              [styles.moreTabActive]: isActiveTabHidden(),
-            }}
+            class={[
+              styles.moreTab,
+              isActiveTabHidden() && styles.moreTabActive,
+            ]}
             onClick={() => setIsOverflowOpen((open) => !open)}
           >
             <span class={styles.moreTabContent}>
@@ -205,10 +212,10 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
                 {(tab) => (
                   <button
                     type="button"
-                    classList={{
-                      [styles.moreMenuItem]: true,
-                      [styles.moreMenuItemActive]: tab.id === props.activeTab,
-                    }}
+                    class={[
+                      styles.moreMenuItem,
+                      tab.id === props.activeTab && styles.moreMenuItemActive,
+                    ]}
                     onClick={() => {
                       props.onTabSelect(tab.id);
                       setIsOverflowOpen(false);

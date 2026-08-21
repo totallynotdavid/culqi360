@@ -1,5 +1,4 @@
 import {
-  createAsync,
   useNavigate,
   useSearchParams,
   type RouteDefinition,
@@ -9,9 +8,9 @@ import {
   createMemo,
   createSignal,
   Match,
-  onMount,
+  onSettled,
   Show,
-  Suspense,
+  Loading,
   Switch,
 } from "solid-js";
 
@@ -19,8 +18,8 @@ import {
   createRegistrationResponse,
   isPasskeyRegistrationSupported,
 } from "~/browser/auth/passkey/registration-client";
-import { Loader } from "~/components/feedback/loading/loader";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Loader } from "~/components/feedback/spinner/loader";
 import type { OnboardingSnapshot } from "~/contracts/auth";
 import { actionErrorMessage } from "~/contracts/errors";
 import { normalizePhoneInput, isValidPhone } from "~/domain/phone/pe-mobile";
@@ -64,7 +63,7 @@ function OnboardingContent() {
   const [searchParams] = useSearchParams();
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
-  const loadedSnapshot = createAsync(() => onboardingSnapshotQuery(), {
+  const loadedSnapshot = createMemo(() => onboardingSnapshotQuery(), {
     deferStream: true,
   });
   const [localSnapshot, setLocalSnapshot] = createSignal<OnboardingSnapshot>();
@@ -88,20 +87,23 @@ function OnboardingContent() {
 
   const [recoveryCodes, setRecoveryCodes] = createSignal<string[]>([]);
 
+  // Seeded once rather than derived: the snapshot query revalidates after every
+  // onboarding mutation, and a writable memo would overwrite what is being typed.
   let initializedPhone = false;
 
-  createEffect(() => {
-    const value = snapshot()?.user.phone;
+  createEffect(
+    () => snapshot()?.user.phone,
+    (value) => {
+      if (initializedPhone || value === undefined) {
+        return;
+      }
 
-    if (initializedPhone || value === undefined) {
-      return;
-    }
+      initializedPhone = true;
+      setPhone(value ?? "");
+    },
+  );
 
-    initializedPhone = true;
-    setPhone(value ?? "");
-  });
-
-  onMount(() => {
+  onSettled(() => {
     setPasskeySupported(isPasskeyRegistrationSupported());
   });
 
@@ -115,8 +117,11 @@ function OnboardingContent() {
       : undefined;
   });
 
-  createEffect(() => {
-    if (step() !== "totp") {
+  // Only the step drives this. The enrollment guards are read in the effect
+  // phase, which is untracked, so writing them no longer re-runs the effect
+  // the way it did when every read was tracked.
+  createEffect(step, (currentStep) => {
+    if (currentStep !== "totp") {
       setTotpEnrollment(null);
       setTotpStartAttempted(false);
       return;
@@ -352,7 +357,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense
+    <Loading
       fallback={
         <OnboardingShell centered>
           <output class={styles.loaderCenter} aria-live="polite">
@@ -362,6 +367,6 @@ export default function OnboardingPage() {
       }
     >
       <OnboardingContent />
-    </Suspense>
+    </Loading>
   );
 }

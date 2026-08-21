@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 
+import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
 import { isSettingsRoutePath } from "~/domain/navigation/route-classification";
 
 import { navigationDrawerAdvancedModeCookie } from "./navigation-drawer-advanced-mode";
@@ -24,7 +25,6 @@ export interface NavigationDrawerStateValue {
   width: () => number;
   setWidth: (value: number) => void;
   isMobile: () => boolean;
-  setIsMobile: (value: boolean) => void;
   currentMobileDrawer: () => MobileDrawerType;
   setCurrentMobileDrawer: (
     value: MobileDrawerType | ((current: MobileDrawerType) => MobileDrawerType),
@@ -64,7 +64,9 @@ export function createNavigationDrawerStore(
   const [width, setWidthSignal] = createSignal(
     options?.initialWidth ?? NAVIGATION_DRAWER_WIDTH_CONSTRAINTS.default,
   );
-  const [isMobile, setIsMobile] = createSignal(false);
+  // One media-query listener for every consumer of the drawer state: useIsMobile
+  // allocates its own on each call, so the store is where it belongs.
+  const isMobile = useIsMobile();
   const [currentMobileDrawer, setCurrentMobileDrawer] =
     createSignal<MobileDrawerType>("main");
   const [advancedModeEnabled, setAdvancedModeEnabledSignal] = createSignal(
@@ -147,7 +149,6 @@ export function createNavigationDrawerStore(
       persistNavigationDrawerWidthToCookie(clampedWidth);
     },
     isMobile,
-    setIsMobile,
     currentMobileDrawer,
     setCurrentMobileDrawer,
     advancedModeEnabled,

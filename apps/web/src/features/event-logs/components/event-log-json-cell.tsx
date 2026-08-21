@@ -20,7 +20,7 @@ export function EventLogJsonCell(props: { value: JsonObject }) {
         ref={setAnchor}
         class={styles.preview}
         aria-controls={popoverId}
-        aria-expanded={isExpanded()}
+        aria-expanded={isExpanded() ? "true" : "false"}
         onClick={() => setIsExpanded((expanded) => !expanded)}
       >
         {JSON.stringify(props.value)}

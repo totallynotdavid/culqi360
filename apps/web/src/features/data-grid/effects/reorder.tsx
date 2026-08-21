@@ -1,4 +1,4 @@
-import { onCleanup, onMount } from "solid-js";
+import { onSettled } from "solid-js";
 
 import { useDataGrid } from "../context/instance-context";
 import { autoScrollContainer, getRowIndexFromPointer } from "../dnd/geometry";
@@ -12,7 +12,7 @@ export function DataGridReorderEffect(props: {
   const grid = useDataGrid();
   const reorderController = props.reorder;
 
-  onMount(() => {
+  onSettled(() => {
     function handlePointerMove(event: PointerEvent) {
       if (event.pointerId !== reorderController.pointerId()) {
         return;
@@ -78,11 +78,11 @@ export function DataGridReorderEffect(props: {
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
 
-    onCleanup(() => {
+    return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
-    });
+    };
   });
 
   return null;

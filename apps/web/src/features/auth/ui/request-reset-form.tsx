@@ -1,4 +1,4 @@
-import { useSubmission } from "@solidjs/router";
+import { useSubmissions } from "@solidjs/router";
 import { Show } from "solid-js";
 
 import { EnterTransition } from "~/components/ui/animation/enter-transition";
@@ -16,10 +16,13 @@ import styles from "~/features/auth/ui/auth-shell.module.css";
 import pageStyles from "~/features/auth/ui/login-page.module.css";
 
 export function RequestResetForm() {
-  const submission = useSubmission(requestPasswordResetMutation);
-  const requestSent = () => submission.result?.ok === true;
-  const errorMessage = () =>
-    submission.error ? actionErrorMessage(submission.error) : undefined;
+  const submissions = useSubmissions(requestPasswordResetMutation);
+  const latest = () => submissions.at(-1);
+  const requestSent = () => latest()?.result?.ok === true;
+  const errorMessage = () => {
+    const error = latest()?.error;
+    return error ? actionErrorMessage(error) : undefined;
+  };
 
   return (
     <AuthFlowShell
@@ -44,11 +47,7 @@ export function RequestResetForm() {
 
               <LoginFeedback message={errorMessage()} />
 
-              <Button
-                type="submit"
-                class={styles.full}
-                loading={submission.pending}
-              >
+              <Button type="submit" class={styles.full}>
                 Enviar enlace
               </Button>
 

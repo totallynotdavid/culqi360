@@ -1,4 +1,5 @@
-import { For, createMemo, createSignal, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { For, createMemo, createSignal } from "solid-js";
 
 import styles from "./otp-slot-input.module.css";
 
@@ -12,6 +13,32 @@ const SLOT_COUNT = 6;
 
 function normalizeOtp(value: string): string {
   return value.replace(/\D/g, "").slice(0, SLOT_COUNT);
+}
+
+function OtpSlotGroup(props: {
+  digits: ReadonlyArray<string>;
+  offset: number;
+  activeIndex: number | null;
+}) {
+  return (
+    <For each={props.digits} keyed={false}>
+      {(digit, index) => {
+        const active = () => props.activeIndex === props.offset + index;
+
+        return (
+          <div
+            aria-hidden="true"
+            class={[styles.slot, active() && styles.slotActive]}
+          >
+            {digit() ? digit() : <span class={styles.placeholder}>X</span>}
+            {!digit() && active() && (
+              <span class={styles.caret} aria-hidden="true" />
+            )}
+          </div>
+        );
+      }}
+    </For>
+  );
 }
 
 export function OtpSlotInput(props: OtpSlotInputProps) {
@@ -40,41 +67,19 @@ export function OtpSlotInput(props: OtpSlotInputProps) {
 
   return (
     <div class={styles.container}>
-      <For each={digits().slice(0, 3)}>
-        {(digit, index) => (
-          <div
-            aria-hidden="true"
-            classList={{
-              [styles.slot]: true,
-              [styles.slotActive]: activeIndex() === index(),
-            }}
-          >
-            {digit ? digit : <span class={styles.placeholder}>X</span>}
-            {!digit && activeIndex() === index() && (
-              <span class={styles.caret} aria-hidden="true" />
-            )}
-          </div>
-        )}
-      </For>
+      <OtpSlotGroup
+        digits={digits().slice(0, 3)}
+        offset={0}
+        activeIndex={activeIndex()}
+      />
       <span class={styles.dash} aria-hidden="true">
         <span class={styles.dashLine} />
       </span>
-      <For each={digits().slice(3)}>
-        {(digit, index) => (
-          <div
-            aria-hidden="true"
-            classList={{
-              [styles.slot]: true,
-              [styles.slotActive]: activeIndex() === index() + 3,
-            }}
-          >
-            {digit ? digit : <span class={styles.placeholder}>X</span>}
-            {!digit && activeIndex() === index() + 3 && (
-              <span class={styles.caret} aria-hidden="true" />
-            )}
-          </div>
-        )}
-      </For>
+      <OtpSlotGroup
+        digits={digits().slice(3)}
+        offset={3}
+        activeIndex={activeIndex()}
+      />
       <input
         type="text"
         inputmode="numeric"

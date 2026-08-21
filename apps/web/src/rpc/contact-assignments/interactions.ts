@@ -1,7 +1,7 @@
+import type { ActionSuccess } from "~/contracts/common";
 import { CONTACT_ASSIGNMENT_CALL_OUTCOMES } from "~/contracts/contact-assignments/vocabulary";
 import { ContactAssignmentId, OrganizationPersonId } from "~/domain/ids";
 import { getApplication } from "~/server/composition/application";
-import type { CompleteContactAssignmentCallResult } from "~/server/contact-assignments/application/contracts";
 import { executeSessionServerFunction } from "~/server/platform/action";
 import {
   parseObject,
@@ -10,7 +10,7 @@ import {
 
 export async function completeContactAssignmentCall(
   input: unknown,
-): Promise<CompleteContactAssignmentCallResult> {
+): Promise<ActionSuccess> {
   "use server";
 
   return executeSessionServerFunction({

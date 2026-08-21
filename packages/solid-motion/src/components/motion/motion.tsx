@@ -1,13 +1,7 @@
 import { combineStyle } from "@solid-primitives/props";
-import {
-  type JSX,
-  createEffect,
-  on,
-  onCleanup,
-  onMount,
-  splitProps,
-} from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { type JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
+import { createEffect, omit, onCleanup, onSettled } from "solid-js";
 
 import { domMax } from "../../features/dom-max";
 import { updateLazyFeatures } from "../../features/lazy-features";
@@ -93,15 +87,25 @@ const MotionComponentImpl = (
   const presenceContext = usePresenceContext();
   const config = useMotionConfig();
 
-  const [options, local, attrs] = splitProps(props, OPTION_KEYS, [
-    "tag",
-    "ref",
-    "children",
-  ]);
+  // Solid 2 dropped splitProps; omit keeps the DOM attributes reactive while
+  // the engine options are read back off props one key at a time below.
+  const attrs = omit(props, ...OPTION_KEYS, "tag", "ref", "children");
+
+  const motionOptions = (): Options => {
+    const options: Record<string, unknown> = {};
+
+    for (const key of OPTION_KEYS) {
+      if (key in props) {
+        options[key] = props[key];
+      }
+    }
+
+    return options as Options;
+  };
 
   const getMotionProps = (): Options =>
     resolveMotionProps(
-      { ...(options as Options), as: local.tag ?? "div" },
+      { ...motionOptions(), as: props.tag ?? "div" },
       {
         layoutGroup,
         presenceContext,
@@ -113,19 +117,17 @@ const MotionComponentImpl = (
   const state = new MotionState(getMotionProps(), parentState);
   state.initVisualElement(createVisualElement);
 
-  onMount(() => state.mount(root));
+  onSettled(() => state.mount(root));
 
-  // Defer the first effect because the constructor already applied initial options.
+  // Deferred because the constructor already applied the initial options.
   createEffect(
-    on(
-      getMotionProps,
-      (motionProps) => {
-        state.beforeUpdate();
-        state.updateOptions(motionProps);
-        state.update();
-      },
-      { defer: true },
-    ),
+    getMotionProps,
+    (motionProps) => {
+      state.beforeUpdate();
+      state.updateOptions(motionProps);
+      state.update();
+    },
+    { defer: true },
   );
 
   onCleanup(() => {
@@ -135,22 +137,22 @@ const MotionComponentImpl = (
   });
 
   return (
-    <MotionContext.Provider value={state}>
+    <MotionContext value={state}>
       <Dynamic
-        component={local.tag ?? "div"}
+        component={props.tag ?? "div"}
         {...attrs}
         ref={(el: Element) => {
           root = el as HTMLElement | SVGElement;
-          local.ref?.(el);
+          props.ref?.(el);
         }}
         style={combineStyle(
           props.style as any,
-          buildInitialStyle(state, options.style),
+          buildInitialStyle(state, props.style),
         )}
       >
-        {local.children}
+        {props.children}
       </Dynamic>
-    </MotionContext.Provider>
+    </MotionContext>
   );
 };
 

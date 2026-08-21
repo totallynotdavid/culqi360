@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createSignal, onSettled } from "solid-js";
 
 import { MOBILE_VIEWPORT } from "~/components/ui/theme/design-system";
 
@@ -7,7 +7,7 @@ import { MOBILE_VIEWPORT } from "~/components/ui/theme/design-system";
 export function useIsMobile() {
   const [isMobile, setIsMobile] = createSignal(false);
 
-  onMount(() => {
+  onSettled(() => {
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_VIEWPORT}px)`);
     setIsMobile(mediaQuery.matches);
 
@@ -16,7 +16,7 @@ export function useIsMobile() {
     };
 
     mediaQuery.addEventListener("change", handleChange);
-    onCleanup(() => mediaQuery.removeEventListener("change", handleChange));
+    return () => mediaQuery.removeEventListener("change", handleChange);
   });
 
   return isMobile;

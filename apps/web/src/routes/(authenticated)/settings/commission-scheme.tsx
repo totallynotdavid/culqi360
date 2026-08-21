@@ -1,14 +1,20 @@
 import {
-  createAsync,
   type RouteDefinition,
   useAction,
   useSearchParams,
-  useSubmission,
 } from "@solidjs/router";
-import { createMemo, createSignal, createUniqueId, Show } from "solid-js";
-import { createStore, reconcile, unwrap } from "solid-js/store";
+import {
+  Loading,
+  Show,
+  createMemo,
+  createSignal,
+  createUniqueId,
+} from "solid-js";
+import { createStore, reconcile, snapshot } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";
 import Package from "~/components/icons/package";
 import Target from "~/components/icons/target";
@@ -67,20 +73,20 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
   const [baseline, setBaseline] = createSignal(structuredClone(props.initial));
 
   const save = useAction(setCommissionSchemeMutation);
-  const saveSubmission = useSubmission(setCommissionSchemeMutation);
+  const saving = createActionPending(setCommissionSchemeMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
   const formId = createUniqueId();
   const { tab, setTab } = useCommissionTab();
 
   const isDirty = createMemo(
-    () => JSON.stringify(unwrap(draft)) !== JSON.stringify(baseline()),
+    () => JSON.stringify(snapshot(draft)) !== JSON.stringify(baseline()),
   );
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
 
-    // Solid stores are proxies, so unwrap before cloning.
-    const rules = structuredClone(unwrap(draft));
+    // Solid stores are proxies, so snapshot before cloning.
+    const rules = structuredClone(snapshot(draft));
     const effectiveFrom = new Date().toISOString().slice(0, 10);
 
     try {
@@ -111,12 +117,7 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
               Cancelar
             </Button>
 
-            <Button
-              type="submit"
-              form={formId}
-              size="sm"
-              loading={saveSubmission.pending}
-            >
+            <Button type="submit" form={formId} size="sm" loading={saving()}>
               Guardar
             </Button>
           </div>
@@ -153,13 +154,11 @@ function CommissionSchemeForm(props: { initial: CommissionSchemeRules }) {
 }
 
 export default function CommissionSchemePage() {
-  const draft = createAsync(() => commissionSchemeDraftQuery(), {
-    initialValue: null,
-  });
+  const draft = createMemo(() => commissionSchemeDraftQuery());
 
   return (
-    <Show when={draft()}>
-      {(initial) => <CommissionSchemeForm initial={initial()} />}
-    </Show>
+    <Loading fallback={<Spinner />}>
+      <CommissionSchemeForm initial={draft()} />
+    </Loading>
   );
 }

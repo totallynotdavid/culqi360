@@ -1,7 +1,7 @@
 import { Title } from "@solidjs/meta";
 import { useLocation } from "@solidjs/router";
+import { Dynamic } from "@solidjs/web";
 import { Show, createMemo } from "solid-js";
-import { Dynamic } from "solid-js/web";
 
 import { ICON_BY_ROUTE } from "~/components/layout/route-icons";
 import { TintedIconTile } from "~/components/ui/display/tinted-icon-tile/tinted-icon-tile";

@@ -1,6 +1,6 @@
 import { useAction } from "@solidjs/router";
+import type { JSX } from "@solidjs/web";
 import { For, Match, Show, Switch, createSignal } from "solid-js";
-import type { JSX } from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
 import { FileInput } from "~/components/ui/input/file-input";
@@ -353,7 +353,7 @@ function ProductChooser(props: { data: LeadDetailView }) {
     state.setError(null);
     try {
       await choose({ leadId: props.data.lead.id, productKind: kind });
-      await revalidateWorkflowLead(props.data.lead.id);
+      revalidateWorkflowLead(props.data.lead.id);
     } catch (caught) {
       state.setError(actionErrorMessage(caught));
     } finally {
@@ -427,7 +427,7 @@ function DocumentUpload(props: {
       formData.set("action", props.action);
       formData.set("file", selected);
       await upload(formData);
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       state.setError(actionErrorMessage(caught));
     } finally {
@@ -511,7 +511,7 @@ function UnitTextRows(props: {
         entries.map(([unitId, value]) => props.submitOne(unitId, value)),
       );
       // Revalidate once after saving every entered unit.
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       state.setError(actionErrorMessage(caught));
     } finally {
@@ -621,7 +621,7 @@ function PaymentProofUpload(props: { leadId: string; units: Unit[] }) {
     formData.set("unitId", unitId);
     formData.set("file", file);
     await upload(formData);
-    await revalidateWorkflowLead(props.leadId);
+    revalidateWorkflowLead(props.leadId);
   }
 
   return (
@@ -671,7 +671,7 @@ function ValidatePayment(props: { leadId: string; units: Unit[] }) {
     state.setError(null);
     try {
       await validate({ leadId: props.leadId });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       state.setError(actionErrorMessage(caught));
     } finally {
@@ -738,7 +738,7 @@ function RejectControl(props: { leadId: string }) {
     state.setError(null);
     try {
       await reject({ leadId: props.leadId, reason: reason().trim() });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       state.setError(actionErrorMessage(caught));
     } finally {

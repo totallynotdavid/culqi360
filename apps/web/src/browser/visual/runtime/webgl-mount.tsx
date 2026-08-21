@@ -1,11 +1,10 @@
+import { type JSX } from "@solidjs/web";
 import {
   Show,
   createEffect,
   createMemo,
   createSignal,
-  onCleanup,
-  onMount,
-  type JSX,
+  onSettled,
 } from "solid-js";
 
 import { observeElementVisibility } from "~/browser/dom/observe-element-visibility";
@@ -53,7 +52,7 @@ export function WebGlMount(props: WebGlMountProps) {
   const [hasContextSlot, setHasContextSlot] = createSignal(false);
   const [contextEpoch, setContextEpoch] = createSignal(0);
 
-  onMount(() => {
+  onSettled(() => {
     const element = rootElement;
 
     if (!element) {
@@ -94,13 +93,13 @@ export function WebGlMount(props: WebGlMountProps) {
 
     element.addEventListener(SITE_WEBGL_CONTEXT_LOST_EVENT, handleContextLost);
 
-    onCleanup(() => {
+    return () => {
       stopObservingVisibility();
       element.removeEventListener(
         SITE_WEBGL_CONTEXT_LOST_EVENT,
         handleContextLost,
       );
-    });
+    };
   });
 
   const mountPriority = createMemo<VisualMountPriority>(() => {
@@ -113,28 +112,27 @@ export function WebGlMount(props: WebGlMountProps) {
   const wantsScene = createMemo(() => policy().allowed && hasBeenVisible());
   const wantsContextSlot = createMemo(() => wantsScene() && isMountReady());
 
-  createEffect(() => {
-    contextEpoch();
-    mountPriority();
+  // A new epoch or priority re-schedules the mount from scratch, so both are
+  // tracked even though only the priority is used below.
+  createEffect(
+    () => ({
+      epoch: contextEpoch(),
+      priority: mountPriority(),
+      wanted: wantsScene(),
+    }),
+    ({ priority, wanted }) => {
+      setIsMountReady(false);
 
-    setIsMountReady(false);
+      if (!wanted) {
+        return;
+      }
 
-    if (!wantsScene()) {
-      return;
-    }
+      return scheduleVisualMount(() => setIsMountReady(true), { priority });
+    },
+  );
 
-    const cancelScheduledMount = scheduleVisualMount(
-      () => setIsMountReady(true),
-      {
-        priority: mountPriority(),
-      },
-    );
-
-    onCleanup(cancelScheduledMount);
-  });
-
-  createEffect(() => {
-    if (!wantsContextSlot()) {
+  createEffect(wantsContextSlot, (wanted) => {
+    if (!wanted) {
       return;
     }
 
@@ -175,24 +173,24 @@ export function WebGlMount(props: WebGlMountProps) {
 
     tryAcquire();
 
-    createEffect(() => {
-      const inViewport = isInViewport();
+    // hasContextSlot is tracked so the handle is re-synced after acquisition,
+    // not only when the viewport changes.
+    createEffect(
+      () => ({ inViewport: isInViewport(), acquired: hasContextSlot() }),
+      ({ inViewport }) => {
+        if (!handle) {
+          return;
+        }
 
-      // Re-sync after acquisition as well as viewport changes.
-      hasContextSlot();
+        if (inViewport) {
+          handle.markActive();
+        } else {
+          handle.markInactive();
+        }
+      },
+    );
 
-      if (!handle) {
-        return;
-      }
-
-      if (inViewport) {
-        handle.markActive();
-      } else {
-        handle.markInactive();
-      }
-    });
-
-    onCleanup(() => {
+    return () => {
       unsubscribe?.();
       unsubscribe = null;
 
@@ -200,7 +198,7 @@ export function WebGlMount(props: WebGlMountProps) {
       handle = null;
 
       setHasContextSlot(false);
-    });
+    };
   });
 
   return (

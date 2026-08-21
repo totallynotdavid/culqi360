@@ -1,4 +1,5 @@
-import { type JSX, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { omit } from "solid-js";
 
 import styles from "./responsive-image.module.css";
 
@@ -23,35 +24,28 @@ export interface ResponsiveImageProps extends Omit<
  * via the <picture> element and helps prevent layout shifts.
  */
 export function ResponsiveImage(props: ResponsiveImageProps) {
-  const [local, others] = splitProps(props, [
-    "sources",
-    "aspectRatio",
-    "class",
-  ]);
+  const others = omit(props, "sources", "aspectRatio", "class");
 
   const containerStyle = () =>
-    local.aspectRatio ? { "aspect-ratio": `${local.aspectRatio}` } : undefined;
+    props.aspectRatio ? { "aspect-ratio": `${props.aspectRatio}` } : undefined;
 
   return (
-    <picture
-      class={`${styles.picture} ${local.class || ""}`.trim()}
-      style={containerStyle()}
-    >
-      {local.sources.avif && (
-        <source srcset={local.sources.avif} type="image/avif" />
+    <picture class={[styles.picture, props.class]} style={containerStyle()}>
+      {props.sources.avif && (
+        <source srcset={props.sources.avif} type="image/avif" />
       )}
-      {local.sources.webp && (
-        <source srcset={local.sources.webp} type="image/webp" />
+      {props.sources.webp && (
+        <source srcset={props.sources.webp} type="image/webp" />
       )}
-      {local.sources.png && (
-        <source srcset={local.sources.png} type="image/png" />
+      {props.sources.png && (
+        <source srcset={props.sources.png} type="image/png" />
       )}
-      {local.sources.jpg && (
-        <source srcset={local.sources.jpg} type="image/jpeg" />
+      {props.sources.jpg && (
+        <source srcset={props.sources.jpg} type="image/jpeg" />
       )}
       <img
         alt={others.alt || ""}
-        src={local.sources.fallback}
+        src={props.sources.fallback}
         loading="lazy"
         decoding="async"
         class={styles.image}

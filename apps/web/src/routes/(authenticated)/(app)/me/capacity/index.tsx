@@ -1,5 +1,5 @@
-import { createAsync, useAction } from "@solidjs/router";
-import { createSignal } from "solid-js";
+import { useAction } from "@solidjs/router";
+import { createMemo, createSignal } from "solid-js";
 
 import { SettingsSection } from "~/components/settings/SettingsSection";
 import { Button } from "~/components/ui/input/button";
@@ -67,8 +67,8 @@ function CapacityRequestForm(props: {
 }
 
 export default function MyCapacityPage() {
-  const searchStatus = createAsync(() => mySearchAllowanceQuery());
-  const leadStatus = createAsync(() => myContactAssignmentCapacityQuery());
+  const searchStatus = createMemo(() => mySearchAllowanceQuery());
+  const leadStatus = createMemo(() => myContactAssignmentCapacityQuery());
   const requestSearches = useAction(requestMoreSearchesMutation);
   const requestRefill = useAction(requestMoreLeadRefillMutation);
 

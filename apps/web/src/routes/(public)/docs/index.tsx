@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { For } from "solid-js";
 
 import { docs } from "~/features/docs/registry";
@@ -15,10 +14,10 @@ export default function DocsPage() {
       <div class={styles.docList}>
         <For each={docs}>
           {(doc) => (
-            <A href={`/docs/${doc.slug}`} class={styles.docCard}>
+            <a href={`/docs/${doc.slug}`} class={styles.docCard}>
               <div class={styles.docCardTitle}>{doc.title}</div>
               <div class={styles.docCardDesc}>{doc.description}</div>
-            </A>
+            </a>
           )}
         </For>
       </div>

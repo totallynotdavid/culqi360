@@ -1,5 +1,5 @@
+import type { JSX } from "@solidjs/web";
 import { For, Show } from "solid-js";
-import type { JSX } from "solid-js";
 
 import BrowserMaximize from "~/components/icons/browser-maximize";
 import Building2 from "~/components/icons/building-2";

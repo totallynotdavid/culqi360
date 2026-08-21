@@ -1,37 +1,26 @@
-import { parseGpvSnapshotProgressMessage } from "~/contracts/merchant-stats/imports";
-import { REALTIME_CHANNELS } from "~/contracts/realtime/channel";
+import { JOB_KINDS } from "~/contracts/jobs/job-event";
 import { hasPermission } from "~/domain/auth/access/rbac";
-import { GpvSnapshotJobId } from "~/domain/ids";
-import { defineRealtimeChannel } from "~/server/realtime/channel";
+import { GpvSnapshotId } from "~/domain/ids";
+import { defineJobProjector } from "~/server/jobs/projector";
 import { isErr } from "~/shared/result";
 
 import type { createMerchantStatsRuntime } from "../infrastructure/runtime";
-import { GPV_SNAPSHOT_PROGRESS_CHANNEL } from "./progress";
 
-export function createGpvSnapshotChannel(
+export function createGpvSnapshotProjector(
   merchantStats: Pick<ReturnType<typeof createMerchantStatsRuntime>, "imports">,
 ) {
-  return defineRealtimeChannel({
-    name: REALTIME_CHANNELS.gpvSnapshot,
-    pgChannel: GPV_SNAPSHOT_PROGRESS_CHANNEL,
+  return defineJobProjector({
+    kind: JOB_KINDS.gpvSnapshot,
 
-    parseId: (raw) => {
-      const parsed = GpvSnapshotJobId.parse(raw);
+    parseSubjectId: (raw) => {
+      const parsed = GpvSnapshotId.parse(raw);
 
       return isErr(parsed) ? null : parsed.value;
     },
 
-    open: async (session, jobId) => {
-      if (!hasPermission(session.role, "dashboards:read")) {
-        return null;
-      }
-
-      const progress = await merchantStats.imports.progress(jobId);
-
-      return progress ? [{ data: JSON.stringify(progress) }] : null;
-    },
-
-    topicIdOfPayload: (payload) =>
-      parseGpvSnapshotProgressMessage(payload)?.jobId ?? null,
+    read: async (session, snapshotId) =>
+      hasPermission(session.role, "dashboards:read")
+        ? merchantStats.imports.jobEvent(snapshotId)
+        : null,
   });
 }

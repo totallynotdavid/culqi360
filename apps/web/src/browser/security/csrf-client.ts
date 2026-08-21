@@ -1,4 +1,4 @@
-import { captureException } from "@sentry/solid";
+import { captureException } from "@sentry/browser";
 
 import { ServerFunctionTransportError } from "~/contracts/errors";
 import { CSRF_CONFIG } from "~/shared/csrf-config";

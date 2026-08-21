@@ -1,9 +1,8 @@
+import { QUERY_KEYS } from "~/contracts/query-keys";
+import { publishJobEvent } from "~/server/jobs/publish";
 import { createJobQueue } from "~/server/platform/jobs/job-queue";
 import type { JobContext } from "~/server/platform/operation/context";
-import {
-  buildRecordImportProgressEvent,
-  publishRecordImportProgress,
-} from "~/server/records/imports/progress-events";
+import { buildRecordImportJobEvent } from "~/server/records/imports/progress-events";
 import { createRecordImportRunner } from "~/server/records/imports/runner";
 
 import { createIntegrationJobRepo } from "../infrastructure/integration-job-repo";
@@ -45,10 +44,7 @@ export function createRecordsImportQueue(
             jobId,
             progress,
           );
-          await publishRecordImportProgress(
-            trx,
-            buildRecordImportProgressEvent(persisted),
-          );
+          await publishJobEvent(trx, buildRecordImportJobEvent(persisted));
         });
       },
     });
@@ -81,9 +77,11 @@ export function createRecordsImportQueue(
         return;
       }
 
-      await publishRecordImportProgress(
+      // An import writes statuses or priorities onto leads, so the list behind
+      // it is stale once the run finishes.
+      await publishJobEvent(
         runtime.executor,
-        buildRecordImportProgressEvent(settled),
+        buildRecordImportJobEvent(settled, [QUERY_KEYS.workflow.leadList]),
       );
     },
   });

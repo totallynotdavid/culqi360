@@ -1,12 +1,9 @@
+import type { ExecutiveStateSnapshot } from "@crm/contracts/extension";
 import { createSignal, onCleanup, type Accessor } from "solid-js";
 
 import { isPlainRecord } from "~/shared/type-guards";
 
-import {
-  getExtensionId,
-  isRuntimeResponse,
-  type ExecutiveStateSnapshot,
-} from "./runtime";
+import { getExtensionId, isRuntimeResponse } from "./runtime";
 
 interface ChromePort {
   onMessage: {

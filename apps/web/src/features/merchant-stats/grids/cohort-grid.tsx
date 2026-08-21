@@ -1,4 +1,4 @@
-import { ErrorBoundary, Suspense } from "solid-js";
+import { Errored, Loading } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
 import CalendarDays from "~/components/icons/calendar-days";
@@ -8,7 +8,6 @@ import User from "~/components/icons/user";
 import type { CohortSaleRow, GpvPoint } from "~/contracts/merchant-stats/views";
 import { COHORT_OFFSETS } from "~/contracts/merchant-stats/vocabulary";
 import { DataGrid } from "~/features/data-grid/components/grid";
-import type { DataGridSource } from "~/features/data-grid/model/source";
 import type { DataGridColumn } from "~/features/data-grid/model/types";
 import { useSidePanelRowOpen } from "~/features/side-panel/hooks/use-side-panel-row-open";
 import { createDataGridDetailSidePanelPage } from "~/features/side-panel/types/side-panel-page";
@@ -141,11 +140,14 @@ export function CohortGrid(props: { view: GpvView }) {
     }),
   );
 
-  const renderGrid = (source: DataGridSource<CohortSaleRow>) => (
+  const renderGrid = (
+    rows: ReadonlyArray<CohortSaleRow>,
+    emptyState: string,
+  ) => (
     <DataGrid
       ariaLabel="Cohortes de ventas"
       columns={COHORT_COLUMNS}
-      emptyState="No hay ventas para los filtros actuales."
+      emptyState={emptyState}
       onRowOpen={rowOpen}
       rowId={(row) => row.saleId}
       rowOpenIndicator="panel"
@@ -154,30 +156,17 @@ export function CohortGrid(props: { view: GpvView }) {
         loading: grid.loading(),
         onLoadMore: grid.onLoadMore,
       }}
-      source={source}
+      source={{ rows }}
     />
   );
 
   return (
     <div class={styles.surface}>
-      <ErrorBoundary
-        fallback={renderGrid({
-          status: "error",
-          rows: [],
-        })}
-      >
-        <Suspense
-          fallback={renderGrid({
-            status: "pending",
-            rows: [],
-          })}
-        >
-          {renderGrid({
-            status: "ready",
-            rows: grid.rows(),
-          })}
-        </Suspense>
-      </ErrorBoundary>
+      <Loading fallback={renderGrid([], "Cargando ventas...")}>
+        <Errored fallback={renderGrid([], "No se pudieron cargar las ventas.")}>
+          {renderGrid(grid.rows(), "No hay ventas para los filtros actuales.")}
+        </Errored>
+      </Loading>
     </div>
   );
 }

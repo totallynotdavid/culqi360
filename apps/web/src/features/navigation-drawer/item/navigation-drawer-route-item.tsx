@@ -1,5 +1,4 @@
-import { A } from "@solidjs/router";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import { WithTooltip } from "~/components/ui/overflow-tooltip/overflow-tooltip";
 
@@ -47,7 +46,7 @@ export function NavigationDrawerRouteItem(
           position="right"
           class={tooltipStyles.wrapperFill}
         >
-          <A
+          <a
             href={props.href}
             class={frame.class()}
             onClick={props.onClick}
@@ -58,7 +57,7 @@ export function NavigationDrawerRouteItem(
             style={frame.style()}
           >
             {frame.content}
-          </A>
+          </a>
         </WithTooltip>
       )}
     />

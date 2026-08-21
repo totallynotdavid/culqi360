@@ -1,4 +1,4 @@
-import { createAsync, revalidate, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { Show, createEffect, createMemo } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
@@ -10,15 +10,14 @@ import Trash from "~/components/icons/trash";
 import X from "~/components/icons/x";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { actionErrorMessage } from "~/contracts/errors";
-import { createRecordPageController } from "~/features/record-show/record-page-controller";
 import { RecordTabs } from "~/features/record-show/tabs/record-tabs";
+import { useEnrichmentWatch } from "~/features/record-show/use-enrichment-watch";
 import { useLeadActions } from "~/features/record-show/use-record-actions";
 import {
   nextActionCta,
   type NextActionTarget,
 } from "~/features/record-show/workflow/next-action";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
-import { leadListQuery } from "~/rpc/workflow/lead-list";
 
 import { SidePanelPage } from "../../components/page";
 import {
@@ -32,9 +31,6 @@ import { useLeadRecordPageState } from "./state";
 
 import styles from "./page.module.css";
 
-const POLL_INTERVAL_MS = 3_500;
-const POLL_TIMEOUT_MS = 60_000;
-
 export function RecordPage() {
   const navigate = useNavigate();
   const { setFavorite, exportLead } = useLeadActions();
@@ -46,30 +42,18 @@ export function RecordPage() {
     useLeadRecordPageState();
 
   const canDeleteCompany = createMemo(() => currentUser().role === "superuser");
-  const detailData = createAsync(() => leadDetailQuery(leadId()));
+  const detailData = createMemo(() => leadDetailQuery(leadId()));
 
-  createEffect(() => {
-    const detail = detailData();
-
-    if (!detail) {
-      return;
-    }
-
-    setSubtitle(detail.lead.ruc);
-  });
-
-  createRecordPageController({
-    leadId,
-    detailData,
-    pollIntervalMs: POLL_INTERVAL_MS,
-    pollTimeoutMs: POLL_TIMEOUT_MS,
-    revalidateLeadDetail: async (currentLeadId) => {
-      await revalidate(leadDetailQuery.keyFor(currentLeadId));
+  createEffect(
+    () => detailData()?.lead.ruc,
+    (ruc) => {
+      if (ruc !== undefined) {
+        setSubtitle(ruc);
+      }
     },
-    revalidateLeadList: async () => {
-      await revalidate(leadListQuery.key);
-    },
-  });
+  );
+
+  useEnrichmentWatch(() => detailData()?.lead.ruc);
 
   async function handleAddToFavorites() {
     const detail = detailData();

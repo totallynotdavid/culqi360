@@ -1,6 +1,7 @@
-import { useAction, useSubmission } from "@solidjs/router";
-import { For, Show, createEffect, createSignal, on } from "solid-js";
+import { useAction } from "@solidjs/router";
+import { For, Show, createEffect, createSignal } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { DatePicker } from "~/components/ui/date-picker/date-picker-field";
 import { Button } from "~/components/ui/input/button";
@@ -26,7 +27,7 @@ export function InviteForm(props: {
   evaluatedAt: number;
 }) {
   const createInvite = useAction(createTeamInviteMutation);
-  const submission = useSubmission(createTeamInviteMutation);
+  const inviting = createActionPending(createTeamInviteMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
   const [names, setNames] = createSignal("");
@@ -49,18 +50,16 @@ export function InviteForm(props: {
 
   // Reset the role if updated permissions no longer allow it.
   createEffect(
-    on(
-      () => props.setup,
-      (setup) => {
-        const roleStillAssignable = setup.assignableRoles.some(
-          (option) => option.value === role(),
-        );
+    () => props.setup,
+    (setup) => {
+      const roleStillAssignable = setup.assignableRoles.some(
+        (option) => option.value === role(),
+      );
 
-        if (!roleStillAssignable) {
-          setRole(getDefaultAssignableRole(setup));
-        }
-      },
-    ),
+      if (!roleStillAssignable) {
+        setRole(getDefaultAssignableRole(setup));
+      }
+    },
   );
 
   function resetForm() {
@@ -223,9 +222,8 @@ export function InviteForm(props: {
       <div class={styles.inviteActions}>
         <Button
           type="submit"
-          loading={submission.pending}
+          loading={inviting()}
           disabled={
-            submission.pending ||
             !role() ||
             (role() === "executive" && !executiveCategory()) ||
             expiresOnErrorMessage() !== undefined

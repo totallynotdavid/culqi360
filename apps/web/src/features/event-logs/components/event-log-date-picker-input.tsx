@@ -1,4 +1,4 @@
-import { createEffect, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 
 import { DatePicker } from "~/components/ui/date-picker/date-picker-field";
 import {
@@ -14,9 +14,9 @@ type EventLogDatePickerInputProps = {
 };
 
 export function EventLogDatePickerInput(props: EventLogDatePickerInputProps) {
-  const [draft, setDraft] = createSignal(props.value ?? "");
-
-  createEffect(() => setDraft(props.value ?? ""));
+  // Writable memo: typing overwrites the draft, a new value from the filter
+  // recomputes it.
+  const [draft, setDraft] = createSignal<string>(() => props.value ?? "");
 
   return (
     <DatePicker

@@ -1,4 +1,5 @@
-import { Show, children, type JSX, type ParentProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show, children, type ParentProps } from "solid-js";
 
 import { OverflowingText } from "~/components/ui/overflow-tooltip/overflow-tooltip";
 

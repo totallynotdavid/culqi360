@@ -1,5 +1,7 @@
-import { Navigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 
+// Router 2 removed <Navigate>; a redirect-only route navigates at setup.
 export default function DashboardsIndexRoute() {
-  return <Navigate href="/dashboards/merchant-gpv" />;
+  useNavigate()("/dashboards/merchant-gpv", { replace: true });
+  return null;
 }

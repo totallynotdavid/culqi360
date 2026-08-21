@@ -1,4 +1,4 @@
-import { createSignal, onMount } from "solid-js";
+import { createSignal, onSettled } from "solid-js";
 
 type AuthMethod = "google" | "password" | "passkey";
 
@@ -31,7 +31,7 @@ export function useLoginFlow() {
     null,
   );
 
-  onMount(() => {
+  onSettled(() => {
     setLastUsedMethod(readLastUsed());
   });
 

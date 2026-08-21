@@ -1,10 +1,5 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  For,
-  type JSX,
-} from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { createEffect, createMemo, createSignal, For } from "solid-js";
 
 import { PresenceChild } from "./presence-child";
 
@@ -37,50 +32,53 @@ export function AnimatePresence<T>(props: AnimatePresenceProps<T>) {
     () => new Set(presentChildren().map((child) => child.key)),
   );
 
-  createEffect(() => {
-    const nextPresentChildren = props.each.map((item) => {
-      const key = props.getKey(item);
-      const existing = trackedByKey.get(key);
-      if (existing) {
-        existing.item = item;
-        return existing;
-      }
-      const trackedChild = { item, key };
-      trackedByKey.set(key, trackedChild);
-      return trackedChild;
-    });
-    const nextPresentKeys = new Set(
-      nextPresentChildren.map((child) => child.key),
-    );
-    setPresentChildren(nextPresentChildren);
-
-    if (!didMount) {
-      didMount = true;
-      setRenderedChildren(nextPresentChildren);
-      return;
-    }
-
-    setRenderedChildren((currentRenderedChildren) => {
-      const nextChildren = [...nextPresentChildren];
-      const exitingChildren: TrackedChild<T>[] = [];
-
-      currentRenderedChildren.forEach((child, index) => {
-        if (!nextPresentKeys.has(child.key)) {
-          exitingKeys.add(child.key);
-          nextChildren.splice(index, 0, child);
-          exitingChildren.push(child);
-        } else {
-          exitingKeys.delete(child.key);
+  createEffect(
+    () => props.each,
+    (each) => {
+      const nextPresentChildren = each.map((item) => {
+        const key = props.getKey(item);
+        const existing = trackedByKey.get(key);
+        if (existing) {
+          existing.item = item;
+          return existing;
         }
+        const trackedChild = { item, key };
+        trackedByKey.set(key, trackedChild);
+        return trackedChild;
       });
+      const nextPresentKeys = new Set(
+        nextPresentChildren.map((child) => child.key),
+      );
+      setPresentChildren(nextPresentChildren);
 
-      if ((props.mode ?? "sync") === "wait" && exitingChildren.length > 0) {
-        return exitingChildren;
+      if (!didMount) {
+        didMount = true;
+        setRenderedChildren(nextPresentChildren);
+        return;
       }
 
-      return nextChildren;
-    });
-  });
+      setRenderedChildren((currentRenderedChildren) => {
+        const nextChildren = [...nextPresentChildren];
+        const exitingChildren: TrackedChild<T>[] = [];
+
+        currentRenderedChildren.forEach((child, index) => {
+          if (!nextPresentKeys.has(child.key)) {
+            exitingKeys.add(child.key);
+            nextChildren.splice(index, 0, child);
+            exitingChildren.push(child);
+          } else {
+            exitingKeys.delete(child.key);
+          }
+        });
+
+        if ((props.mode ?? "sync") === "wait" && exitingChildren.length > 0) {
+          return exitingChildren;
+        }
+
+        return nextChildren;
+      });
+    },
+  );
 
   const handleChildExitComplete = (key: string) => {
     if (!exitingKeys.has(key)) {

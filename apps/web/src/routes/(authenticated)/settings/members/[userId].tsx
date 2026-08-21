@@ -1,4 +1,4 @@
-import { createAsync, useParams, useSearchParams } from "@solidjs/router";
+import { useParams, useSearchParams } from "@solidjs/router";
 import { createMemo, Match, Show, Switch } from "solid-js";
 
 import Activity from "~/components/icons/activity";
@@ -33,7 +33,7 @@ export default function SettingsMemberDetailPage() {
   const params = useParams();
   const [search, setSearch] = useSearchParams();
   const { currentUser } = useAuthenticatedSession();
-  const detail = createAsync(() => memberDetailQuery(params.userId));
+  const detail = createMemo(() => memberDetailQuery(params.userId));
 
   const tabs = createMemo<TabItem<MemberTabId>[]>(() => {
     const member = detail();

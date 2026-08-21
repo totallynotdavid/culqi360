@@ -44,14 +44,15 @@ RUN bun run --cwd apps/web build:container
 FROM oven/bun:1.3.14 AS runtime
 
 ENV NODE_ENV=production \
-    NITRO_HOST=0.0.0.0 \
-    NITRO_PORT=3000
+    HOST=0.0.0.0 \
+    PORT=3000
 
 WORKDIR /app
 
 COPY --from=production-deps --chown=bun:bun /app/node_modules ./node_modules
 COPY --from=production-deps --chown=bun:bun /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=build --chown=bun:bun /app/apps/web/.output ./apps/web/.output
+COPY --from=build --chown=bun:bun /app/apps/web/dist ./apps/web/dist
+COPY --from=build --chown=bun:bun /app/apps/web/server.ts ./apps/web/server.ts
 COPY --from=build --chown=bun:bun /app/apps/web/package.json ./apps/web/package.json
 COPY --from=build --chown=bun:bun /app/apps/web/src ./apps/web/src
 COPY --from=build --chown=bun:bun /app/apps/web/tsconfig.json ./apps/web/tsconfig.json

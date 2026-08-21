@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { children, type Accessor, type JSX } from "solid-js";
+import { children, type Accessor } from "solid-js";
 
 import ChevronRight from "~/components/icons/chevron-right";
 import { TintedIconTile } from "~/components/ui/display/tinted-icon-tile/tinted-icon-tile";

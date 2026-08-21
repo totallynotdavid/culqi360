@@ -53,7 +53,7 @@ export function CloseQuotationSection(props: { leadId: string }) {
         reason: selected,
         note: note().trim() || null,
       });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       setErrorMessage(actionErrorMessage(caught));
     } finally {

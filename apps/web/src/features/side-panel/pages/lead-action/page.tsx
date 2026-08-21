@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { Match, Show, Switch, createEffect } from "solid-js";
+import { Match, Show, Switch, createEffect, createMemo } from "solid-js";
 
 import { CloseQuotationSection } from "~/features/record-show/workflow/close-quotation";
 import { isLeadActionStillRelevant } from "~/features/record-show/workflow/next-action";
@@ -20,19 +19,17 @@ export function LeadActionPage() {
   const { goBack } = useSidePanel();
   const { leadId, action } = useLeadActionPageState();
 
-  const detailData = createAsync(() => leadDetailQuery(leadId()));
+  const detailData = createMemo(() => leadDetailQuery(leadId()));
 
   // Leave an action page after the server stage changes.
-  createEffect(() => {
-    const detail = detailData();
-    if (!detail) {
-      return;
-    }
-
-    if (!isLeadActionStillRelevant(action(), detail)) {
-      goBack();
-    }
-  });
+  createEffect(
+    () => ({ detail: detailData(), currentAction: action() }),
+    ({ detail, currentAction }) => {
+      if (detail && !isLeadActionStillRelevant(currentAction, detail)) {
+        goBack();
+      }
+    },
+  );
 
   return (
     <SidePanelPage>

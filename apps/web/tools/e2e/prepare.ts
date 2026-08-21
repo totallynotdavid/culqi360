@@ -33,11 +33,15 @@ import {
   writeManifest,
 } from "../../tests/e2e/manifest";
 import { ROSTER } from "../../tests/e2e/roster";
+import { sourceFingerprint } from "../support/source-fingerprint";
 
 const TEMPLATE_DB = "crm_e2e_template";
 const WORKER_DB_PREFIX = "crm_e2e_w";
-const BUILD_HASH_FILE = resolve(process.cwd(), ".output/.e2e-build-hash");
-const SERVER_ENTRY = resolve(process.cwd(), ".output/server/index.mjs");
+const BUILD_HASH_FILE = resolve(process.cwd(), "dist/.e2e-build-hash");
+// The build artifact proves the build is fresh; the runnable server is the
+// Bun entrypoint that imports it.
+const BUILD_ARTIFACT = resolve(process.cwd(), "dist/server/server.js");
+const SERVER_ENTRY = resolve(process.cwd(), "server.ts");
 const ROSTER_PASSWORD = "E2ePassw0rd!";
 
 // Executives need a team to resolve their workspace.
@@ -91,48 +95,17 @@ async function dropStaleDatabases(client: Client): Promise<void> {
   }
 }
 
-function sourceFingerprint(): string {
-  const hash = createHash("sha256");
-  const roots = ["src", "vite.config.ts", "package.json", "tracer.ts"];
-
-  const walk = (path: string): void => {
-    const stat = statSync(path, { throwIfNoEntry: false });
-
-    if (!stat) {
-      return;
-    }
-
-    if (stat.isDirectory()) {
-      for (const entry of readdirSync(path)) {
-        walk(join(path, entry));
-      }
-
-      return;
-    }
-
-    hash.update(path);
-    hash.update(String(stat.size));
-    hash.update(String(Math.trunc(stat.mtimeMs)));
-  };
-
-  for (const root of roots) {
-    walk(resolve(process.cwd(), root));
-  }
-
-  const lockfile = resolve(process.cwd(), "../../bun.lock");
-  const lockfileStat = statSync(lockfile, { throwIfNoEntry: false });
-
-  if (lockfileStat) {
-    hash.update(String(lockfileStat.mtimeMs));
-  }
-
-  return hash.digest("hex");
-}
+const FINGERPRINT_ROOTS = [
+  "src",
+  "vite.config.ts",
+  "package.json",
+  "tracer.ts",
+];
 
 function buildIfStale(): void {
-  const fingerprint = sourceFingerprint();
+  const fingerprint = sourceFingerprint(FINGERPRINT_ROOTS);
   const built =
-    existsSync(SERVER_ENTRY) &&
+    existsSync(BUILD_ARTIFACT) &&
     existsSync(BUILD_HASH_FILE) &&
     readFileSync(BUILD_HASH_FILE, "utf8") === fingerprint;
 
@@ -141,7 +114,7 @@ function buildIfStale(): void {
     return;
   }
 
-  console.log("[e2e] building app (.output)...");
+  console.log("[e2e] building app (dist)...");
 
   // NODE_ENV=test breaks Rolldown's resolution of shiki's onig.wasm.
   const result = spawnSync("bun", ["run", "build:container"], {

@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import type { SetStoreFunction } from "solid-js/store";
+import type { StoreSetter } from "solid-js";
 
 import { SettingsOptionCardCounterRow } from "~/components/settings/settings-option-card";
 import {
@@ -7,12 +7,22 @@ import {
   type CommissionSchemeRules,
 } from "~/domain/merchant-stats/commission";
 
-import { ConfigurableSection, NumberField, PendingSection } from "./fields";
+import {
+  ConfigurableSection,
+  createSectionSetter,
+  NumberField,
+  PendingSection,
+} from "./fields";
 
 export function CorporativaTab(props: {
   draft: CommissionSchemeRules;
-  setDraft: SetStoreFunction<CommissionSchemeRules>;
+  setDraft: StoreSetter<CommissionSchemeRules>;
 }) {
+  const setCaja2 = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.corporate.caja2,
+  );
+
   return (
     <>
       <PendingSection
@@ -26,11 +36,11 @@ export function CorporativaTab(props: {
         toggleAriaLabel="Caja 2, mesa 1 (corporativa)"
         enabled={props.draft.corporate.caja2 !== null}
         onToggle={(enabled) =>
-          props.setDraft(
-            "corporate",
-            "caja2",
-            enabled ? defaultCorporateCaja2Rules() : null,
-          )
+          props.setDraft((draft) => {
+            draft.corporate.caja2 = enabled
+              ? defaultCorporateCaja2Rules()
+              : null;
+          })
         }
       >
         <Show when={props.draft.corporate.caja2}>
@@ -40,9 +50,8 @@ export function CorporativaTab(props: {
                 label="GPV mínimo por RUC activo"
                 value={caja2().activeRucMinGpv}
                 onChange={(activeRucMinGpv) =>
-                  props.setDraft("corporate", "caja2", {
-                    ...caja2(),
-                    activeRucMinGpv,
+                  setCaja2((rules) => {
+                    rules.activeRucMinGpv = activeRucMinGpv;
                   })
                 }
               />
@@ -51,9 +60,8 @@ export function CorporativaTab(props: {
                 label="Suma mínima de RUCs calificados"
                 value={caja2().minAggregateGpv}
                 onChange={(minAggregateGpv) =>
-                  props.setDraft("corporate", "caja2", {
-                    ...caja2(),
-                    minAggregateGpv,
+                  setCaja2((rules) => {
+                    rules.minAggregateGpv = minAggregateGpv;
                   })
                 }
               />
@@ -64,9 +72,8 @@ export function CorporativaTab(props: {
                 min={0}
                 max={10}
                 onChange={(minQualifyingRucs) =>
-                  props.setDraft("corporate", "caja2", {
-                    ...caja2(),
-                    minQualifyingRucs,
+                  setCaja2((rules) => {
+                    rules.minQualifyingRucs = minQualifyingRucs;
                   })
                 }
               />

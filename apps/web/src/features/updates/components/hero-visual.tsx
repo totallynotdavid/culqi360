@@ -1,5 +1,5 @@
 import { resolveImageSourceUrl } from "@crm/images";
-import { createResource, Show } from "solid-js";
+import { createMemo, Loading } from "solid-js";
 
 import { HalftoneImageCanvas } from "~/browser/visual/halftone/image-canvas";
 import { WebGlMount } from "~/browser/visual/runtime";
@@ -40,26 +40,24 @@ const HERO_VISUAL_SETTINGS = buildMilestoneSettings({
 });
 
 export default function UpdatesHeroVisual() {
-  const [imageUrl] = createResource(() =>
+  const imageUrl = createMemo(() =>
     resolveImageSourceUrl(MILESTONE_IMAGE_SOURCES),
   );
 
   return (
     <div aria-hidden="true" class={styles.heroVisual}>
       <WebGlMount fallback={<UpdatesHeroVisualPlaceholder />} priority>
-        <Show fallback={<UpdatesHeroVisualPlaceholder />} when={imageUrl()}>
-          {(resolvedImageUrl) => (
-            <HalftoneImageCanvas
-              imageFit={MILESTONE_IMAGE_FIT}
-              imageUrl={resolvedImageUrl()}
-              initialPose={MILESTONE_INITIAL_POSE}
-              maxRenderPixelRatio={HERO_VISUAL_MAX_PIXEL_RATIO}
-              previewDistance={MILESTONE_PREVIEW_DISTANCE}
-              settings={HERO_VISUAL_SETTINGS}
-              virtualRenderHeight={HERO_VISUAL_RENDER_HEIGHT}
-            />
-          )}
-        </Show>
+        <Loading fallback={<UpdatesHeroVisualPlaceholder />}>
+          <HalftoneImageCanvas
+            imageFit={MILESTONE_IMAGE_FIT}
+            imageUrl={imageUrl()}
+            initialPose={MILESTONE_INITIAL_POSE}
+            maxRenderPixelRatio={HERO_VISUAL_MAX_PIXEL_RATIO}
+            previewDistance={MILESTONE_PREVIEW_DISTANCE}
+            settings={HERO_VISUAL_SETTINGS}
+            virtualRenderHeight={HERO_VISUAL_RENDER_HEIGHT}
+          />
+        </Loading>
       </WebGlMount>
     </div>
   );

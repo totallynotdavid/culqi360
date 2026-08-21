@@ -1,15 +1,8 @@
-import {
-  For,
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  onMount,
-  type JSX,
-} from "solid-js";
-import { Portal } from "solid-js/web";
+import { type JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
+import { For, Show, createMemo, createSignal, onSettled } from "solid-js";
 
+import { trackViewportAnchor } from "~/browser/dom/track-viewport-anchor";
 import { useDismissibleLayer } from "~/components/ui/utilities/use-dismissible-layer";
 import { useScopedHotkey } from "~/features/side-panel/core/hotkeys/create-scoped-hotkey";
 
@@ -93,26 +86,11 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
     getAdditionalContainers: () => [menuRef()],
   });
 
-  onMount(() => {
+  onSettled(() => {
     setIsMac(/Mac/i.test(navigator.platform));
   });
 
-  createEffect(() => {
-    if (!isOptionsOpen()) {
-      return;
-    }
-
-    updateMenuPosition();
-
-    const handleViewportChange = () => updateMenuPosition();
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
-    onCleanup(() => {
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    });
-  });
+  trackViewportAnchor(isOptionsOpen, updateMenuPosition);
 
   useScopedHotkey("Mod+O", () => toggleOptions(), {
     allowInInputs: true,
@@ -128,7 +106,7 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
             type="button"
             class={styles.secondaryButton}
             aria-haspopup="menu"
-            aria-expanded={isOptionsOpen()}
+            aria-expanded={isOptionsOpen() ? "true" : "false"}
             ref={setTriggerRef}
             onClick={toggleOptions}
           >
@@ -157,10 +135,10 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
               {(option) => (
                 <button
                   type="button"
-                  classList={{
-                    [styles.optionsMenuItem]: true,
-                    [styles.optionsMenuItemDanger]: option.danger,
-                  }}
+                  class={[
+                    styles.optionsMenuItem,
+                    option.danger && styles.optionsMenuItemDanger,
+                  ]}
                   disabled={option.disabled}
                   onClick={() => {
                     if (option.disabled) {

@@ -7,7 +7,7 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "jsx": "preserve",
-    "jsxImportSource": "solid-js",
+    "jsxImportSource": "@solidjs/web",
     "allowJs": true,
     "noEmit": true,
     "strict": true,
@@ -17,6 +17,11 @@
       "~/*": ["./src/*"],
       "@tests/*": ["./tests/*"]
     },
-    "types": ["@solidjs/start/env", "mdx"]
+    "types": [
+      "vite/client",
+      "mdx",
+      "@solidjs/vite-plugin/boundary-modules",
+      "filesystem-routing/types"
+    ]
   }
 }

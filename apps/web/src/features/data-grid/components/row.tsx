@@ -150,7 +150,7 @@ function DataGridRowCell<T>(props: {
         element.dataset.gridColumnKey = props.column.key;
       }}
       data-grid-focusable-cell="true"
-      tabIndex={
+      tabindex={
         grid.isInteractive()
           ? grid.focus.getCellTabIndex(rowKey(), props.column.key)
           : -1

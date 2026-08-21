@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { createSignal, type JSX, splitProps } from "solid-js";
+import { createSignal, omit } from "solid-js";
 
 import styles from "./file-dropzone.module.css";
 
@@ -19,7 +20,8 @@ export interface FileDropzoneProps extends Omit<
 }
 
 export function FileDropzone(props: FileDropzoneProps) {
-  const [local, rest] = splitProps(props, [
+  const rest = omit(
+    props,
     "accept",
     "multiple",
     "disabled",
@@ -27,7 +29,7 @@ export function FileDropzone(props: FileDropzoneProps) {
     "children",
     "class",
     "type",
-  ]);
+  );
 
   const [dragging, setDragging] = createSignal(false);
   let inputRef: HTMLInputElement | null = null;
@@ -37,7 +39,7 @@ export function FileDropzone(props: FileDropzoneProps) {
   };
 
   function openPicker() {
-    if (local.disabled) {
+    if (props.disabled) {
       return;
     }
     inputRef?.click();
@@ -50,13 +52,13 @@ export function FileDropzone(props: FileDropzoneProps) {
     }
     const files = Array.from(target.files ?? []);
     if (files.length > 0) {
-      local.onFiles(files);
+      props.onFiles(files);
     }
     target.value = "";
   }
 
   function onDragEnter(event: DragEvent) {
-    if (local.disabled) {
+    if (props.disabled) {
       return;
     }
     if (!event.dataTransfer?.types.includes("Files")) {
@@ -67,7 +69,7 @@ export function FileDropzone(props: FileDropzoneProps) {
   }
 
   function onDragOver(event: DragEvent) {
-    if (local.disabled) {
+    if (props.disabled) {
       return;
     }
     if (!event.dataTransfer?.types.includes("Files")) {
@@ -80,7 +82,7 @@ export function FileDropzone(props: FileDropzoneProps) {
   }
 
   function onDragLeave(event: DragEvent) {
-    if (local.disabled) {
+    if (props.disabled) {
       return;
     }
     const target = event.currentTarget;
@@ -96,7 +98,7 @@ export function FileDropzone(props: FileDropzoneProps) {
   }
 
   function onDrop(event: DragEvent) {
-    if (local.disabled) {
+    if (props.disabled) {
       return;
     }
     if (!event.dataTransfer?.types.includes("Files")) {
@@ -106,12 +108,12 @@ export function FileDropzone(props: FileDropzoneProps) {
     setDragging(false);
     const files = Array.from(event.dataTransfer.files);
     if (files.length > 0) {
-      local.onFiles(files);
+      props.onFiles(files);
     }
   }
 
   function onClick(event: MouseEvent) {
-    if (local.disabled) {
+    if (props.disabled) {
       return;
     }
     if (event.target === inputRef) {
@@ -127,28 +129,28 @@ export function FileDropzone(props: FileDropzoneProps) {
         ref={setInputRef}
         type="file"
         class={styles.input}
-        accept={local.accept}
-        multiple={local.multiple}
-        tabIndex={-1}
+        accept={props.accept}
+        multiple={props.multiple}
+        tabindex={-1}
         aria-hidden="true"
         onChange={onInputChange}
       />
       <button
         {...rest}
-        type={local.type ?? "button"}
+        type={props.type ?? "button"}
         class={clsx(
           styles.host,
-          local.disabled && styles.disabled,
-          local.class,
+          props.disabled && styles.disabled,
+          props.class,
         )}
-        disabled={local.disabled}
+        disabled={props.disabled}
         onClick={onClick}
         onDragEnter={onDragEnter}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {local.children({ dragging: dragging() })}
+        {props.children({ dragging: dragging() })}
       </button>
     </>
   );

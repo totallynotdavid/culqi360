@@ -1,8 +1,13 @@
-import { Navigate } from "@solidjs/router";
-import type { ParentProps } from "solid-js";
-import { Match, Switch, createContext, useContext } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import {
+  createContext,
+  Loading,
+  type ParentProps,
+  Show,
+  useContext,
+} from "solid-js";
 
-import { Loading } from "~/components/feedback/loading/screen";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import type { CurrentUserView } from "~/contracts/auth";
 
 import { SessionProvider, useSession } from "./session-provider";
@@ -12,62 +17,57 @@ interface AuthenticatedSessionContextValue {
   updateCurrentUser: (
     update: (current: CurrentUserView) => CurrentUserView,
   ) => void;
-  refreshCurrentUser: () => Promise<CurrentUserView | null | undefined>;
+  refreshCurrentUser: () => void;
 }
 
 const AuthenticatedSessionContext =
   createContext<AuthenticatedSessionContextValue>();
 
+/**
+ * Middleware already redirects unauthenticated document requests, so this only
+ * catches a client navigation that outlived its session.
+ */
+function RedirectToLogin() {
+  useNavigate()("/login", { replace: true });
+  return null;
+}
+
 function AuthenticatedSessionBoundary(props: ParentProps) {
   const { user, updateCurrentUser, refreshCurrentUser } = useSession();
 
-  const currentUser = () => {
-    const value = user();
-    if (!value) {
-      throw new Error("Authenticated app rendered without a valid user");
-    }
-    return value;
-  };
-
   return (
-    <Switch>
-      <Match when={user() === undefined}>
-        <Loading />
-      </Match>
-      <Match when={user() === null}>
-        <Navigate href="/login" />
-      </Match>
-      <Match when={Boolean(user())}>
-        <AuthenticatedSessionContext.Provider
-          value={{
-            currentUser,
-            updateCurrentUser,
-            refreshCurrentUser,
-          }}
+    <Show when={user()} fallback={<RedirectToLogin />}>
+      {(currentUser) => (
+        <AuthenticatedSessionContext
+          value={{ currentUser, updateCurrentUser, refreshCurrentUser }}
         >
           {props.children}
-        </AuthenticatedSessionContext.Provider>
-      </Match>
-    </Switch>
+        </AuthenticatedSessionContext>
+      )}
+    </Show>
   );
 }
 
 export function AuthenticatedSessionProvider(props: ParentProps) {
   return (
     <SessionProvider>
-      <AuthenticatedSessionBoundary>
-        {props.children}
-      </AuthenticatedSessionBoundary>
+      <Loading fallback={<Spinner />}>
+        <AuthenticatedSessionBoundary>
+          {props.children}
+        </AuthenticatedSessionBoundary>
+      </Loading>
     </SessionProvider>
   );
 }
 
 export function useAuthenticatedSession() {
   const context = useContext(AuthenticatedSessionContext);
+
   if (!context) {
     throw new Error(
       "useAuthenticatedSession must be used within AuthenticatedSessionProvider",
     );
   }
+
   return context;
 }

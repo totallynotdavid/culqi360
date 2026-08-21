@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 
 import type { BreadcrumbItem, MobileBackAction } from "./breadcrumb-model";
@@ -41,9 +40,9 @@ export function Breadcrumb(props: BreadcrumbProps) {
               >
                 {(href) => (
                   <span class={styles.linkContainer}>
-                    <A href={href()} class={styles.link} title={item.label}>
+                    <a href={href()} class={styles.link} title={item.label}>
                       {item.label}
-                    </A>
+                    </a>
                   </span>
                 )}
               </Show>

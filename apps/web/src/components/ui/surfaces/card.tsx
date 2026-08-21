@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { splitProps, type JSX } from "solid-js";
+import { omit } from "solid-js";
 
 import styles from "./card.module.css";
 
@@ -10,22 +11,23 @@ type CardProps = JSX.HTMLAttributes<HTMLDivElement> & {
 };
 
 export const Card = (props: CardProps) => {
-  const [local, others] = splitProps(props, [
+  const others = omit(
+    props,
     "class",
     "fullWidth",
     "rounded",
     "backgroundColor",
     "style",
-  ]);
+  );
   return (
     <div
-      data-full-width={local.fullWidth ? "" : undefined}
-      data-rounded={local.rounded ? "" : undefined}
-      class={clsx(styles.card, local.class)}
+      data-full-width={props.fullWidth ? "" : undefined}
+      data-rounded={props.rounded ? "" : undefined}
+      class={clsx(styles.card, props.class)}
       style={{
-        ...(typeof local.style === "object" ? local.style : {}),
-        ...(local.backgroundColor
-          ? { "--card-background-color": local.backgroundColor }
+        ...(typeof props.style === "object" ? props.style : {}),
+        ...(props.backgroundColor
+          ? { "--card-background-color": props.backgroundColor }
           : {}),
       }}
       {...others}

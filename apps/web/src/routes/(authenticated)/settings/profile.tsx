@@ -1,6 +1,7 @@
-import { useAction, useSubmission, useSubmissions } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
 import { createSignal, onCleanup } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { SettingsSection } from "~/components/settings/SettingsSection";
@@ -36,13 +37,11 @@ export default function ProfilePage() {
   const removeAvatar = useAction(removeUserAvatarMutation);
   const updateProfile = useAction(updateUserProfileMutation);
 
-  const profileSubmission = useSubmission(updateUserProfileMutation);
-  const uploadSubmissions = useSubmissions(uploadUserAvatarMutation);
-  const removeSubmissions = useSubmissions(removeUserAvatarMutation);
+  const savingPhone = createActionPending(updateUserProfileMutation);
+  const uploadingAvatar = createActionPending(uploadUserAvatarMutation);
+  const removingAvatar = createActionPending(removeUserAvatarMutation);
 
-  const avatarMutationPending = () =>
-    uploadSubmissions.some((submission) => submission.pending) ||
-    removeSubmissions.some((submission) => submission.pending);
+  const avatarMutationPending = () => uploadingAvatar() || removingAvatar();
 
   const phoneFormId = "settings-profile-phone-form";
 
@@ -171,7 +170,7 @@ export default function ProfilePage() {
               type="submit"
               size="sm"
               variant="secondary"
-              loading={Boolean(profileSubmission.pending)}
+              loading={savingPhone()}
             >
               Guardar
             </Button>

@@ -1,5 +1,5 @@
-import { createAsync, useNavigate } from "@solidjs/router";
-import { createMemo, createSignal } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { createMemo, createSignal, Loading } from "solid-js";
 
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
 import List from "~/components/icons/list";
@@ -9,7 +9,6 @@ import UserRound from "~/components/icons/user-round";
 import { SearchInput } from "~/components/ui/input/search-input";
 import type { ManagedExecutiveView } from "~/contracts/capacity";
 import { DataGrid } from "~/features/data-grid/components/grid";
-import type { DataGridSource } from "~/features/data-grid/model/source";
 import type { DataGridColumn } from "~/features/data-grid/model/types";
 import { managedExecutivesQuery } from "~/rpc/capacity/managed-executives";
 import { capitalize } from "~/shared/text";
@@ -73,27 +72,38 @@ const TEAM_COLUMNS = [
 
 export default function TeamPage() {
   const navigate = useNavigate();
-  const executives = createAsync(() => managedExecutivesQuery());
+  const executives = createMemo(() => managedExecutivesQuery());
   const [filter, setFilter] = createSignal("");
   const filtered = createMemo(() => {
     const value = filter().trim().toLowerCase();
-    const rows = executives() ?? [];
+    const rows = executives();
+
     if (!value) {
       return rows;
     }
+
     return rows.filter((executive) =>
       `${executive.fullName} ${executive.email}`.toLowerCase().includes(value),
     );
   });
-  const source = (): DataGridSource<ManagedExecutiveView> => {
-    if (executives() === undefined) {
-      return { status: "pending", rows: [] };
-    }
-    return { status: "ready", rows: filtered() };
-  };
   const openExecutive = (executive: ManagedExecutiveView) => {
     navigate(`/settings/members/${executive.id}?tab=capacity`);
   };
+
+  const renderGrid = (
+    rows: ReadonlyArray<ManagedExecutiveView>,
+    emptyState: string,
+  ) => (
+    <DataGrid
+      ariaLabel="Equipo"
+      columns={TEAM_COLUMNS}
+      emptyState={emptyState}
+      onRowOpen={openExecutive}
+      rowId={(row) => row.id}
+      rowOpenIndicator="route"
+      source={{ rows }}
+    />
+  );
 
   return (
     <div class={styles.page}>
@@ -106,15 +116,11 @@ export default function TeamPage() {
         />
       </div>
 
-      <DataGrid
-        ariaLabel="Equipo"
-        columns={TEAM_COLUMNS}
-        emptyState="No hay ejecutivos visibles."
-        onRowOpen={openExecutive}
-        rowId={(row) => row.id}
-        rowOpenIndicator="route"
-        source={source()}
-      />
+      {/* Scoped here so the roster loads under the search box rather than
+          replacing the whole page with the app-level fallback. */}
+      <Loading fallback={renderGrid([], "Cargando ejecutivos...")}>
+        {renderGrid(filtered(), "No hay ejecutivos visibles.")}
+      </Loading>
     </div>
   );
 }

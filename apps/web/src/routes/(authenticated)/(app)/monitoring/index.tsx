@@ -1,6 +1,15 @@
 import { revalidate } from "@solidjs/router";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import {
+  Errored,
+  For,
+  Loading,
+  Show,
+  createMemo,
+  createSignal,
+  isPending,
+} from "solid-js";
 
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Activity from "~/components/icons/activity";
 import CircleAlert from "~/components/icons/circle-alert";
 import CircleCheckBig from "~/components/icons/circle-check-big";
@@ -74,6 +83,10 @@ function parseStatus(value: string): MonitoringStatus {
   return "all";
 }
 
+function reload(): void {
+  revalidate(observabilitySnapshotQuery.key);
+}
+
 export default function MonitoringPage() {
   const [windowMinutes, setWindowMinutes] = createSignal(60);
   const [status, setStatus] = createSignal<MonitoringStatus>("all");
@@ -88,15 +101,9 @@ export default function MonitoringPage() {
     (snapshot) => ({ rows: snapshot.summary }),
   );
 
-  const [refreshing, setRefreshing] = createSignal(false);
-  async function reload() {
-    setRefreshing(true);
-    try {
-      await revalidate(observabilitySnapshotQuery.key);
-    } finally {
-      setRefreshing(false);
-    }
-  }
+  // The boundary owns the first load; this only reports an in-flight
+  // replacement for content that is already on screen.
+  const refreshing = () => isPending(() => source());
 
   const rowOpen = useSidePanelRowOpen<MonitoringRow>((row) =>
     createDataGridDetailSidePanelPage({
@@ -143,7 +150,7 @@ export default function MonitoringPage() {
           variant="secondary"
           size="sm"
           disabled={refreshing()}
-          onClick={() => void reload()}
+          onClick={reload}
         >
           Recargar
         </Button>
@@ -152,16 +159,23 @@ export default function MonitoringPage() {
         </Show>
       </div>
 
-      <DataGrid
-        ariaLabel="Monitoreo"
-        columns={MONITORING_COLUMNS}
-        emptyState="No hay métricas disponibles para la ventana actual."
-        errorState="No se pudieron cargar las métricas."
-        onRowOpen={rowOpen}
-        rowId={(row) => row.actionName}
-        rowOpenIndicator="panel"
-        source={source()}
-      />
+      <Loading fallback={<Spinner size="lg" />}>
+        <Errored
+          fallback={
+            <p class={styles.refreshing}>No se pudieron cargar las métricas.</p>
+          }
+        >
+          <DataGrid
+            ariaLabel="Monitoreo"
+            columns={MONITORING_COLUMNS}
+            emptyState="No hay métricas disponibles para la ventana actual."
+            onRowOpen={rowOpen}
+            rowId={(row) => row.actionName}
+            rowOpenIndicator="panel"
+            source={source()}
+          />
+        </Errored>
+      </Loading>
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { createAsync, useParams, type RouteDefinition } from "@solidjs/router";
-import { Match, Switch } from "solid-js";
+import { useParams, type RouteDefinition } from "@solidjs/router";
+import { Match, Switch, createMemo } from "solid-js";
 
 import { useAuthPageView } from "~/features/auth/services/use-auth-analytics";
 import { AuthFlowShell } from "~/features/auth/ui/auth-flow-shell";
@@ -16,7 +16,7 @@ export default function LoginInvitePage() {
   useAuthPageView("login");
   const params = useParams<{ token: string }>();
   const token = () => params.token ?? "";
-  const inviteInfo = createAsync(() => inviteActivationViewQuery(token()));
+  const inviteInfo = createMemo(() => inviteActivationViewQuery(token()));
 
   return (
     <AuthFlowShell

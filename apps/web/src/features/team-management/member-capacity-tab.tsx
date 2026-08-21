@@ -1,7 +1,8 @@
-import { createAsync, useAction, useSubmission } from "@solidjs/router";
-import { For, Show, createSignal, type Accessor } from "solid-js";
-import { createStore } from "solid-js/store";
+import { useAction } from "@solidjs/router";
+import { For, Show, createMemo, createSignal, type Accessor } from "solid-js";
+import { createStore } from "solid-js";
 
+import { createActionTarget } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import {
   CapacityLimitFields,
@@ -40,9 +41,7 @@ const REQUEST_STATUS_LABEL: Record<CapacityRequestStatus, string> = {
 };
 
 export function MemberCapacityTab(props: { userId: string }) {
-  const detail = createAsync(() => executiveCapacityDetailQuery(props.userId), {
-    initialValue: null,
-  });
+  const detail = createMemo(() => executiveCapacityDetailQuery(props.userId));
 
   return (
     <Show
@@ -66,18 +65,18 @@ function MemberCapacityEditor(props: {
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
   const executiveId = () => props.detail().executive.id;
-  const searchGrantSubmission = useSubmission(
-    grantMoreSearchesMutation,
-    (input) => input[0] === executiveId(),
-  );
-  const refillGrantSubmission = useSubmission(
-    grantMoreLeadRefillMutation,
-    (input) => input[0] === executiveId(),
-  );
-  const overrideSubmission = useSubmission(
+
+  // Every member tab is mounted against one executive, so comparing the id the
+  // action is acting on is what keeps another tab's grant from lighting up here.
+  const searchGrantTarget = createActionTarget(grantMoreSearchesMutation);
+  const refillGrantTarget = createActionTarget(grantMoreLeadRefillMutation);
+  const overrideTarget = createActionTarget(
     updateExecutivePolicyOverrideMutation,
-    (input) => input[0].userId === executiveId(),
   );
+
+  const grantingSearches = () => searchGrantTarget() === executiveId();
+  const grantingRefill = () => refillGrantTarget() === executiveId();
+  const savingOverride = () => overrideTarget()?.userId === executiveId();
 
   const [searchGrant, setSearchGrant] = createSignal("25");
   const [leadGrant, setLeadGrant] = createSignal("10");
@@ -210,7 +209,7 @@ function MemberCapacityEditor(props: {
                 type="submit"
                 size="sm"
                 variant="secondary"
-                loading={searchGrantSubmission.pending}
+                loading={grantingSearches()}
               >
                 Otorgar
               </Button>
@@ -239,7 +238,7 @@ function MemberCapacityEditor(props: {
                 type="submit"
                 size="sm"
                 variant="secondary"
-                loading={refillGrantSubmission.pending}
+                loading={grantingRefill()}
               >
                 Otorgar
               </Button>
@@ -259,16 +258,13 @@ function MemberCapacityEditor(props: {
             void saveOverride();
           }}
         >
-          <CapacityLimitFields
-            draft={override}
-            setValue={(key, value) => setOverride(key, value)}
-          />
+          <CapacityLimitFields draft={override} setDraft={setOverride} />
           <div class={styles.capacityActions}>
             <Button
               type="submit"
               size="sm"
               variant="secondary"
-              loading={overrideSubmission.pending}
+              loading={savingOverride()}
             >
               Guardar límite
             </Button>

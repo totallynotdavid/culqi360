@@ -1,9 +1,7 @@
-import { createAsync, revalidate } from "@solidjs/router";
-import { Show } from "solid-js";
+import { Show, createMemo } from "solid-js";
 
-import { createRecordPageController } from "~/features/record-show/record-page-controller";
+import { useEnrichmentWatch } from "~/features/record-show/use-enrichment-watch";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
-import { leadListQuery } from "~/rpc/workflow/lead-list";
 
 import { RecordLeftPanel } from "../panels/record-left-panel";
 import { RecordRightPanel } from "../panels/record-right-panel";
@@ -14,24 +12,10 @@ type RecordShowPageProps = {
   recordId: string;
 };
 
-const POLL_INTERVAL_MS = 3_500;
-const POLL_TIMEOUT_MS = 60_000;
-
 export function RecordShowPage(props: RecordShowPageProps) {
-  const data = createAsync(() => leadDetailQuery(props.recordId));
+  const data = createMemo(() => leadDetailQuery(props.recordId));
 
-  createRecordPageController({
-    leadId: () => props.recordId,
-    detailData: data,
-    pollIntervalMs: POLL_INTERVAL_MS,
-    pollTimeoutMs: POLL_TIMEOUT_MS,
-    revalidateLeadDetail: async (currentLeadId) => {
-      await revalidate(leadDetailQuery.keyFor(currentLeadId));
-    },
-    revalidateLeadList: async () => {
-      await revalidate(leadListQuery.key);
-    },
-  });
+  useEnrichmentWatch(() => data()?.lead.ruc);
 
   return (
     <Show when={data()}>

@@ -1,4 +1,4 @@
-import { createAsync, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
 import ChevronRight from "~/components/icons/chevron-right";
@@ -36,7 +36,7 @@ function statusBadge(member: MemberListItem) {
 export function TeamTab() {
   const navigate = useNavigate();
   const { currentUser } = useAuthenticatedSession();
-  const roster = createAsync(() => membersRosterQuery());
+  const roster = createMemo(() => membersRosterQuery());
   const [filter, setFilter] = createSignal("");
 
   const filtered = createMemo(() => {
@@ -94,7 +94,7 @@ export function TeamTab() {
             when={filtered().length > 0}
             fallback={
               <TableRow>
-                <TableCell class={styles.rosterEmpty} colSpan={4}>
+                <TableCell class={styles.rosterEmpty} colspan={4}>
                   {filter()
                     ? "Ningún miembro coincide con tu búsqueda."
                     : "No hay miembros."}
@@ -109,7 +109,7 @@ export function TeamTab() {
                 return (
                   <TableRow
                     clickable={canOpen()}
-                    tabIndex={canOpen() ? 0 : undefined}
+                    tabindex={canOpen() ? 0 : undefined}
                     onClick={() => openMember(member)}
                     onKeyDown={(event) => {
                       if (

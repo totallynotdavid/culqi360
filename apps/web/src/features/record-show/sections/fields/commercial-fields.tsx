@@ -1,5 +1,5 @@
 import { useAction } from "@solidjs/router";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import Building2 from "~/components/icons/building-2";
 import Moneybag from "~/components/icons/moneybag";
@@ -52,7 +52,7 @@ export function CommercialFields(props: { data: LeadDetailView }) {
         posCount: current.posCount,
         ...patch,
       });
-      await revalidateWorkflowLead(props.data.lead.id);
+      revalidateWorkflowLead(props.data.lead.id);
     } catch (caught) {
       throw new Error(actionErrorMessage(caught), { cause: caught });
     }

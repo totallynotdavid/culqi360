@@ -1,3 +1,5 @@
+import type { StoreSetter } from "solid-js";
+
 import { Input } from "~/components/ui/input/input";
 
 import styles from "./capacity-limit-fields.module.css";
@@ -10,7 +12,7 @@ export interface CapacityLimitsDraft {
 
 export function CapacityLimitFields(props: {
   draft: CapacityLimitsDraft;
-  setValue: (key: keyof CapacityLimitsDraft, value: string) => void;
+  setDraft: StoreSetter<CapacityLimitsDraft>;
   disabled?: boolean;
 }) {
   return (
@@ -19,9 +21,12 @@ export function CapacityLimitFields(props: {
         type="number"
         label="Límite mensual de búsquedas"
         value={props.draft.searchLimit}
-        onInput={(event) =>
-          props.setValue("searchLimit", event.currentTarget.value)
-        }
+        onInput={(event) => {
+          const searchLimit = event.currentTarget.value;
+          props.setDraft((draft) => {
+            draft.searchLimit = searchLimit;
+          });
+        }}
         disabled={props.disabled}
         required
       />
@@ -29,9 +34,12 @@ export function CapacityLimitFields(props: {
         type="number"
         label="Límite de clientes activos"
         value={props.draft.bufferTarget}
-        onInput={(event) =>
-          props.setValue("bufferTarget", event.currentTarget.value)
-        }
+        onInput={(event) => {
+          const bufferTarget = event.currentTarget.value;
+          props.setDraft((draft) => {
+            draft.bufferTarget = bufferTarget;
+          });
+        }}
         disabled={props.disabled}
         required
       />
@@ -39,9 +47,12 @@ export function CapacityLimitFields(props: {
         type="number"
         label="Límite diario de asignaciones"
         value={props.draft.dailyRefillLimit}
-        onInput={(event) =>
-          props.setValue("dailyRefillLimit", event.currentTarget.value)
-        }
+        onInput={(event) => {
+          const dailyRefillLimit = event.currentTarget.value;
+          props.setDraft((draft) => {
+            draft.dailyRefillLimit = dailyRefillLimit;
+          });
+        }}
         disabled={props.disabled}
         required
       />

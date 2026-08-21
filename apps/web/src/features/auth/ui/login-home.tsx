@@ -1,5 +1,5 @@
-import { useSubmission } from "@solidjs/router";
-import { createEffect, createSignal, onMount, Show } from "solid-js";
+import { useSubmissions } from "@solidjs/router";
+import { createSignal, onSettled, Show } from "solid-js";
 
 import Google from "~/components/icons/brands/google";
 import { Button } from "~/components/ui/input/button";
@@ -19,42 +19,35 @@ import pageStyles from "./login-page.module.css";
 
 export function LoginHome() {
   const loginMethods = useLoginFlow();
-  const passwordSubmission = useSubmission(passwordLoginMutation);
+  const passwordSubmissions = useSubmissions(passwordLoginMutation);
   const passkeyLogin = usePasskeyLogin();
 
   const [username, setUsername] = createSignal("");
-  const [handledPasskeyFlowId, setHandledPasskeyFlowId] = createSignal<
-    string | null
-  >(null);
 
   let usernameInputRef: HTMLInputElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     usernameInputRef?.focus();
   });
 
-  const passwordError = () =>
-    passwordSubmission.error
-      ? actionErrorMessage(passwordSubmission.error)
-      : undefined;
-
-  // Password login may hand back a passkey flow when the account requires a
-  // step-up factor; continue it here instead of navigating away.
-  createEffect(() => {
-    const result = passwordSubmission.result;
-
-    if (!result || handledPasskeyFlowId() === result.flow.id) {
-      return;
+  // Password login hands back a passkey flow when the account requires a
+  // step-up factor; continue it here instead of navigating away. onSettled
+  // runs once per submission, so unlike an effect over the result there is no
+  // repeat delivery to dedupe.
+  passwordLoginMutation.onSettled((submission) => {
+    if (submission.result) {
+      void passkeyLogin.continueFlow(submission.result.flow);
     }
-
-    setHandledPasskeyFlowId(result.flow.id);
-    void passkeyLogin.continueFlow(result.flow);
   });
+
+  const passwordError = () => {
+    const error = passwordSubmissions.at(-1)?.error;
+    return error ? actionErrorMessage(error) : undefined;
+  };
 
   function handleUsernameInput(value: string) {
     setUsername(value);
     passkeyLogin.clear();
-    setHandledPasskeyFlowId(null);
   }
 
   return (
@@ -160,12 +153,7 @@ export function LoginHome() {
         />
 
         <div class={pageStyles.ssoButtonContainer}>
-          <Button
-            type="submit"
-            variant="primary"
-            class={fullStyles.full}
-            loading={passwordSubmission.pending}
-          >
+          <Button type="submit" variant="primary" class={fullStyles.full}>
             Iniciar sesión
           </Button>
           <Show when={loginMethods.lastUsedMethod() === "password"}>

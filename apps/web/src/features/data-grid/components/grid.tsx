@@ -47,7 +47,6 @@ export function DataGrid<T>(props: DataGridProps<T>) {
         ariaLabel={props.ariaLabel}
         columns={props.columns}
         emptyState={props.emptyState}
-        errorState={props.errorState}
         gridTemplateColumns={gridTemplateColumns()}
         loadMore={props.loadMore}
         onAddColumn={props.onAddColumn}

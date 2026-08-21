@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js";
+import { createEffect, createSignal, type Accessor } from "solid-js";
 
 import type {
   RealtimeChannelName,
@@ -25,24 +25,25 @@ export function createTopicConnection(
 ): Accessor<ConnectionState> {
   const [state, setState] = createSignal<ConnectionState>("idle");
 
-  createEffect(() => {
-    const id = options.id();
+  createEffect(
+    () => ({ id: options.id(), stopped: options.stopped?.() === true }),
+    ({ id, stopped }) => {
+      if (id === null || stopped) {
+        setState("idle");
+        return;
+      }
 
-    if (id === null || options.stopped?.() === true) {
-      setState("idle");
-      return;
-    }
-
-    const dispose = startConnection({
-      channel: options.channel,
-      id,
-      onMessage: options.onMessage,
-      readStream: readRealtimeStream,
-      setState,
-    });
-
-    onCleanup(dispose);
-  });
+      // Returned as the effect's cleanup, so the socket closes before the next
+      // run reopens it on a new id.
+      return startConnection({
+        channel: options.channel,
+        id,
+        onMessage: options.onMessage,
+        readStream: readRealtimeStream,
+        setState,
+      });
+    },
+  );
 
   return state;
 }
