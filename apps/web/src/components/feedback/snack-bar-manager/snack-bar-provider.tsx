@@ -1,8 +1,9 @@
 import { Portal, type JSX } from "@solidjs/web";
-import { createContext, createStore, onSettled } from "solid-js";
+import { createContext, createMemo, createStore } from "solid-js";
 
 import { AnimatePresence } from "~/components/ui/animation/animate-presence";
 import { Animated } from "~/components/ui/animation/animated";
+import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
 
 import { SnackBar } from "./snack-bar";
 import type {
@@ -16,50 +17,22 @@ import styles from "./snack-bar-provider.module.css";
 
 const DEFAULT_DURATION_MS = 5000;
 const MAX_QUEUE = 3;
-const TICK_MS = 100;
-const MOBILE_VIEWPORT = 768;
 const SNACK_BAR_Z_INDEX = 10002;
 
 export const SnackBarContext = createContext<SnackBarContextValue>();
 
 export function SnackBarProvider(props: { children: JSX.Element }) {
-  const isMobile =
-    typeof window !== "undefined"
-      ? window.matchMedia(`(max-width: ${MOBILE_VIEWPORT}px)`).matches
-      : false;
+  // Toasts enter from the top on mobile and the bottom elsewhere, so this has to
+  // follow a resize rather than sample the viewport once at startup.
+  const isMobile = useIsMobile();
 
-  const motionVariants = {
-    out: { opacity: 0, y: isMobile ? -40 : 40 },
+  const motionVariants = createMemo(() => ({
+    out: { opacity: 0, y: isMobile() ? -40 : 40 },
     in: { opacity: 1, y: 0 },
-  } as const;
+  }));
 
   const [items, setItems] = createStore<SnackBarItem[]>([]);
   let counter = 0;
-
-  onSettled(() => {
-    const intervalId = setInterval(() => {
-      setItems((draft) => {
-        for (const item of draft) {
-          if (
-            !item.paused &&
-            item.duration > 0 &&
-            item.elapsed < item.duration
-          ) {
-            item.elapsed = Math.min(item.duration, item.elapsed + TICK_MS);
-          }
-        }
-
-        for (let index = draft.length - 1; index >= 0; index -= 1) {
-          const item = draft[index];
-
-          if (item.duration > 0 && item.elapsed >= item.duration) {
-            draft.splice(index, 1);
-          }
-        }
-      });
-    }, TICK_MS);
-    return () => clearInterval(intervalId);
-  });
 
   const enqueue = (spec: SnackBarSpec): string => {
     if (spec.dedupeKey) {
@@ -80,8 +53,6 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
       message: spec.message,
       detailedMessage: spec.detailedMessage ?? null,
       duration: spec.duration ?? DEFAULT_DURATION_MS,
-      elapsed: 0,
-      paused: false,
       dedupeKey: spec.dedupeKey ?? null,
       buttonLabel: spec.buttonLabel ?? null,
       buttonOnClick: spec.buttonOnClick ?? null,
@@ -104,48 +75,14 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
     setItems((draft) => {
       const item = draft.find((candidate) => candidate.id === id);
 
-      if (!item) {
-        return;
-      }
-
-      if (patch.message !== undefined) {
-        item.message = patch.message;
-      }
-      if (patch.detailedMessage !== undefined) {
-        item.detailedMessage = patch.detailedMessage;
-      }
-      if (patch.variant !== undefined) {
-        item.variant = patch.variant;
-      }
-      if (patch.duration !== undefined) {
-        item.duration = patch.duration;
-        item.elapsed = 0;
+      if (item) {
+        Object.assign(item, patch);
       }
     });
   };
 
   const dismiss = (id: string): void => {
     setItems((current) => current.filter((item) => item.id !== id));
-  };
-
-  const pause = (id: string): void => {
-    setItems((draft) => {
-      const item = draft.find((candidate) => candidate.id === id);
-
-      if (item) {
-        item.paused = true;
-      }
-    });
-  };
-
-  const resume = (id: string): void => {
-    setItems((draft) => {
-      const item = draft.find((candidate) => candidate.id === id);
-
-      if (item) {
-        item.paused = false;
-      }
-    });
   };
 
   return (
@@ -160,18 +97,13 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
             {(item) => (
               <Animated
                 key={item.id}
-                variants={motionVariants}
+                variants={motionVariants()}
                 initial="out"
                 animate="in"
                 exit="out"
                 transition={{ duration: 0.5 }}
               >
-                <SnackBar
-                  item={item}
-                  onDismiss={() => dismiss(item.id)}
-                  onPause={() => pause(item.id)}
-                  onResume={() => resume(item.id)}
-                />
+                <SnackBar item={item} onDismiss={() => dismiss(item.id)} />
               </Animated>
             )}
           </AnimatePresence>

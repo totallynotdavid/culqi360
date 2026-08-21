@@ -1,11 +1,15 @@
-import type { RecordImportProgressEvent } from "~/contracts/records/imports";
+import { JOB_KINDS, type JobEvent } from "~/contracts/jobs/job-event";
+import type { RecordImportDetail } from "~/contracts/records/imports";
 import type { IntegrationJobRow } from "~/server/integrations/types";
-import type { DatabaseExecutor } from "~/server/platform/database/executor";
-import { notify } from "~/server/platform/database/notifications/publish";
 
-export const RECORDS_IMPORT_PROGRESS_CHANNEL = "records-import-progress";
-
-export function buildRecordImportProgressEvent(
+/**
+ * A record import's live state.
+ *
+ * The run is the subject here, unlike a GPV snapshot: an import is started from
+ * a file picker and watched once, so there is no durable entity behind it to key
+ * on.
+ */
+export function buildRecordImportJobEvent(
   job: Pick<
     IntegrationJobRow,
     | "id"
@@ -16,22 +20,19 @@ export function buildRecordImportProgressEvent(
     | "rows_total"
     | "error_message"
   >,
-): RecordImportProgressEvent {
+  stale?: readonly string[],
+): JobEvent<RecordImportDetail> {
   return {
-    type: "job_progress",
-    jobId: job.id,
-    importType: job.type,
-    queueState: job.queue_state,
-    rowsApplied: job.rows_applied ?? 0,
-    rowsFailed: job.rows_failed ?? 0,
-    rowsTotal: job.rows_total ?? 0,
+    kind: JOB_KINDS.recordImport,
+    subjectId: job.id,
+    state: job.queue_state,
+    progress: {
+      completed: job.rows_applied ?? 0,
+      failed: job.rows_failed ?? 0,
+      total: job.rows_total ?? 0,
+    },
     errorMessage: job.error_message,
+    detail: { importType: job.type },
+    stale,
   };
-}
-
-export function publishRecordImportProgress(
-  db: DatabaseExecutor,
-  event: RecordImportProgressEvent,
-): Promise<void> {
-  return notify(db, RECORDS_IMPORT_PROGRESS_CHANNEL, JSON.stringify(event));
 }

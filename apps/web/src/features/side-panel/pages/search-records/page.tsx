@@ -14,11 +14,11 @@ import {
   type SearchResultItem,
 } from "~/features/search/model/search-results";
 import { createSearchViewModel } from "~/features/search/model/search-view-model";
+import { preloadSidePanelSearchResultDetailPage } from "~/features/side-panel/registry/lazy-detail-pages";
 
 import { PanelGroup } from "../../components/group";
 import { SidePanelPage } from "../../components/page";
 import { SelectableList } from "../../components/selectable-list";
-import { preloadSidePanelSearchResultDetailPage } from "../../registry/page-registry";
 import { useSidePanel } from "../../state/use-side-panel";
 import {
   createSearchCompanyDetailSidePanelPage,

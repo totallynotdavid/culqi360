@@ -8,6 +8,7 @@ import { AppPageBody } from "~/components/layout/page";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { Button } from "~/components/ui/input/button";
 import { actionErrorMessage } from "~/contracts/errors";
+import { PUBLISHED_GPV_KEYS } from "~/contracts/query-keys";
 import { hasPermission } from "~/domain/auth/access/rbac";
 import {
   TabStrip,
@@ -17,7 +18,6 @@ import {
 import { CommissionTab } from "./commission/commission-tab";
 import { CulqiView } from "./culqi/culqi-view";
 import { requestMerchantGpvExportMutation } from "./data/mutations";
-import { PUBLISHED_GPV_QUERY_KEYS } from "./data/revalidation";
 import { GpvFilterBar } from "./gpv-filter-bar";
 import { type GpvTabId, useGpvView } from "./gpv-view";
 import { AttributionGrid } from "./grids/attribution-grid";
@@ -36,7 +36,7 @@ const BASE_GPV_TABS: ReadonlyArray<TabItem<GpvTabId>> = [
 // revalidate only marks the queries stale; a failed refetch surfaces at the
 // read site through the boundary, not here.
 function refreshData(): void {
-  revalidate(PUBLISHED_GPV_QUERY_KEYS);
+  revalidate([...PUBLISHED_GPV_KEYS]);
 }
 
 export function MerchantGpvDashboard() {

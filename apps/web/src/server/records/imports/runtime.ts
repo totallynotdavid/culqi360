@@ -2,20 +2,18 @@ import { randomUUID } from "node:crypto";
 
 import type { RecordImportType } from "~/contracts/records/imports";
 import type { UserId } from "~/domain/ids";
-import type { FileStorage } from "~/server/files/storage";
 import { createIntegrationJobRepo } from "~/server/integrations/infrastructure/integration-job-repo";
 import { createRecordsImportQueue } from "~/server/integrations/queue/records-import-queue";
 import type { IntegrationRuntime } from "~/server/integrations/types";
+import { publishJobEvent } from "~/server/jobs/publish";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 
 import { canAccessRecordImportJob } from "./api";
-import {
-  buildRecordImportProgressEvent,
-  publishRecordImportProgress,
-} from "./progress-events";
+import { buildRecordImportJobEvent } from "./progress-events";
 
 export function createRecordImportsRuntime(
   integration: IntegrationRuntime,
-  storage: FileStorage,
+  storage: BlobStore,
 ) {
   return {
     async create(input: {
@@ -38,10 +36,7 @@ export function createRecordImportsRuntime(
           max_attempts: 3,
           created_at: input.createdAt,
         });
-        await publishRecordImportProgress(
-          trx,
-          buildRecordImportProgressEvent(job),
-        );
+        await publishJobEvent(trx, buildRecordImportJobEvent(job));
         return job;
       });
     },

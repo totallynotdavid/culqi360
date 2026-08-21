@@ -1,38 +1,40 @@
-import { revalidate, useAction, useSubmissions } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
 import {
+  createSignal,
   Errored,
   For,
+  Loading,
   Match,
   Show,
-  Loading,
   Switch,
-  createEffect,
   createMemo,
-  createOptimistic,
 } from "solid-js";
 
-import { createTopicState } from "~/browser/realtime/create-topic-state";
+import { createJob } from "~/browser/jobs/create-job";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { actionErrorMessage } from "~/contracts/errors";
+import { JOB_KINDS, type JobProgress } from "~/contracts/jobs/job-event";
 import {
-  parseGpvSnapshotProgressMessage,
-  type GpvSnapshotProgressEvent,
+  parseGpvSnapshotDetail,
   type GpvSnapshotView,
 } from "~/contracts/merchant-stats/imports";
-import { REALTIME_CHANNELS } from "~/contracts/realtime/channel";
 import { formatAppDateTime } from "~/domain/time/app-time";
 import { WidgetCardShell } from "~/features/widgets/widget-card-shell";
 import { WidgetSkeleton } from "~/features/widgets/widget-skeleton";
 import { gpvSnapshotQuery } from "~/rpc/merchant-stats/gpv-snapshot";
 
 import { resolveGpvImportIssueMutation } from "../data/mutations";
-import { PUBLISHED_GPV_QUERY_KEYS } from "../data/revalidation";
 import { formatInteger } from "../format";
 
 import styles from "./upload-report.module.css";
 
+type IssueResolution =
+  | "keep_previous"
+  | "accept_candidate"
+  | "exclude_candidate"
+  | "reject_snapshot";
+
 // The boundaries live here so the card below only ever sees a settled view.
-// Keeping the realtime subscription and the revalidation effects inside the
-// card means their reads suspend to this Loading rather than to an ancestor.
 export function ImportStatus(props: { snapshotId: string }) {
   const snapshot = createMemo(() => gpvSnapshotQuery(props.snapshotId));
 
@@ -53,63 +55,33 @@ export function ImportStatus(props: { snapshotId: string }) {
 
 function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
   const resolveIssue = useAction(resolveGpvImportIssueMutation);
-  const resolutions = useSubmissions(resolveGpvImportIssueMutation);
+  const resolving = createActionPending(resolveGpvImportIssueMutation);
+  const [resolutionError, setResolutionError] = createSignal<unknown>(null);
 
-  // Tentative for the action's lifetime, so it reverts on settle without a
-  // finally clause on either the success or the failure path.
-  const [resolving, setResolving] = createOptimistic(false);
-  resolveGpvImportIssueMutation.onSubmit(() => setResolving(true));
+  const isRunning = () =>
+    props.view.state === "queued" || props.view.state === "processing";
 
-  const resolutionError = () => resolutions.at(-1)?.error;
-
-  // Terminal jobs no longer publish progress.
-  const jobId = () => {
-    const job = props.view.job;
-
-    return !job || isTerminalJob(job.queueState) ? null : job.jobId;
-  };
-
-  // Progress invalidates the snapshot; the query remains the source of truth.
-  const progress = createTopicState({
-    channel: REALTIME_CHANNELS.gpvSnapshot,
-    id: jobId,
-    parse: parseGpvSnapshotProgressMessage,
-    isFinal: (event) => isTerminalJob(event.queueState),
-  });
-
-  createEffect(progress.value, (event) => {
-    if (!event) {
-      return;
-    }
-
-    revalidate(gpvSnapshotQuery.key);
-  });
-
-  // A memo, not the effect's compute: effects re-run on every dependency
-  // change without comparing the computed value, so the dedupe that keeps
-  // this to one republish per snapshot has to happen here.
-  const publishedSnapshotId = createMemo(() =>
-    props.view.state === "active" ? props.view.snapshotId : null,
-  );
-
-  createEffect(publishedSnapshotId, (snapshotId) => {
-    if (snapshotId) {
-      revalidate(PUBLISHED_GPV_QUERY_KEYS);
-    }
+  /**
+   * Only a running import has anything to say, and the settling frame carries
+   * the query keys it invalidated, so this view refreshes itself without
+   * watching for a state transition to infer that from.
+   */
+  const job = createJob({
+    kind: JOB_KINDS.gpvSnapshot,
+    subjectId: () => (isRunning() ? props.view.snapshotId : null),
+    parseDetail: parseGpvSnapshotDetail,
   });
 
   async function submitDecision(
     issueId: string,
-    choice:
-      | "keep_previous"
-      | "accept_candidate"
-      | "exclude_candidate"
-      | "reject_snapshot",
+    resolution: IssueResolution,
   ): Promise<void> {
+    setResolutionError(null);
+
     try {
-      await resolveIssue({ issueId, resolution: choice });
-    } catch {
-      // A direct action call rethrows; the settled submission renders it.
+      await resolveIssue({ issueId, resolution });
+    } catch (caught) {
+      setResolutionError(caught);
     }
   }
 
@@ -130,22 +102,8 @@ function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
         </Show>
 
         <Switch>
-          <Match
-            when={
-              props.view.state === "queued" || props.view.state === "processing"
-            }
-          >
-            <ImportProgress job={props.view.job} />
-
-            <Show when={progress.connection() === "offline"}>
-              <p class={styles.status}>Sin conexión. Reintentando...</p>
-            </Show>
-
-            <Show when={progress.connection() === "denied"}>
-              <p class={styles.statusError}>
-                Se perdió la conexión. Recarga la página.
-              </p>
-            </Show>
+          <Match when={isRunning()}>
+            <ImportProgress progress={job()?.progress} />
           </Match>
 
           <Match when={props.view.state === "needs_review"}>
@@ -228,7 +186,7 @@ function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
 
           <Match when={props.view.state === "failed"}>
             <p class={styles.statusError}>
-              {props.view.job?.errorMessage ?? "La importación falló."}
+              {props.view.jobError ?? "La importación falló."}
             </p>
           </Match>
         </Switch>
@@ -237,10 +195,10 @@ function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
   );
 }
 
-function ImportProgress(props: { job: GpvSnapshotProgressEvent | null }) {
+function ImportProgress(props: { progress: JobProgress | undefined }) {
   const completed = () =>
-    (props.job?.rowsApplied ?? 0) + (props.job?.rowsFailed ?? 0);
-  const total = () => props.job?.rowsTotal ?? 0;
+    (props.progress?.completed ?? 0) + (props.progress?.failed ?? 0);
+  const total = () => props.progress?.total ?? 0;
 
   return (
     <div>
@@ -255,9 +213,7 @@ function ImportProgress(props: { job: GpvSnapshotProgressEvent | null }) {
       <div class={styles.bar}>
         <div
           class={styles.barFill}
-          style={{
-            width: `${total() ? (completed() / total()) * 100 : 0}%`,
-          }}
+          style={{ width: `${total() ? (completed() / total()) * 100 : 0}%` }}
         />
       </div>
     </div>
@@ -279,10 +235,4 @@ function DecisionButton(props: {
       {props.children}
     </button>
   );
-}
-
-function isTerminalJob(
-  state: GpvSnapshotProgressEvent["queueState"] | undefined,
-): boolean {
-  return state === "done" || state === "failed";
 }

@@ -1,10 +1,9 @@
-import type { Role } from "~/domain/auth/access/rbac";
+import { isRole, type Role } from "~/domain/auth/access/rbac";
 import { SESSION_COOKIE_NAME } from "~/server/auth/session/cookies";
 import { createDb } from "~/server/platform/database/client";
 
 import { ensureDatabase, previewDbUrl } from "./db";
 import {
-  isRole,
   listRoles,
   resolvePersonaByRole,
   resolvePersonaByUsername,

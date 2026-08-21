@@ -138,3 +138,28 @@
     width: 100%;
   }
 }
+
+.countdown {
+  height: 2px;
+  width: 100%;
+  transform-origin: left center;
+  background: var(--snack-bar-progress-color);
+  animation-name: snack-bar-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* Pausing the animation pauses the dismissal, because they are one clock. */
+.snackBar:hover .countdown {
+  animation-play-state: paused;
+}
+
+@keyframes snack-bar-countdown {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}

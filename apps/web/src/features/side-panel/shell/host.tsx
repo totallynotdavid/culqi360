@@ -2,8 +2,8 @@ import { Show, createSignal, onSettled } from "solid-js";
 
 import { scheduleVisualMount } from "~/browser/visual/runtime/visual-mount-scheduler";
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
+import { preloadSidePanelEntryPages } from "~/features/side-panel/registry/lazy-pages";
 
-import { preloadSidePanelEntryPages } from "../registry/page-registry";
 import { Router } from "../router/router";
 import { DesktopSidePanelContent } from "./desktop-content";
 import { DesktopSidePanelFrame } from "./desktop-frame";

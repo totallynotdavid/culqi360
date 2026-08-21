@@ -24,6 +24,9 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   stopping = true;
   logger.info("realtime_stopping", { signal });
 
+  // Stops the engine poll loops before the streams they feed go away.
+  application.ingestJobs.stop();
+
   await application.realtime.stop().catch((error: unknown) => {
     logger.error("realtime_stop_failed", { error });
   });

@@ -1,5 +1,7 @@
 import { createEffect, type Accessor } from "solid-js";
 
+import { prefersReducedMotion } from "./animate";
+
 const SPRING = {
   stiffness: 300,
   damping: 20,
@@ -257,10 +259,6 @@ function createSpringConstants(delta: number) {
     dampingRatio,
     coefficient: (dampingRatio * omega0 * delta) / omegaD,
   };
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function formatNumber(value: number): string {

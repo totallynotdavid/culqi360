@@ -24,14 +24,17 @@ export function createGridSource<TData, TRow>(
 ): GridSource<TData, TRow> {
   const data = createMemo(() => fetcher());
 
-  const source = (): DataGridSource<TRow> => {
+  // Memoized like the read above it: the grid reads the source from several
+  // places per render, and projecting thousands of rows on each of those was
+  // work nobody asked for.
+  const source = createMemo<DataGridSource<TRow>>(() => {
     const projected = project(data());
 
     return {
       rows: projected.rows,
       totalCount: projected.totalCount ?? projected.rows.length,
     };
-  };
+  });
 
   return { source, data };
 }

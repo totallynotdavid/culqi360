@@ -1,14 +1,8 @@
 import { type JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
-import {
-  For,
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  onSettled,
-} from "solid-js";
+import { For, Show, createMemo, createSignal, onSettled } from "solid-js";
 
+import { trackViewportAnchor } from "~/browser/dom/track-viewport-anchor";
 import { useDismissibleLayer } from "~/components/ui/utilities/use-dismissible-layer";
 import { useScopedHotkey } from "~/features/side-panel/core/hotkeys/create-scoped-hotkey";
 
@@ -96,26 +90,7 @@ export function SidePanelFooter(props: SidePanelFooterProps) {
     setIsMac(/Mac/i.test(navigator.platform));
   });
 
-  createEffect(
-    () => isOptionsOpen(),
-    (isOpen) => {
-      if (!isOpen) {
-        return;
-      }
-
-      updateMenuPosition();
-
-      const handleViewportChange = () => updateMenuPosition();
-
-      window.addEventListener("resize", handleViewportChange);
-      window.addEventListener("scroll", handleViewportChange, true);
-
-      return () => {
-        window.removeEventListener("resize", handleViewportChange);
-        window.removeEventListener("scroll", handleViewportChange, true);
-      };
-    },
-  );
+  trackViewportAnchor(isOptionsOpen, updateMenuPosition);
 
   useScopedHotkey("Mod+O", () => toggleOptions(), {
     allowInInputs: true,

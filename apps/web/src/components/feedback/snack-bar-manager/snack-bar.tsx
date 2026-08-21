@@ -6,7 +6,6 @@ import CircleAlert from "~/components/icons/circle-alert";
 import CircleCheckBig from "~/components/icons/circle-check-big";
 import Info from "~/components/icons/info";
 import X from "~/components/icons/x";
-import { ProgressBar } from "~/components/ui/feedback/progress-bar";
 import { Button } from "~/components/ui/input/button";
 
 import type { SnackBarItem, SnackBarVariant } from "./types";
@@ -32,26 +31,25 @@ const iconByVariant = {
 interface SnackBarProps {
   item: SnackBarItem;
   onDismiss: () => void;
-  onPause: () => void;
-  onResume: () => void;
 }
 
 export function SnackBar(props: SnackBarProps) {
-  const progressValue = () =>
-    props.item.duration <= 0
-      ? 100
-      : Math.max(0, (1 - props.item.elapsed / props.item.duration) * 100);
-
   return (
     <div
       class={clsx(styles.snackBar, variantStyles[props.item.variant])}
-      onMouseEnter={() => props.onPause()}
-      onMouseLeave={() => props.onResume()}
       role={props.item.role}
       aria-live={props.item.role === "alert" ? "assertive" : "polite"}
       data-globally-prevent-click-outside
     >
-      <ProgressBar value={progressValue()} />
+      <Show when={props.item.duration > 0 ? props.item.duration : null} keyed>
+        {(duration) => (
+          <div
+            class={styles.countdown}
+            style={{ "animation-duration": `${duration}ms` }}
+            onAnimationEnd={props.onDismiss}
+          />
+        )}
+      </Show>
       <div class={styles.header}>
         <div class={styles.icon}>
           {props.item.icon ?? iconByVariant[props.item.variant]()}

@@ -1,21 +1,17 @@
-import { isQueueState, type QueueState } from "~/domain/jobs/queue-state";
 import type { GpvSnapshotState } from "~/domain/merchant-stats/snapshot";
 
-export interface GpvSnapshotProgressEvent {
-  type: "gpv_snapshot_progress";
-  jobId: string;
-  queueState: QueueState;
-  rowsApplied: number;
-  rowsFailed: number;
-  rowsTotal: number;
-  errorMessage: string | null;
-}
-
+/**
+ * A snapshot's settled shape: what it is, not how far along it is.
+ *
+ * Progress belongs to the import job and arrives over the job channel, so
+ * nothing here changes while rows are being applied. The server revalidates this
+ * read when the job settles.
+ */
 export interface GpvSnapshotView {
   snapshotId: string;
   state: GpvSnapshotState;
   cutAt: string;
-  job: GpvSnapshotProgressEvent | null;
+  jobError: string | null;
   issues: readonly {
     id: string;
     type: string;
@@ -24,38 +20,47 @@ export interface GpvSnapshotView {
   }[];
 }
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+/**
+ * What the snapshot became, once the import knows.
+ *
+ * Null while rows are still being applied: a running import has no outcome yet,
+ * and the envelope's queue state is what describes it until then.
+ */
+export interface GpvSnapshotDetail {
+  snapshotState: GpvSnapshotState | null;
 }
 
-function isGpvSnapshotProgressEvent(
+const GPV_SNAPSHOT_STATES: readonly GpvSnapshotState[] = [
+  "queued",
+  "processing",
+  "needs_review",
+  "ready",
+  "active",
+  "superseded",
+  "rejected",
+  "failed",
+];
+
+export function parseGpvSnapshotDetail(
   value: unknown,
-): value is GpvSnapshotProgressEvent {
-  if (!isObjectRecord(value)) {
-    return false;
-  }
-
-  return (
-    value.type === "gpv_snapshot_progress" &&
-    typeof value.jobId === "string" &&
-    isQueueState(value.queueState) &&
-    typeof value.rowsApplied === "number" &&
-    typeof value.rowsFailed === "number" &&
-    typeof value.rowsTotal === "number" &&
-    (typeof value.errorMessage === "string" || value.errorMessage === null)
-  );
-}
-
-export function parseGpvSnapshotProgressMessage(
-  raw: string,
-): GpvSnapshotProgressEvent | null {
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
+): GpvSnapshotDetail | null {
+  if (typeof value !== "object" || value === null) {
     return null;
   }
 
-  return isGpvSnapshotProgressEvent(parsed) ? parsed : null;
+  if (!("snapshotState" in value)) {
+    return null;
+  }
+
+  const { snapshotState } = value;
+
+  if (snapshotState === null) {
+    return { snapshotState: null };
+  }
+
+  const known = GPV_SNAPSHOT_STATES.find(
+    (candidate) => candidate === snapshotState,
+  );
+
+  return known === undefined ? null : { snapshotState: known };
 }

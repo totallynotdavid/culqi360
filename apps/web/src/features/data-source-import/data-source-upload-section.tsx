@@ -1,5 +1,6 @@
 import { Errored, For, Loading, Show, createMemo } from "solid-js";
 
+import { createJob } from "~/browser/jobs/create-job";
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";
@@ -8,8 +9,12 @@ import { Button } from "~/components/ui/input/button";
 import { FileInput } from "~/components/ui/input/file-input";
 import { Input } from "~/components/ui/input/input";
 import { Select } from "~/components/ui/input/select";
-import type { IngestJobStep } from "~/contracts/data-sources/ingest";
+import {
+  parseIngestJobDetail,
+  type IngestJobStep,
+} from "~/contracts/data-sources/ingest";
 import { actionErrorMessage } from "~/contracts/errors";
+import { JOB_KINDS } from "~/contracts/jobs/job-event";
 import { listDataSourceKeysQuery } from "~/rpc/data-sources/ingest";
 
 import {
@@ -30,29 +35,56 @@ const STEP_LABELS: Record<IngestJobStep, string> = {
   complete: "Completado",
 };
 
-const LOCAL_PHASE_LABELS: Partial<Record<UploadRowPhase, string>> = {
+const LOCAL_PHASE_LABELS: Record<UploadRowPhase, string> = {
   idle: "Pendiente",
   hashing: "Calculando hash…",
   registering: "Registrando…",
   uploading: "Subiendo archivo…",
+  tracking: "En cola",
+  failed: "Error",
 };
 
-function describeRow(row: UploadRow): string {
-  if (row.phase === "failed") {
-    return row.error ? `Error: ${row.error}` : "Error";
-  }
-
-  if (row.job) {
-    return row.job.outcome === "succeeded"
-      ? "Completado"
-      : STEP_LABELS[row.job.step];
-  }
-
-  return LOCAL_PHASE_LABELS[row.phase] ?? row.phase;
+// Only the browser's own phases block removal. A tracked row can be dropped:
+// the engine keeps working and the server keeps following it either way.
+function isRemovable(phase: UploadRowPhase): boolean {
+  return phase === "idle" || phase === "tracking" || phase === "failed";
 }
 
-function isRemovable(phase: UploadRowPhase): boolean {
-  return phase === "idle" || phase === "done" || phase === "failed";
+function UploadRowStatus(props: { row: UploadRow }) {
+  const job = createJob({
+    kind: JOB_KINDS.dataSourceIngest,
+    subjectId: () => props.row.jobId,
+    parseDetail: parseIngestJobDetail,
+  });
+
+  const label = () => {
+    if (props.row.phase === "failed") {
+      return props.row.error ? `Error: ${props.row.error}` : "Error";
+    }
+
+    const event = job();
+
+    if (!event) {
+      return LOCAL_PHASE_LABELS[props.row.phase];
+    }
+
+    if (event.state === "failed") {
+      return event.errorMessage ? `Error: ${event.errorMessage}` : "Error";
+    }
+
+    return event.state === "done"
+      ? "Completado"
+      : STEP_LABELS[event.detail.step];
+  };
+
+  const failed = () =>
+    props.row.phase === "failed" || job()?.state === "failed";
+
+  return (
+    <p class={styles.status} data-error={failed() ? "true" : undefined}>
+      {label()}
+    </p>
+  );
 }
 
 export function DataSourceUploadSection() {
@@ -163,14 +195,7 @@ export function DataSourceUploadSection() {
                       </div>
 
                       <div class={styles.rowFooter}>
-                        <p
-                          class={styles.status}
-                          data-error={
-                            row.phase === "failed" ? "true" : undefined
-                          }
-                        >
-                          {describeRow(row)}
-                        </p>
+                        <UploadRowStatus row={row} />
 
                         <Button
                           type="button"

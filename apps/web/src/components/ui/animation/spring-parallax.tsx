@@ -1,6 +1,8 @@
 import { type JSX } from "@solidjs/web";
 import { onSettled } from "solid-js";
 
+import { prefersReducedMotion } from "./animate";
+
 interface SpringParallaxProps {
   children: JSX.Element;
   class?: string;
@@ -19,10 +21,12 @@ export function SpringParallax(props: SpringParallaxProps) {
   let rafId: number | undefined;
 
   onSettled(() => {
+    // A rAF spring, not a WAAPI animation, so there is no duration to collapse:
+    // under reduced motion the element simply stays put.
     if (typeof window === "undefined" || !containerRef) {
       return;
     }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion()) {
       return;
     }
 

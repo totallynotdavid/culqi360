@@ -1,7 +1,4 @@
-import {
-  observeElementVisibility,
-  type ObserveElementVisibilityOptions,
-} from "~/browser/dom/observe-element-visibility";
+import { observeElementVisibility } from "~/browser/dom/observe-element-visibility";
 import { runCleanupTasks } from "~/shared/lifecycle/run-cleanup-tasks";
 
 export type VisualRenderLoop = {
@@ -41,7 +38,7 @@ export type CreateVisualRenderLoopOptions = {
   requestAnimationFrame?: VisualRenderLoopScheduler;
   shouldRender?: () => boolean;
   target?: Element | null;
-  targetVisibilityOptions?: ObserveElementVisibilityOptions;
+  targetVisibilityOptions?: IntersectionObserverInit;
   visibilityObserver?: typeof observeElementVisibility;
 };
 

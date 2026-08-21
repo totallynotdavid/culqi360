@@ -53,6 +53,17 @@ export function createGpvSnapshotJobRepo(db: DatabaseExecutor) {
       return row.id;
     },
 
+    // Newest first: a re-imported snapshot has one job per attempt, and the
+    // live one is the attempt a subscriber cares about.
+    findBySnapshotId(snapshotId: GpvSnapshotId) {
+      return db
+        .selectFrom("gpv_snapshot_jobs")
+        .selectAll()
+        .where("snapshot_id", "=", snapshotId)
+        .orderBy("created_at", "desc")
+        .executeTakeFirst();
+    },
+
     findById(id: GpvSnapshotJobId) {
       return db
         .selectFrom("gpv_snapshot_jobs")

@@ -2,13 +2,18 @@ import type { APIEvent } from "filesystem-routing/api";
 
 import { getApplication } from "~/server/composition/application";
 import { getSession } from "~/server/platform/action/session";
-import { respondToAvatarRequest } from "~/server/users/avatar-http";
+import { respondWithAvatar } from "~/server/users/avatar-http";
 
 export async function GET(event: Pick<APIEvent, "request">): Promise<Response> {
   try {
-    return await respondToAvatarRequest(
+    const session = await getSession();
+    if (!session) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    return await respondWithAvatar(
       event.request,
-      await getSession(),
+      session.userId,
       getApplication().users.avatars,
     );
   } catch {

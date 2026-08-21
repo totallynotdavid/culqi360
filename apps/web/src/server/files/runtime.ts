@@ -4,14 +4,15 @@ import { createSalesRepo } from "~/server/files/repo/sales";
 import { createTokensRepo } from "~/server/files/repo/tokens";
 import type { FileRepos } from "~/server/files/service/contracts";
 import { executeDownload } from "~/server/files/service/execute-download";
-import { createFileStorage, type FileStorage } from "~/server/files/storage";
+import { createFileStorage } from "~/server/files/storage";
 import type { UploadsConfig } from "~/server/platform/config/env";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { ServerInfrastructure } from "~/server/platform/infrastructure";
 import type { OperationContext } from "~/server/platform/operation/context";
 
 export type FilesRuntime = {
   repo: FileRepos;
-  storage: FileStorage;
+  storage: BlobStore;
   download: (
     token: Parameters<typeof executeDownload>[0],
     operation: OperationContext,

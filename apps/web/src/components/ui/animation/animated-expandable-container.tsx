@@ -1,6 +1,8 @@
 import { type JSX } from "@solidjs/web";
 import { createEffect, onCleanup } from "solid-js";
 
+import { animate } from "./animate";
+
 interface AnimatedExpandableContainerProps {
   isExpanded: boolean;
   children: JSX.Element;
@@ -44,12 +46,14 @@ export function AnimatedExpandableContainer(
       element.style.opacity = currentOpacity;
       element.style.pointerEvents = isExpanded ? "" : "none";
 
-      const nextHeightAnimation = element.animate(
+      const nextHeightAnimation = animate(
+        element,
         [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
         { duration, easing: EASING, fill: "forwards" },
       );
 
-      const nextOpacityAnimation = element.animate(
+      const nextOpacityAnimation = animate(
+        element,
         [{ opacity: currentOpacity }, { opacity: isExpanded ? "1" : "0" }],
         { duration: opacityDuration, easing: EASING, fill: "forwards" },
       );

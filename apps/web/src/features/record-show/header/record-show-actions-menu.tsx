@@ -1,13 +1,7 @@
 import { Portal } from "@solidjs/web";
-import {
-  For,
-  Show,
-  createEffect,
-  createSignal,
-  onSettled,
-  type Component,
-} from "solid-js";
+import { For, Show, createSignal, onSettled, type Component } from "solid-js";
 
+import { trackViewportAnchor } from "~/browser/dom/track-viewport-anchor";
 import DotsVertical from "~/components/icons/dots-vertical";
 import { TopBarActionButton } from "~/components/layout/top-bar-action-button";
 import { TopBarTooltip } from "~/components/layout/top-bar-tooltip";
@@ -81,26 +75,7 @@ export function RecordShowActionsMenu(props: RecordShowActionsMenuProps) {
       window.document.removeEventListener("pointerdown", handlePointerDown);
   });
 
-  createEffect(
-    () => open(),
-    (isOpen) => {
-      if (!isOpen) {
-        return;
-      }
-
-      updateMenuPosition();
-
-      const handleViewportChange = () => updateMenuPosition();
-
-      window.addEventListener("resize", handleViewportChange);
-      window.addEventListener("scroll", handleViewportChange, true);
-
-      return () => {
-        window.removeEventListener("resize", handleViewportChange);
-        window.removeEventListener("scroll", handleViewportChange, true);
-      };
-    },
-  );
+  trackViewportAnchor(open, updateMenuPosition);
 
   return (
     <Show when={props.items.length > 0}>

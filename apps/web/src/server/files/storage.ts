@@ -5,10 +5,8 @@ import {
   type BlobStore,
 } from "~/server/platform/files/blob-store";
 
-export type FileStorage = BlobStore;
-
 const WORKFLOW_FILES_DIR = "workflow-files";
 
-export function createFileStorage(baseDir: string): FileStorage {
+export function createFileStorage(baseDir: string): BlobStore {
   return createBlobStore(join(baseDir, WORKFLOW_FILES_DIR));
 }

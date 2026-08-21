@@ -1,4 +1,4 @@
-import { lazy, type Component } from "solid-js";
+import type { Component } from "solid-js";
 
 import { CompactDetailPageSkeleton } from "../pages/common/skeletons/compact-detail-page-skeleton";
 import { ListPageSkeleton } from "../pages/common/skeletons/list-page-skeleton";
@@ -10,73 +10,15 @@ import { RecordPageInfo } from "../pages/record-page/page-info";
 import { SearchCompanyPageInfo } from "../pages/search-company/page-info";
 import { SearchPersonPageInfo } from "../pages/search-person/page-info";
 import type { SidePanelPageKey } from "../types/side-panel-page";
-
-// Keep page bodies lazy; skeletons and header chrome stay eager.
-const CreateLeadPage = lazy(() =>
-  import("../pages/create-lead/page").then((m) => ({
-    default: m.CreateLeadPage,
-  })),
-);
-
-const RootPage = lazy(() =>
-  import("../pages/root/page").then((m) => ({
-    default: m.RootPage,
-  })),
-);
-
-const SearchRecordsPage = lazy(() =>
-  import("../pages/search-records/page").then((m) => ({
-    default: m.SearchRecordsPage,
-  })),
-);
-
-const SearchPersonPage = lazy(() =>
-  import("../pages/search-person/page").then((m) => ({
-    default: m.SearchPersonPage,
-  })),
-);
-
-const SearchCompanyPage = lazy(() =>
-  import("../pages/search-company/page").then((m) => ({
-    default: m.SearchCompanyPage,
-  })),
-);
-
-const RecordPage = lazy(() =>
-  import("../pages/record-page/page").then((m) => ({
-    default: m.RecordPage,
-  })),
-);
-
-const LeadActionPage = lazy(() =>
-  import("../pages/lead-action/page").then((m) => ({
-    default: m.LeadActionPage,
-  })),
-);
-
-const DataGridDetailPage = lazy(() =>
-  import("../pages/data-grid-detail/page").then((m) => ({
-    default: m.DataGridDetailPage,
-  })),
-);
-
-// These are the only pages commonly opened before the panel is already active.
-export function preloadSidePanelEntryPages(): void {
-  void RootPage.preload();
-  void SearchRecordsPage.preload();
-}
-
-// Hover or focus is a strong enough signal to preload the matching detail page.
-export function preloadSidePanelSearchResultDetailPage(
-  kind: "person" | "company",
-): void {
-  if (kind === "person") {
-    void SearchPersonPage.preload();
-    return;
-  }
-
-  void SearchCompanyPage.preload();
-}
+import { SearchCompanyPage, SearchPersonPage } from "./lazy-detail-pages";
+import {
+  CreateLeadPage,
+  DataGridDetailPage,
+  LeadActionPage,
+  RecordPage,
+  RootPage,
+  SearchRecordsPage,
+} from "./lazy-pages";
 
 type SidePanelPageConfig = {
   showsSearch: boolean;

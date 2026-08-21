@@ -18,10 +18,10 @@ import type { FileRepos } from "~/server/files/service/contracts";
 import { issueDownloadToken } from "~/server/files/service/issue-download-token";
 import { storeGeneratedFile } from "~/server/files/service/store-generated-file";
 import { storeUploadedFile } from "~/server/files/service/store-uploaded-file";
-import type { FileStorage } from "~/server/files/storage";
 import { buildRecordExportCsv } from "~/server/integrations/infrastructure/lead-export-builder";
 import type { AppContext } from "~/server/platform/action/context";
 import type { DatabaseExecutor } from "~/server/platform/database/executor";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import {
   exportPendingInquiries,
   type InquiryExportRow,
@@ -108,7 +108,7 @@ type LeadFilesDeps = {
   leadQueries: LeadQueries;
   fulfillment: FulfillmentRepository;
   filesRepo: FileRepos;
-  filesStorage: FileStorage;
+  filesStorage: BlobStore;
   executor: DatabaseExecutor;
 };
 

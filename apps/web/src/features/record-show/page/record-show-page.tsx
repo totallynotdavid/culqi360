@@ -1,6 +1,6 @@
 import { Show, createMemo } from "solid-js";
 
-import { createRecordPageController } from "~/features/record-show/record-page-controller";
+import { useEnrichmentWatch } from "~/features/record-show/use-enrichment-watch";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
 
 import { RecordLeftPanel } from "../panels/record-left-panel";
@@ -12,18 +12,10 @@ type RecordShowPageProps = {
   recordId: string;
 };
 
-const POLL_INTERVAL_MS = 3_500;
-const POLL_TIMEOUT_MS = 60_000;
-
 export function RecordShowPage(props: RecordShowPageProps) {
   const data = createMemo(() => leadDetailQuery(props.recordId));
 
-  createRecordPageController({
-    leadId: () => props.recordId,
-    detailData: data,
-    pollIntervalMs: POLL_INTERVAL_MS,
-    pollTimeoutMs: POLL_TIMEOUT_MS,
-  });
+  useEnrichmentWatch(() => data()?.lead.ruc);
 
   return (
     <Show when={data()}>
