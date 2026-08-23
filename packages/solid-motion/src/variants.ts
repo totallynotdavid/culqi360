@@ -46,10 +46,10 @@ export interface PassTurn {
 }
 
 export interface Sequencer {
-  /** A turn for a descendant's pass. */
-  child: () => PassTurn;
-  /** A turn for this element's own pass. */
-  self: () => PassTurn;
+  /** A turn for a descendant's pass, or `undefined` when nothing orders them. */
+  child: () => PassTurn | undefined;
+  /** A turn for this element's own pass, on the same terms. */
+  self: () => PassTurn | undefined;
 }
 
 export const VariantContext = createContext<VariantScope | null>(null);
@@ -141,10 +141,14 @@ function createChildRegistry(orchestration: () => Orchestration) {
  * else's animation, so both sides announce themselves to this object and it
  * decides who waits.
  *
- * Announcing is unconditional; waiting is not. A child cannot know at the
- * moment it starts whether its parent will later run an `afterChildren` pass
- * that needs to count it, so the count is always kept and only ever read when
- * the option asks for it.
+ * Both sides read the same `when`, the controlling element's, so an element
+ * with no order to impose hands out no turns at all and its descendants never
+ * allocate one. That matters: `when` is rare and a staggered list is not.
+ *
+ * Within a scope that does use it, announcing is unconditional even for the
+ * direction that is not waiting. A child under `afterChildren` does not wait,
+ * but it does have to be counted, or the parent it is holding up would see an
+ * empty room.
  */
 function createSequencer(orchestration: () => Orchestration) {
   let selfRunning = false;
@@ -185,8 +189,10 @@ function createSequencer(orchestration: () => Orchestration) {
   };
 
   return {
-    child: () =>
-      turn(
+    child: () => {
+      if (orchestration().when === false) return undefined;
+
+      return turn(
         (queued) => {
           if (!selfRunning || orchestration().when !== "beforeChildren") {
             return false;
@@ -199,10 +205,13 @@ function createSequencer(orchestration: () => Orchestration) {
           childrenRunning -= 1;
           if (childrenRunning === 0) release(waitingSelf);
         },
-      ),
+      );
+    },
 
-    self: () =>
-      turn(
+    self: () => {
+      if (orchestration().when === false) return undefined;
+
+      return turn(
         (queued) => {
           if (orchestration().when !== "afterChildren") return false;
 
@@ -224,7 +233,8 @@ function createSequencer(orchestration: () => Orchestration) {
           selfRunning = false;
           release(waitingChildren);
         },
-      ),
+      );
+    },
   };
 }
 
@@ -285,11 +295,11 @@ export function sequencePass(
   inherited: VariantScope | null,
   own: VariantScope | null,
 ): PassSequence | undefined {
-  const turns: PassTurn[] = [];
   // As a child first: an element inside a `beforeChildren` parent has to be let
   // through before its own children can be made to wait on it.
-  if (inherited) turns.push(inherited.sequencer.child());
-  if (own) turns.push(own.sequencer.self());
+  const turns = [inherited?.sequencer.child(), own?.sequencer.self()].filter(
+    (pending): pending is PassTurn => pending !== undefined,
+  );
   if (turns.length === 0) return undefined;
 
   return {
