@@ -1,6 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import { type JSX } from "@solidjs/web";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AnimatePresence, motion } from "../src";
@@ -233,3 +233,58 @@ describe("exit cancellation", () => {
     expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 });
+
+describe("value-level diffing", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("leaves an in-flight value alone when a different key changes", async () => {
+    const [opacity, setOpacity] = createSignal(1);
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 0, x: 0 }}
+        animate={{ opacity: opacity(), x: 200 }}
+        transition={{ duration: 0.4, ease: "linear" }}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const midpoint = readTranslateX(element);
+    expect(midpoint).toBeGreaterThan(20);
+
+    // Only `opacity` changed. Restarting the pass wholesale would stop `x` and
+    // re-ease it from wherever it happens to be, so it would fall behind.
+    setOpacity(0.5);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(readTranslateX(element)).toBeGreaterThan(midpoint + 40);
+  });
+
+  it("returns a key to its base value once the target stops naming it", async () => {
+    const [shifted, setShifted] = createSignal(true);
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={shifted() ? { opacity: 1, x: 100 } : { opacity: 1 }}
+        transition={{ duration: 0.1 }}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(readTranslateX(element)).toBe(100);
+
+    // This is what makes a gesture releasable: when the layer that contributed
+    // `x` stops contributing it, `x` has to go somewhere rather than staying
+    // where it was left.
+    setShifted(false);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(readTranslateX(element)).toBe(0);
+  });
+});
+
+function readTranslateX(element: HTMLElement): number {
+  const match = /translateX\((-?[\d.]+)px\)/.exec(element.style.transform);
+  return match ? Number(match[1]) : 0;
+}

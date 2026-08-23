@@ -1,10 +1,7 @@
 import { frame, type AnimationPlaybackControlsWithThen } from "motion-dom";
 
-import type {
-  AnimationDefinition,
-  TargetAndTransition,
-  Transition,
-} from "./types";
+import type { MergedTarget } from "./target";
+import type { AnimationDefinition, Transition } from "./types";
 import { createValueStore, type ValueStore } from "./values";
 
 /**
@@ -13,10 +10,11 @@ import { createValueStore, type ValueStore } from "./values";
  * and only ever performs side effects.
  */
 export interface MotionPass {
-  target: TargetAndTransition | undefined;
+  target: MergedTarget;
   /** The target the element was rendered with, in raw (pre-CSS) units. */
   initialValues: Record<string, string | number>;
-  transition: Transition | undefined;
+  /** Used by values falling back after the layer that owned them went away. */
+  fallbackTransition: Transition | undefined;
   /** Handed back to lifecycle callbacks unchanged, for reporting only. */
   definition: AnimationDefinition;
   onAnimationStart?: (definition: AnimationDefinition) => void;
@@ -41,6 +39,13 @@ export function createMotionController(): MotionController {
     | undefined;
   let onUpdate: MotionPass["onUpdate"];
   let observing = false;
+
+  /**
+   * What the element was last told to become, so a pass only touches values that
+   * actually changed. Seeded from the initial target, because that is what the
+   * element was rendered carrying.
+   */
+  let applied = new Map<string, string | number>();
 
   /**
    * Identifies the pass allowed to settle. A cancelled motion animation's
@@ -75,39 +80,35 @@ export function createMotionController(): MotionController {
     const current = generation;
     if (!store) return;
 
-    // The listener is installed once and reads the latest callback, so a
-    // component that swaps its `onUpdate` does not resubscribe every value.
+    // Installed once and reading the latest callback, so a component that swaps
+    // its `onUpdate` does not resubscribe every value.
     onUpdate = pass.onUpdate;
     if (onUpdate && !observing) {
       observing = true;
       store.observe((latest) => onUpdate?.(latest));
     }
 
-    const {
-      transition: _transition,
-      transitionEnd,
-      ...rest
-    } = pass.target ?? {};
-    const values = rest as Record<string, string | number>;
-    const keys = Object.keys(values);
+    const work = planWork(pass, applied, store);
+    applied = work.applied;
 
-    if (keys.length === 0) {
-      complete(current);
-      return;
-    }
-
-    pass.onAnimationStart?.(pass.definition);
+    const { transitionEnd } = pass.target;
 
     const finish = () => {
       if (current !== generation) return;
-      if (transitionEnd) {
-        for (const [key, value] of Object.entries(transitionEnd)) {
-          store?.set(key, value as string | number);
-        }
+      for (const [key, value] of Object.entries(transitionEnd)) {
+        store?.set(key, value);
+        applied.set(key, value);
       }
       pass.onAnimationComplete?.(pass.definition);
       complete(current);
     };
+
+    if (work.changes.length === 0) {
+      finish();
+      return;
+    }
+
+    pass.onAnimationStart?.(pass.definition);
 
     // Animations are created on motion's frame, never inline in Solid's flush.
     //
@@ -125,8 +126,12 @@ export function createMotionController(): MotionController {
       if (current !== generation || !store) return;
 
       const animations: AnimationPlaybackControlsWithThen[] = [];
-      for (const key of keys) {
-        const animation = store.animate(key, values[key], pass.transition);
+      for (const change of work.changes) {
+        const animation = store.animate(
+          change.key,
+          change.value,
+          change.transition,
+        );
         if (animation) animations.push(animation);
       }
 
@@ -148,7 +153,10 @@ export function createMotionController(): MotionController {
 
   return {
     mount(element) {
-      store = createValueStore(element, queued?.pass.initialValues ?? {});
+      const initialValues = queued?.pass.initialValues ?? {};
+      store = createValueStore(element, initialValues);
+      applied = new Map(Object.entries(initialValues));
+
       if (!queued) return;
 
       const { pass, onSettled } = queued;
@@ -176,4 +184,51 @@ export function createMotionController(): MotionController {
       store = undefined;
     },
   };
+}
+
+interface ValueChange {
+  key: string;
+  value: string | number;
+  transition: Transition | undefined;
+}
+
+/**
+ * Which values this pass actually has to move, and what the element becomes as a
+ * result.
+ *
+ * Diffing per value rather than per target is what stops an unrelated prop
+ * update from restarting animations: re-running a pass whose `opacity` did not
+ * change must not stop `opacity` and restart it from wherever it currently sits.
+ *
+ * A key that disappeared from the target goes back to the value the element was
+ * bound at. Motion calls these removed keys, and handling them is what makes a
+ * gesture state releasable: when `whileHover` stops contributing `scale`,
+ * `scale` has to return somewhere rather than staying where the gesture left it.
+ */
+function planWork(
+  pass: MotionPass,
+  applied: Map<string, string | number>,
+  store: ValueStore,
+): { changes: ValueChange[]; applied: Map<string, string | number> } {
+  const changes: ValueChange[] = [];
+  const next = new Map<string, string | number>();
+
+  for (const [key, entry] of pass.target.entries) {
+    next.set(key, entry.value);
+    if (Object.is(applied.get(key), entry.value)) continue;
+    changes.push({ key, value: entry.value, transition: entry.transition });
+  }
+
+  for (const key of applied.keys()) {
+    if (next.has(key)) continue;
+
+    const base = store.baseValue(key) ?? pass.initialValues[key];
+    if (base === undefined) continue;
+
+    next.set(key, base);
+    if (Object.is(applied.get(key), base)) continue;
+    changes.push({ key, value: base, transition: pass.fallbackTransition });
+  }
+
+  return { changes, applied: next };
 }

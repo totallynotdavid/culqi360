@@ -14,11 +14,8 @@ import { createMotionController, type MotionPass } from "./controller";
 import { buildInitialStyle } from "./initial";
 import { usePresence } from "./presence";
 import { useReducedMotion } from "./reduced-motion";
-import {
-  resolveDefinition,
-  resolveInitialDefinition,
-  stripAnimationOptions,
-} from "./resolve";
+import { resolveDefinition, resolveInitialDefinition } from "./resolve";
+import { mergeLayers, type MergedTarget } from "./target";
 import type {
   MotionComponent,
   MotionProps,
@@ -67,9 +64,7 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
         custom: custom(),
       }),
     );
-    const initialValues = untrack(() =>
-      toRawValues(stripAnimationOptions(initialTarget)),
-    );
+    const initialValues = toRawValues(initialTarget);
     const initialStyle = buildInitialStyle(initialTarget);
 
     const style = createMemo(
@@ -80,20 +75,40 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     createEffect(
       () => {
         const present = presence ? presence.isPresent() : true;
-        const definition = present ? props.animate : props.exit;
+        const fallbackTransition = withConfig(
+          props.transition ?? config.transition,
+          config.skipAnimations ?? false,
+        );
         const reducedMotion =
           config.reducedMotion === "always" ||
           (config.reducedMotion === "user" && prefersReducedMotion());
 
+        // `exit` sits on top of `animate` rather than replacing it, so a key
+        // `animate` owns and `exit` says nothing about keeps its animated value
+        // instead of falling back on the way out.
+        const target = mergeLayers(
+          [
+            {
+              target: resolveDefinition(
+                props.animate,
+                props.variants,
+                custom(),
+              ),
+              active: true,
+            },
+            {
+              target: resolveDefinition(props.exit, props.variants, custom()),
+              active: !present,
+            },
+          ],
+          fallbackTransition,
+        );
+
         return {
           present,
-          definition,
-          target: resolveDefinition(definition, props.variants, custom()),
-          transition: withConfig(
-            props.transition ?? config.transition,
-            config.skipAnimations ?? false,
-          ),
-          reducedMotion,
+          definition: present ? props.animate : props.exit,
+          target: reducedMotion ? withoutMovement(target) : target,
+          fallbackTransition,
           onAnimationStart: props.onAnimationStart,
           onAnimationComplete: props.onAnimationComplete,
           onUpdate: props.onUpdate,
@@ -101,9 +116,9 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
       },
       (next) => {
         const pass: MotionPass = {
-          target: applyReducedMotion(next.target, next.reducedMotion),
+          target: next.target,
           initialValues,
-          transition: next.transition,
+          fallbackTransition: next.fallbackTransition,
           definition: next.definition,
           onAnimationStart: next.onAnimationStart,
           onAnimationComplete: next.onAnimationComplete,
@@ -151,23 +166,13 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
  * layout properties jump; opacity, colour and the rest still animate, because
  * those are the ones that carry meaning rather than movement.
  */
-function applyReducedMotion(
-  target: TargetAndTransition | undefined,
-  reducedMotion: boolean,
-): TargetAndTransition | undefined {
-  if (!reducedMotion || !target) return target;
-
-  const { transition, transitionEnd, ...values } = target;
-  const perValue: Record<string, unknown> = {};
-  for (const key of Object.keys(values)) {
-    if (positionalKeys.has(key)) perValue[key] = { type: false };
+function withoutMovement(target: MergedTarget): MergedTarget {
+  const entries = new Map(target.entries);
+  for (const [key, entry] of entries) {
+    if (!positionalKeys.has(key)) continue;
+    entries.set(key, { ...entry, transition: { type: false } as Transition });
   }
-
-  return {
-    ...values,
-    transitionEnd,
-    transition: { ...transition, ...perValue },
-  } as TargetAndTransition;
+  return { entries, transitionEnd: target.transitionEnd };
 }
 
 function withConfig(
@@ -179,15 +184,19 @@ function withConfig(
 }
 
 /**
- * The raw target values, kept out of `buildInitialStyle`'s CSS output. An
+ * The same values `buildInitialStyle` renders, but raw rather than as CSS: an
  * animation starting from `x` needs the number `20`, not the string `20px`.
+ * `transitionEnd` is folded in for the same reason it is there, since on the
+ * initial pass there is no transition for it to land after.
  */
 function toRawValues(
   target: TargetAndTransition | undefined,
 ): Record<string, string | number> {
   const values: Record<string, string | number> = {};
   if (!target) return values;
-  for (const [key, value] of Object.entries(target)) {
+
+  const { transition: _transition, transitionEnd, ...rest } = target;
+  for (const [key, value] of Object.entries({ ...rest, ...transitionEnd })) {
     if (typeof value === "string" || typeof value === "number") {
       values[key] = value;
     }

@@ -74,15 +74,3 @@ export function resolveInitialDefinition<TCustom>(
 
   return resolveDefinition(definition, props.variants, props.custom);
 }
-
-export function stripAnimationOptions(
-  target: TargetAndTransition | undefined,
-): TargetAndTransition | undefined {
-  if (!target) return undefined;
-  const {
-    transition: _transition,
-    transitionEnd: _transitionEnd,
-    ...values
-  } = target;
-  return values;
-}

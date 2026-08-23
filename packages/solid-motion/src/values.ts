@@ -31,6 +31,12 @@ export interface ValueStore {
   ): AnimationPlaybackControlsWithThen | undefined;
   /** Sets a property without animating, used for `transitionEnd`. */
   set(key: string, value: string | number): void;
+  /**
+   * The value this property was bound at, which is where it returns when the
+   * layer that was driving it stops contributing. `undefined` until the
+   * property has been animated at least once.
+   */
+  baseValue(key: string): string | number | undefined;
   /** Subscribes to every animated property's per-frame value. */
   observe(listener: (latest: Record<string, string | number>) => void): void;
   /** Stops in-flight animations without unbinding, used between targets. */
@@ -44,6 +50,7 @@ export function createValueStore(
   initialValues: Record<string, string | number>,
 ): ValueStore {
   const values = new Map<string, MotionValue>();
+  const bases = new Map<string, string | number>();
   const unbind: VoidFunction[] = [];
   let observer: ((latest: Record<string, string | number>) => void) | undefined;
   const latest: Record<string, string | number> = {};
@@ -60,7 +67,9 @@ export function createValueStore(
     values.set(key, value as MotionValue);
     unbind.push(styleEffect(element, { [key]: value as MotionValue }));
 
-    value.jump(readStartValue(element, key, initialValues), false);
+    const base = readStartValue(element, key, initialValues);
+    bases.set(key, base);
+    value.jump(base, false);
 
     if (observer) subscribe(key, value as MotionValue);
 
@@ -94,6 +103,10 @@ export function createValueStore(
       ensure(key).jump(value);
     },
 
+    baseValue(key) {
+      return bases.get(key);
+    },
+
     observe(listener) {
       observer = listener;
       for (const [key, value] of values) subscribe(key, value);
@@ -107,6 +120,7 @@ export function createValueStore(
       for (const cancel of unbind) cancel();
       for (const value of values.values()) value.destroy();
       values.clear();
+      bases.clear();
       unbind.length = 0;
     },
   };
