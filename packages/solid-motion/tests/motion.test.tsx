@@ -1,10 +1,11 @@
 import { render } from "@solidjs/testing-library";
 import { type JSX } from "@solidjs/web";
-import { createSignal, flush } from "solid-js";
+import { createContext, createSignal, flush, useContext } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AnimatePresence,
+  AnimatePresenceList,
   createMotion,
   createMotionValue,
   motion,
@@ -133,7 +134,7 @@ describe("motion", () => {
   });
 });
 
-describe("AnimatePresence", () => {
+describe("AnimatePresenceList", () => {
   afterEach(() => document.body.replaceChildren());
 
   it("keeps an exiting child mounted until its animation settles", async () => {
@@ -141,7 +142,7 @@ describe("AnimatePresence", () => {
     const onComplete = vi.fn<() => void>();
     const [items, setItems] = createSignal([{ id: "one" }]);
     const { container } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => (
           <motion.div
             exit={{ opacity: 0 }}
@@ -151,7 +152,7 @@ describe("AnimatePresence", () => {
             data-id={item().id}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
@@ -166,7 +167,7 @@ describe("AnimatePresence", () => {
 
   it("passes initial=false from the boundary to its first child", () => {
     const { container } = render(() => (
-      <AnimatePresence
+      <AnimatePresenceList
         each={[{ id: "one" }]}
         getKey={(item) => item.id}
         initial={false}
@@ -178,7 +179,7 @@ describe("AnimatePresence", () => {
             transition={{ duration: 0 }}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     const element = container.querySelector("div") as HTMLElement;
@@ -191,12 +192,12 @@ describe("AnimatePresence", () => {
       .mockImplementation(() => undefined);
 
     const { container } = render(() => (
-      <AnimatePresence
+      <AnimatePresenceList
         each={[{ id: "same" }, { id: "same" }]}
         getKey={(item) => item.id}
       >
         {(item) => <motion.div data-id={item().id} />}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     expect(reported).toHaveBeenCalled();
@@ -208,9 +209,9 @@ describe("AnimatePresence", () => {
   it("keeps a surviving row's data current without recreating it", async () => {
     const [items, setItems] = createSignal([{ id: "one", label: "first" }]);
     const { container } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => <motion.div data-id={item().id}>{item().label}</motion.div>}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     const element = container.querySelector('[data-id="one"]') as HTMLElement;
@@ -230,7 +231,7 @@ describe("AnimatePresence", () => {
       { id: "c" },
     ]);
     const { container } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => (
           <motion.div
             exit={{ opacity: 0 }}
@@ -238,7 +239,7 @@ describe("AnimatePresence", () => {
             data-id={item().id}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
     const order = () =>
       [...container.querySelectorAll("[data-id]")].map((node) =>
@@ -256,14 +257,133 @@ describe("AnimatePresence", () => {
   it("removes an item immediately when no exit target is defined", async () => {
     const [items, setItems] = createSignal([{ id: "one" }]);
     const { container } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => <motion.div data-id={item().id} />}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     setItems([]);
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(container.querySelector('[data-id="one"]')).toBeNull();
+  });
+});
+
+const Theme = createContext("unset");
+
+describe("AnimatePresence", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("keeps a conditional subtree mounted while it animates out", async () => {
+    const [open, setOpen] = createSignal(true);
+    const { container } = render(() => (
+      <AnimatePresence when={open()}>
+        {() => (
+          <motion.div
+            class="panel"
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          />
+        )}
+      </AnimatePresence>
+    ));
+    expect(container.querySelector(".panel")).toBeTruthy();
+
+    // Solid disposes a conditional branch the instant its condition flips, so
+    // a boundary reacting to the child disappearing would find the motion
+    // element's cleanup already done. The boundary owning the root is what
+    // buys this window.
+    setOpen(false);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const exiting = container.querySelector(".panel") as HTMLElement;
+    expect(exiting).toBeTruthy();
+    expect(Number(exiting.style.opacity)).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(container.querySelector(".panel")).toBeNull();
+  });
+
+  it("runs the outgoing and incoming subtrees together when the key changes", async () => {
+    const [page, setPage] = createSignal("a");
+    const { container } = render(() => (
+      <AnimatePresence when={page()}>
+        {(name) => (
+          <motion.div
+            class={`page-${name}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          />
+        )}
+      </AnimatePresence>
+    ));
+
+    // The entrance has to land first. Swapping in the same tick leaves the
+    // outgoing element still sitting at its `initial` opacity of 0, which is
+    // exactly what `exit` asks for, so there is nothing to animate and it
+    // leaves at once. Motion resolves it against the element's current values
+    // and behaves the same way.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    setPage("b");
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(container.querySelector(".page-a")).toBeTruthy();
+    expect(container.querySelector(".page-b")).toBeTruthy();
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(container.querySelector(".page-a")).toBeNull();
+    expect(container.querySelector(".page-b")).toBeTruthy();
+  });
+
+  it("builds the subtree inside the context surrounding the boundary", () => {
+    // The whole design rests on `createRoot` inheriting the current owner, so
+    // a subtree the boundary builds still sees the app's providers. If that
+    // ever stopped holding, every context read below a boundary would quietly
+    // fall back to its default.
+    const { container } = render(() => (
+      <Theme value="dark">
+        <AnimatePresence when={true}>
+          {() => <motion.div class="panel" data-theme={useContext(Theme)} />}
+        </AnimatePresence>
+      </Theme>
+    ));
+
+    const panel = container.querySelector(".panel") as HTMLElement;
+    expect(panel.dataset.theme).toBe("dark");
+  });
+
+  it("revives a subtree that returns mid-exit rather than building a second", async () => {
+    const [open, setOpen] = createSignal(true);
+    const { container } = render(() => (
+      <AnimatePresence when={open()}>
+        {() => (
+          <motion.div
+            class="panel"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
+        )}
+      </AnimatePresence>
+    ));
+
+    setOpen(false);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    setOpen(true);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+
+    // Checked here rather than at the end. Building a second subtree beside the
+    // one still leaving also settles on a single panel once the first finishes
+    // exiting, so only the overlap catches it.
+    expect(container.querySelectorAll(".panel")).toHaveLength(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(container.querySelectorAll(".panel")).toHaveLength(1);
   });
 });
 
@@ -273,7 +393,7 @@ describe("exit cancellation", () => {
   it("keeps a re-entering child mounted instead of letting the stale exit remove it", async () => {
     const [items, setItems] = createSignal([{ id: "one" }]);
     const { container } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => (
           <motion.div
             exit={{ opacity: 0 }}
@@ -282,7 +402,7 @@ describe("exit cancellation", () => {
             data-id={item().id}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     setItems([]);
@@ -308,7 +428,7 @@ describe("exit cancellation", () => {
     const [items, setItems] = createSignal([{ id: "one" }]);
     const [fade, setFade] = createSignal(0);
     const { container } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => (
           <motion.div
             exit={{ opacity: fade() }}
@@ -316,7 +436,7 @@ describe("exit cancellation", () => {
             data-id={item().id}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     setItems([]);
@@ -336,7 +456,7 @@ describe("exit cancellation", () => {
   it("releases the boundary when an exiting child is disposed mid-animation", async () => {
     const [items, setItems] = createSignal([{ id: "one" }]);
     const { container, unmount } = render(() => (
-      <AnimatePresence each={items()} getKey={(item) => item.id}>
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
         {(item) => (
           <motion.div
             exit={{ opacity: 0 }}
@@ -344,7 +464,7 @@ describe("exit cancellation", () => {
             data-id={item().id}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceList>
     ));
 
     setItems([]);

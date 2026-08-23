@@ -1,9 +1,11 @@
-import { For, type JSX } from "@solidjs/web";
 import {
   createContext,
   createEffect,
   createMemo,
+  createRoot,
   createSignal,
+  getOwner,
+  runWithOwner,
   untrack,
   useContext,
   type Accessor,
@@ -39,7 +41,7 @@ interface PresenceChildProps {
  * an exit is interrupted. Releasing is something the element does on every
  * terminal path, including the one where it lost.
  */
-function PresenceChild(props: PresenceChildProps) {
+export function PresenceChild(props: PresenceChildProps) {
   let holds = 0;
 
   const leaveIfDone = () => {
@@ -79,129 +81,123 @@ function PresenceChild(props: PresenceChildProps) {
   return <PresenceContext value={scope}>{props.children}</PresenceContext>;
 }
 
-/** One item the boundary is keeping on screen, present or on its way out. */
-interface PresenceEntry<T> {
-  key: string;
-  item: T;
-  present: boolean;
+/** One subtree the boundary is keeping on screen, entering or on its way out. */
+interface Rendering {
+  /** The `when` value it was built for; identity decides whether it survives. */
+  key: unknown;
+  nodes: Element;
+  present: Accessor<boolean>;
+  setPresent: (present: boolean) => void;
+  dispose: VoidFunction;
 }
 
 export interface AnimatePresenceProps<T> {
-  each: readonly T[];
-  getKey: (item: T) => string;
-  children: (item: Accessor<T>) => JSX.Element;
+  /**
+   * What is on screen, and its identity in one value. Falsy renders nothing;
+   * changing it to a different truthy value swaps, with the outgoing subtree
+   * animating out while the incoming one animates in.
+   */
+  when: T;
+  children: (value: NonNullable<T>) => Element;
+  /** `false` skips the entrance on first render, for a subtree already on screen. */
   initial?: boolean;
   custom?: unknown;
+  /** `wait` holds the newcomer back until the outgoing subtree is gone. */
   mode?: "sync" | "wait";
   onExitComplete?: () => void;
 }
 
-export function AnimatePresence<T>(props: AnimatePresenceProps<T>) {
-  const toEntry = (item: T): PresenceEntry<T> => ({
-    key: props.getKey(item),
-    item,
-    present: true,
-  });
+/**
+ * Keeps a subtree mounted while it animates out.
+ *
+ * `when` rather than a conditional child, because Solid disposes a branch the
+ * moment its condition flips: by the time a boundary could notice the child had
+ * gone, the motion element's cleanup has already run and there is nothing left
+ * to animate. React can hold a removed child because it re-renders and diffs;
+ * Solid gives no such window. So the boundary builds the subtree itself, in a
+ * root parented to this component, and decides when that root is torn down.
+ *
+ * That is also why `when` doubles as the key. It is the one value the caller
+ * already has, and Motion's own `key` prop on the child says the same thing.
+ */
+export function AnimatePresence<T>(props: AnimatePresenceProps<T>): Element {
+  const owner = getOwner();
 
-  /**
-   * One list, not several. Everything the boundary needs is a view of it: what
-   * is on screen is the list, what is leaving is the entries with `present`
-   * false, and an item's latest data is its `item`.
-   *
-   * The earlier version kept a present list, a rendered list, a key index, an
-   * exiting set and a signal per item, which is the shape React forces because
-   * it cannot hand a surviving child new data without re-rendering it. Solid's
-   * keyed `<For>` gives each row an accessor that follows entry replacement
-   * without recreating the row, so a single signal covers all of it.
-   */
-  const [entries, setEntries] = createSignal<PresenceEntry<T>[]>(
-    untrack(() => props.each.map(toEntry)),
+  const remove = (rendering: Rendering) => {
+    // Dropped from the list first: Solid takes the nodes out of the document,
+    // and only then is it safe to tear down the reactivity behind them.
+    setRenderings((current) => current.filter((entry) => entry !== rendering));
+    rendering.dispose();
+
+    // Snapshot reads, not subscriptions. Solid 2 warns about a bare read here
+    // for good reason, and `untrack` is how you say the snapshot is the point.
+    const stillLeaving = untrack(() =>
+      renderings().some((entry) => !entry.present()),
+    );
+    if (!stillLeaving) props.onExitComplete?.();
+  };
+
+  const build = (key: NonNullable<T>): Rendering =>
+    runWithOwner(owner, () =>
+      createRoot((dispose) => {
+        const [present, setPresent] = createSignal(true);
+        // Assigned below and read only from the callback, which cannot fire
+        // before the subtree it belongs to exists.
+        let rendering: Rendering;
+
+        const nodes = (
+          <PresenceChild
+            isPresent={present()}
+            initial={props.initial}
+            custom={props.custom}
+            onExitComplete={() => remove(rendering)}
+          >
+            {props.children(key)}
+          </PresenceChild>
+        );
+
+        rendering = { key, nodes, present, setPresent, dispose };
+        return rendering;
+      }),
+    ) as Rendering;
+
+  // Built during render rather than from the effect below, so the server emits
+  // the subtree and the first client paint carries it. An effect would leave
+  // both empty. It seeds the signal instead of writing to it, because Solid 2
+  // rejects a write from inside a component body.
+  const [renderings, setRenderings] = createSignal<Rendering[]>(
+    untrack(() => (props.when ? [build(props.when as NonNullable<T>)] : [])),
   );
 
   createEffect(
-    () => props.each,
-    (items) => {
-      setEntries((current) => diffEntries(current, items, props.getKey));
+    () => props.when,
+    (when) => {
+      const current = untrack(renderings);
+      const newest = current.at(-1);
+      if (newest && newest.key === when && untrack(newest.present)) return;
+
+      for (const rendering of current) rendering.setPresent(false);
+
+      if (!when) return;
+
+      // Coming back to a key that is still animating out revives that subtree
+      // instead of building a second one beside it.
+      const returning = current.find((entry) => entry.key === when);
+      if (returning) {
+        returning.setPresent(true);
+        return;
+      }
+
+      setRenderings([...current, build(when as NonNullable<T>)]);
     },
   );
 
-  // `wait` holds the newcomers back entirely until the outgoing ones are gone.
   const rendered = createMemo(() => {
-    const all = entries();
+    const all = renderings();
     if (props.mode !== "wait") return all;
-    const leaving = all.filter((entry) => !entry.present);
+    const leaving = all.filter((entry) => !entry.present());
     return leaving.length > 0 ? leaving : all;
   });
 
-  const completeExit = (key: string) => {
-    setEntries((current) => {
-      // The item can have come back while its exit was still playing.
-      const leaving = current.find((entry) => entry.key === key);
-      if (!leaving || leaving.present) return current;
-      return current.filter((entry) => entry.key !== key);
-    });
-
-    if (!entries().some((entry) => !entry.present)) props.onExitComplete?.();
-  };
-
-  return (
-    <For each={rendered()} keyed={(entry) => entry.key}>
-      {(entry) => (
-        <PresenceChild
-          isPresent={entry().present}
-          initial={props.initial}
-          custom={props.custom}
-          onExitComplete={() => completeExit(entry().key)}
-        >
-          {props.children(() => entry().item)}
-        </PresenceChild>
-      )}
-    </For>
-  );
-}
-
-/**
- * Rebuilds the list from the incoming collection, keeping anything that left it
- * at the index it used to hold so a row does not jump while it animates out.
- */
-function diffEntries<T>(
-  current: readonly PresenceEntry<T>[],
-  items: readonly T[],
-  getKey: (item: T) => string,
-): PresenceEntry<T>[] {
-  const previous = new Map(current.map((entry) => [entry.key, entry]));
-  const seen = new Set<string>();
-  const next: PresenceEntry<T>[] = [];
-
-  for (const item of items) {
-    const key = getKey(item);
-
-    // Reported, never thrown. An uncaught error inside an effect halts Solid's
-    // reactive system for the whole application, so throwing here would turn a
-    // mis-keyed list into a dead page. Keeping the first occurrence at least
-    // leaves the diff coherent.
-    if (seen.has(key)) {
-      console.error(
-        `AnimatePresence: getKey returned "${key}" for more than one item. ` +
-          "Presence diffing cannot tell those items apart, so the extra ones " +
-          "are ignored.",
-      );
-      continue;
-    }
-    seen.add(key);
-
-    const entry = previous.get(key);
-    next.push(
-      entry && entry.present && entry.item === item
-        ? entry
-        : { key, item, present: true },
-    );
-  }
-
-  current.forEach((entry, index) => {
-    if (seen.has(entry.key)) return;
-    next.splice(index, 0, entry.present ? { ...entry, present: false } : entry);
-  });
-
-  return next;
+  return <>{rendered().map((entry) => entry.nodes)}</>;
 }
