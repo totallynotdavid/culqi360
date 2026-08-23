@@ -38,3 +38,24 @@ export function buildInitialStyle(
 
   return { ...state.style, ...state.vars } as Record<string, string | number>;
 }
+
+/**
+ * The same values `buildInitialStyle` renders, but raw rather than as CSS: an
+ * animation starting from `x` needs the number `20`, not the string `20px`.
+ * `transitionEnd` is folded in for the same reason it is there, since on the
+ * initial pass there is no transition for it to land after.
+ */
+export function toInitialValues(
+  target: TargetAndTransition | undefined,
+): Record<string, string | number> {
+  const values: Record<string, string | number> = {};
+  if (!target) return values;
+
+  const { transition: _transition, transitionEnd, ...rest } = target;
+  for (const [key, value] of Object.entries({ ...rest, ...transitionEnd })) {
+    if (typeof value === "string" || typeof value === "number") {
+      values[key] = value;
+    }
+  }
+  return values;
+}

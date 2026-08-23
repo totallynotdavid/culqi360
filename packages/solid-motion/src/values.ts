@@ -7,6 +7,7 @@ import {
   transformProps,
   type AnimationPlaybackControlsWithThen,
   type Transition,
+  type ValueKeyframesDefinition,
 } from "motion-dom";
 
 /**
@@ -26,7 +27,7 @@ export interface ValueStore {
    */
   animate(
     key: string,
-    keyframe: string | number,
+    keyframe: ValueKeyframesDefinition,
     transition: Transition | undefined,
   ): AnimationPlaybackControlsWithThen | undefined;
   /** Sets a property without animating, used for `transitionEnd`. */
@@ -39,8 +40,6 @@ export interface ValueStore {
   baseValue(key: string): string | number | undefined;
   /** Subscribes to every animated property's per-frame value. */
   observe(listener: (latest: Record<string, string | number>) => void): void;
-  /** Stops in-flight animations without unbinding, used between targets. */
-  stop(): void;
   dispose(): void;
 }
 
@@ -110,10 +109,6 @@ export function createValueStore(
     observe(listener) {
       observer = listener;
       for (const [key, value] of values) subscribe(key, value);
-    },
-
-    stop() {
-      for (const value of values.values()) value.stop();
     },
 
     dispose() {

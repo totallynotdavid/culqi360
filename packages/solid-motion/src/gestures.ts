@@ -1,12 +1,39 @@
 import { addDomEvent, hover, press } from "motion-dom";
+import { createEffect, createSignal, type Accessor } from "solid-js";
+
+import type { AnimationDefinition } from "./types";
+
+/**
+ * The slice of the motion options this module reads. Narrower than the whole
+ * options object on purpose: nothing here depends on the variant map, so
+ * nothing here has to be generic over its custom data.
+ */
+export type GestureOptions = Partial<
+  Record<GestureName, AnimationDefinition>
+> & { viewport?: ViewportOptions };
 
 /**
  * The gesture states an element can be in, lowest priority first. `animate`
  * sits below all of them and `exit` above, matching Motion's own order.
  */
-export const gestureNames = ["whileFocus", "whileHover", "whilePress"] as const;
+export const gestureNames = [
+  "whileInView",
+  "whileFocus",
+  "whileHover",
+  "whilePress",
+] as const;
 
 export type GestureName = (typeof gestureNames)[number];
+
+export interface ViewportOptions {
+  /** Stay in the in-view state once entered, and stop observing. */
+  once?: boolean;
+  root?: Element | Document;
+  /** Grows or shrinks the detection box, in CSS margin syntax. */
+  margin?: string;
+  /** How much of the element must be visible to count. */
+  amount?: "some" | "all" | number;
+}
 
 /**
  * Starts watching one gesture and returns the disposer the owning scope needs.
@@ -23,7 +50,12 @@ export function observeGesture(
   name: GestureName,
   element: HTMLElement | SVGElement,
   setActive: (active: boolean) => void,
+  viewport?: ViewportOptions,
 ): VoidFunction {
+  if (name === "whileInView") {
+    return observeInView(element, setActive, viewport);
+  }
+
   if (name === "whileHover") {
     return hover(element, () => {
       setActive(true);
@@ -39,6 +71,46 @@ export function observeGesture(
   }
 
   return observeFocus(element, setActive);
+}
+
+const visibilityThresholds = { some: 0, all: 1 } as const;
+
+/**
+ * Viewport visibility, the one gesture motion-dom does not offer: `inView`
+ * lives in framer-motion, and depending on that package to reach it would drag
+ * back the animation engine wrapper we deliberately left behind.
+ *
+ * `once` unobserves on entry rather than checking a flag on every callback, so
+ * a list that has finished revealing stops costing anything.
+ */
+function observeInView(
+  element: HTMLElement | SVGElement,
+  setActive: (active: boolean) => void,
+  { once = false, root, margin, amount = "some" }: ViewportOptions = {},
+): VoidFunction {
+  if (typeof IntersectionObserver === "undefined") return () => undefined;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          setActive(true);
+          if (once) observer.unobserve(entry.target);
+        } else if (!once) {
+          setActive(false);
+        }
+      }
+    },
+    {
+      root,
+      rootMargin: margin,
+      threshold:
+        typeof amount === "number" ? amount : visibilityThresholds[amount],
+    },
+  );
+
+  observer.observe(element);
+  return () => observer.disconnect();
 }
 
 /**
@@ -71,4 +143,40 @@ function observeFocus(
     removeFocus();
     removeBlur();
   };
+}
+
+/**
+ * One signal per gesture, with listeners attached only while the matching prop
+ * exists, so an element without `whileHover` pays for no pointer listeners.
+ *
+ * The node arrives through a signal rather than a `let`, because an effect
+ * cannot observe a plain variable being assigned by a ref callback.
+ */
+export function watchGestures(
+  options: () => GestureOptions,
+  element: Accessor<HTMLElement | SVGElement | undefined>,
+): Record<GestureName, Accessor<boolean>> {
+  const states = {} as Record<GestureName, Accessor<boolean>>;
+
+  for (const name of gestureNames) {
+    const [active, setActive] = createSignal(false);
+    states[name] = active;
+
+    createEffect(
+      () => {
+        if (options()[name] === undefined) return undefined;
+        const node = element();
+        if (!node) return undefined;
+        // Re-read the viewport options here so changing them re-observes
+        // instead of leaving a stale IntersectionObserver in place.
+        return { node, viewport: options().viewport };
+      },
+      (spec) =>
+        spec
+          ? observeGesture(name, spec.node, setActive, spec.viewport)
+          : undefined,
+    );
+  }
+
+  return states;
 }

@@ -1,6 +1,6 @@
-import { createContext, useContext } from "solid-js";
+import { createContext, untrack, useContext } from "solid-js";
 
-import type { GestureName } from "./gestures";
+import { gestureNames, type GestureName } from "./gestures";
 import type { AnimationDefinition, Transition } from "./types";
 
 /** Every prop a variant label can be attached to, in Motion's own vocabulary. */
@@ -108,5 +108,46 @@ export function createChildRegistry(orchestration: () => Orchestration) {
 
       return delayChildren + offset;
     },
+  };
+}
+
+/** Every prop that can carry a variant label, in Motion's own vocabulary. */
+export const variantLayers: readonly VariantLayer[] = [
+  "initial",
+  "animate",
+  "exit",
+  ...gestureNames,
+];
+
+/**
+ * The scope an element offers its descendants, or `null` when it has no labels
+ * to offer.
+ *
+ * A fresh scope rather than an extension of the ancestor's: Motion builds the
+ * context from a controlling node's own label-valued props, so a parent naming
+ * `animate` but not `whileHover` does not leak a grandparent's `whileHover`
+ * down. Whether an element controls variants is read once, the way Motion
+ * decides it at element creation.
+ */
+export function createVariantScope(
+  options: () => Partial<Record<VariantLayer, AnimationDefinition>>,
+  custom: () => unknown,
+  transition: () => Transition | undefined,
+): VariantScope | null {
+  const controls = untrack(() =>
+    variantLayers.some((layer) => isVariantLabel(options()[layer])),
+  );
+  if (!controls) return null;
+
+  const registry = createChildRegistry(() => readOrchestration(transition()));
+
+  return {
+    label: (layer) => {
+      const own = options()[layer];
+      return isVariantLabel(own) ? own : undefined;
+    },
+    custom,
+    register: registry.register,
+    delayFor: registry.delayFor,
   };
 }

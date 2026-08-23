@@ -1,3 +1,5 @@
+import { positionalKeys, type ValueKeyframesDefinition } from "motion-dom";
+
 import type { TargetAndTransition, Transition } from "./types";
 
 /**
@@ -11,7 +13,8 @@ export interface MotionLayer {
 }
 
 export interface TargetEntry {
-  value: string | number;
+  /** A single value, or the keyframe list to run through. */
+  value: ValueKeyframesDefinition;
   /**
    * The transition of the layer this value came from, so an `exit` carrying its
    * own timing does not get the element's default.
@@ -62,7 +65,7 @@ export function mergeLayers(
     for (const [key, value] of Object.entries(values)) {
       if (value === undefined || value === null) continue;
       entries.set(key, {
-        value: value as string | number,
+        value: value as ValueKeyframesDefinition,
         transition: layerTransition,
       });
     }
@@ -71,4 +74,22 @@ export function mergeLayers(
   }
 
   return { entries, transitionEnd, transition: winning };
+}
+
+/**
+ * Motion's reduced-motion contract is not "do not animate". Positional and
+ * layout properties jump; opacity, colour and the rest still animate, because
+ * those are the ones that carry meaning rather than movement.
+ */
+export function withoutMovement(target: MergedTarget): MergedTarget {
+  const entries = new Map(target.entries);
+  for (const [key, entry] of entries) {
+    if (!positionalKeys.has(key)) continue;
+    entries.set(key, { ...entry, transition: { type: false } as Transition });
+  }
+  return {
+    entries,
+    transitionEnd: target.transitionEnd,
+    transition: target.transition,
+  };
 }

@@ -2,7 +2,10 @@ import type { ComponentProps, JSX } from "@solidjs/web";
 import type { TargetAndTransition, Transition } from "motion-dom";
 import type { Element as SolidElement } from "solid-js";
 
+import type { ViewportOptions } from "./gestures";
+
 export type { TargetAndTransition, Transition } from "motion-dom";
+export type { ViewportOptions } from "./gestures";
 
 export type VariantDefinition<TCustom = unknown> =
   | TargetAndTransition
@@ -52,19 +55,26 @@ type MotionPropKeys =
   | "variants"
   | "whileFocus"
   | "whileHover"
+  | "whileInView"
   | "whilePress"
+  | "viewport"
   | "ref";
 
-export interface MotionProps<TCustom = unknown> extends Omit<
-  ComponentProps<"div">,
-  MotionPropKeys
-> {
+/**
+ * How an element animates, with nothing about how it is rendered. This is what
+ * `createMotion` takes; `MotionProps` is this plus the element's own attributes.
+ */
+export interface MotionOptions<TCustom = unknown> {
   animate?: AnimationDefinition;
   custom?: TCustom;
   exit?: AnimationDefinition;
-  initial?: AnimationDefinition | true;
+  initial?: AnimationDefinition;
   /** Applied while the element has a visible focus ring. */
   whileFocus?: AnimationDefinition;
+  /** Applied while the element is inside the viewport. */
+  whileInView?: AnimationDefinition;
+  /** Tunes what `whileInView` counts as visible. */
+  viewport?: ViewportOptions;
   /** Applied while a non-touch pointer is over the element. */
   whileHover?: AnimationDefinition;
   /** Applied while the element is pressed, including by Enter on a keyboard. */
@@ -72,9 +82,13 @@ export interface MotionProps<TCustom = unknown> extends Omit<
   onAnimationComplete?: (definition: AnimationDefinition) => void;
   onAnimationStart?: (definition: AnimationDefinition) => void;
   onUpdate?: (latest: Record<string, unknown>) => void;
-  style?: JSX.CSSProperties | Record<string, unknown>;
   transition?: Transition;
   variants?: VariantMap<TCustom>;
+}
+
+export interface MotionProps<TCustom = unknown>
+  extends MotionOptions<TCustom>, Omit<ComponentProps<"div">, MotionPropKeys> {
+  style?: JSX.CSSProperties | Record<string, unknown>;
   ref?: JSX.Ref<unknown>;
   children?: SolidElement;
 }

@@ -3,7 +3,8 @@ import { type JSX } from "@solidjs/web";
 import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AnimatePresence, motion } from "../src";
+import { AnimatePresence, createMotion, motion } from "../src";
+import { buildInitialStyle } from "../src/initial";
 
 describe("motion", () => {
   afterEach(() => document.body.replaceChildren());
@@ -19,6 +20,55 @@ describe("motion", () => {
     expect(element).toBeTruthy();
     expect(element.dataset.x).toBe("1");
     expect(element.textContent).toBe("hello");
+  });
+
+  it("paints exactly the initial style the server would have emitted", () => {
+    const target = {
+      opacity: 0,
+      x: 10,
+      scale: 0.9,
+      "--tint": "red",
+      transitionEnd: { rotate: 45 },
+    };
+    const { container } = render(() => <motion.div initial={target} />);
+    const element = container.querySelector("div") as HTMLElement;
+
+    // The server has no element, so the two paths are separate code. Them
+    // disagreeing is a hydration flash, and they have disagreed before: the
+    // raw-value path used to drop the `transitionEnd` the style path kept.
+    for (const [key, value] of Object.entries(buildInitialStyle(target))) {
+      const painted = key.startsWith("--")
+        ? element.style.getPropertyValue(key)
+        : element.style[key as "opacity"];
+      expect(String(painted)).toBe(String(value));
+    }
+    expect(element.style.transform).toBe(
+      "translateX(10px) scale(0.9) rotate(45deg)",
+    );
+  });
+
+  it("renders a keyframe array at the value the element is born with", () => {
+    // A CSS builder has no reading of an array: handed `[0, 100]` it emitted
+    // `transform: none` and an opacity of the literal string "0,1", and the
+    // server sent that markup before the animation corrected it a frame later.
+    const { container } = render(() => (
+      <motion.div initial={{ x: [40, 100], opacity: [0, 1] }} />
+    ));
+    const entering = container.querySelector("div") as HTMLElement;
+    expect(entering.style.opacity).toBe("0");
+    expect(entering.style.transform).toBe("translateX(40px)");
+  });
+
+  it("renders the last keyframe when the entrance is blocked", () => {
+    // `initial={false}` means the element is born where the animation it is
+    // not playing would have ended, so the far end of the sequence is what
+    // describes it.
+    const { container } = render(() => (
+      <motion.div initial={false} animate={{ x: [40, 100], opacity: [0, 1] }} />
+    ));
+    const settled = container.querySelector("div") as HTMLElement;
+    expect(settled.style.opacity).toBe("1");
+    expect(settled.style.transform).toBe("translateX(100px)");
   });
 
   it("renders initial opacity and transform values as inline style", () => {
@@ -128,6 +178,74 @@ describe("AnimatePresence", () => {
 
     const element = container.querySelector("div") as HTMLElement;
     expect(element.style.opacity).not.toBe("0");
+  });
+
+  it("reports duplicate keys without taking the reactive system down", () => {
+    const reported = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    const { container } = render(() => (
+      <AnimatePresence
+        each={[{ id: "same" }, { id: "same" }]}
+        getKey={(item) => item.id}
+      >
+        {(item) => <motion.div data-id={item().id} />}
+      </AnimatePresence>
+    ));
+
+    expect(reported).toHaveBeenCalled();
+    // One row per distinct key, and the page still works.
+    expect(container.querySelectorAll('[data-id="same"]')).toHaveLength(1);
+    reported.mockRestore();
+  });
+
+  it("keeps a surviving row's data current without recreating it", async () => {
+    const [items, setItems] = createSignal([{ id: "one", label: "first" }]);
+    const { container } = render(() => (
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => <motion.div data-id={item().id}>{item().label}</motion.div>}
+      </AnimatePresence>
+    ));
+
+    const element = container.querySelector('[data-id="one"]') as HTMLElement;
+    setItems([{ id: "one", label: "second" }]);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(element.textContent).toBe("second");
+    // Same node: new data must not cost a remount.
+    expect(container.querySelector('[data-id="one"]')).toBe(element);
+  });
+
+  it("holds an exiting row at its old position instead of moving it", async () => {
+    const [items, setItems] = createSignal([
+      { id: "a" },
+      { id: "b" },
+      { id: "c" },
+    ]);
+    const { container } = render(() => (
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <motion.div
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            data-id={item().id}
+          />
+        )}
+      </AnimatePresence>
+    ));
+    const order = () =>
+      [...container.querySelectorAll("[data-id]")].map((node) =>
+        node.getAttribute("data-id"),
+      );
+
+    // Drop the middle row. While it animates out it must stay in the middle,
+    // not slide to the end of the list.
+    setItems([{ id: "a" }, { id: "c" }]);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(order()).toEqual(["a", "b", "c"]);
   });
 
   it("removes an item immediately when no exit target is defined", async () => {
@@ -282,6 +400,75 @@ describe("value-level diffing", () => {
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(readTranslateX(element)).toBe(0);
   });
+
+  it("keeps a keyframe sequence running through an unrelated value change", async () => {
+    const [x, setX] = createSignal(0);
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 0, x: 0 }}
+        animate={{ opacity: [0, 1], x: x() }}
+        transition={{ duration: 0.4, ease: "linear" }}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    const midpoint = Number(element.style.opacity);
+    expect(midpoint).toBeGreaterThan(0.3);
+
+    // Reading `x()` inside the target rebuilds the whole object, so an equal
+    // but freshly allocated `[0, 1]` arrives on this pass. Compared by
+    // identity it looks like a new target and the sequence restarts from its
+    // first keyframe, which is what per-value diffing exists to prevent.
+    setX(50);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(Number(element.style.opacity)).toBeGreaterThan(midpoint);
+  });
+});
+
+describe("createMotion", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("animates an element the caller renders, initial style included", async () => {
+    const { container } = render(() => {
+      const anim = createMotion(() => ({
+        initial: { opacity: 0, x: 0 },
+        animate: { opacity: 1, x: 100 },
+        transition: { duration: 0.1 },
+      }));
+      // A literal element, not a Dynamic: `class` stays a compiled setter.
+      return <span class="leaf" style={anim.style} ref={anim.ref} />;
+    });
+
+    const element = container.querySelector("span.leaf") as HTMLElement;
+    expect(element.style.opacity).toBe("0");
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(element.style.opacity).toBe("1");
+    expect(readTranslateX(element)).toBe(100);
+  });
+
+  it("responds to a gesture without a component boundary", async () => {
+    const { container } = render(() => {
+      const anim = createMotion(() => ({
+        whileHover: { scale: 1.5 },
+        transition: { duration: 0.05 },
+      }));
+      return <span style={anim.style} ref={anim.ref} />;
+    });
+
+    const element = container.querySelector("span") as HTMLElement;
+    element.dispatchEvent(
+      new PointerEvent("pointerenter", {
+        pointerType: "mouse",
+        isPrimary: true,
+        bubbles: true,
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(readScale(element)).toBe(1.5);
+  });
 });
 
 function readTranslateX(element: HTMLElement): number {
@@ -418,5 +605,96 @@ describe("variant propagation", () => {
         .opacity;
     expect(opacityOf("inherits")).toBe("1");
     expect(opacityOf("overrides")).toBe("0");
+  });
+});
+
+describe("whileInView", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  /** jsdom has no IntersectionObserver, so the wiring is what gets tested. */
+  function stubObserver() {
+    const state: {
+      callback?: IntersectionObserverCallback;
+      options?: IntersectionObserverInit;
+      unobserved: Element[];
+    } = { unobserved: [] };
+
+    class StubObserver {
+      constructor(
+        callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
+        state.callback = callback;
+        state.options = options;
+      }
+      observe() {}
+      unobserve(element: Element) {
+        state.unobserved.push(element);
+      }
+      disconnect() {}
+    }
+
+    vi.stubGlobal("IntersectionObserver", StubObserver);
+    return {
+      state,
+      report: (target: Element, isIntersecting: boolean) =>
+        state.callback?.(
+          [{ target, isIntersecting } as IntersectionObserverEntry],
+          null as unknown as IntersectionObserver,
+        ),
+    };
+  }
+
+  it("follows the element in and out of view", async () => {
+    const observer = stubObserver();
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.05 }}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    observer.report(element, true);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(element.style.opacity).toBe("1");
+
+    observer.report(element, false);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(element.style.opacity).toBe("0");
+  });
+
+  it("stops observing after the first entry when once is set", async () => {
+    const observer = stubObserver();
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: "all" }}
+        transition={{ duration: 0.05 }}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // `viewport` configures the observer; it is not an attribute. Leaving it
+    // out of the forwarded set rendered `viewport="[object Object]"` into the
+    // markup, which the server emitted too.
+    expect(element.hasAttribute("viewport")).toBe(false);
+    expect(observer.state.options?.threshold).toBe(1);
+
+    observer.report(element, true);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(observer.state.unobserved).toContain(element);
+
+    // Leaving the viewport must not take it back: that is what `once` means.
+    observer.report(element, false);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(element.style.opacity).toBe("1");
   });
 });

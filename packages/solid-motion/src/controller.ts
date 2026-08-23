@@ -1,4 +1,8 @@
-import { frame, type AnimationPlaybackControlsWithThen } from "motion-dom";
+import {
+  frame,
+  type AnimationPlaybackControlsWithThen,
+  type ValueKeyframesDefinition,
+} from "motion-dom";
 
 import type { MergedTarget } from "./target";
 import type { AnimationDefinition, Transition } from "./types";
@@ -11,8 +15,6 @@ import { createValueStore, type ValueStore } from "./values";
  */
 export interface MotionPass {
   target: MergedTarget;
-  /** The target the element was rendered with, in raw (pre-CSS) units. */
-  initialValues: Record<string, string | number>;
   /** Used by values falling back after the layer that owned them went away. */
   fallbackTransition: Transition | undefined;
   /** Stagger offset contributed by a variant-controlling ancestor. */
@@ -34,7 +36,17 @@ export interface MotionController {
   dispose(): void;
 }
 
-export function createMotionController(): MotionController {
+export function createMotionController(
+  /**
+   * The target the element was rendered with, in raw (pre-CSS) units. Passed at
+   * construction rather than on a pass: it describes the element, not the
+   * animation, and the ref fires before the first pass is ever queued. Reaching
+   * it through the first pass meant the value store was built with nothing and
+   * fell back to reading the DOM, which round-trips a transform through the
+   * computed matrix and cannot tell `rotate: 450` from `rotate: 90`.
+   */
+  initialValues: Record<string, string | number>,
+): MotionController {
   let store: ValueStore | undefined;
   let queued:
     | { pass: MotionPass; onSettled?: (completed: boolean) => void }
@@ -47,7 +59,9 @@ export function createMotionController(): MotionController {
    * actually changed. Seeded from the initial target, because that is what the
    * element was rendered carrying.
    */
-  let applied = new Map<string, string | number>();
+  let applied = new Map<string, ValueKeyframesDefinition>(
+    Object.entries(initialValues),
+  );
 
   /**
    * Identifies the pass allowed to settle. A cancelled motion animation's
@@ -90,7 +104,7 @@ export function createMotionController(): MotionController {
       store.observe((latest) => onUpdate?.(latest));
     }
 
-    const work = planWork(pass, applied, store);
+    const work = planWork(pass, applied, store, initialValues);
     applied = work.applied;
 
     const { transitionEnd } = pass.target;
@@ -155,10 +169,7 @@ export function createMotionController(): MotionController {
 
   return {
     mount(element) {
-      const initialValues = queued?.pass.initialValues ?? {};
       store = createValueStore(element, initialValues);
-      applied = new Map(Object.entries(initialValues));
-
       if (!queued) return;
 
       const { pass, onSettled } = queued;
@@ -204,7 +215,7 @@ function withDelay(
 
 interface ValueChange {
   key: string;
-  value: string | number;
+  value: ValueKeyframesDefinition;
   transition: Transition | undefined;
 }
 
@@ -223,28 +234,51 @@ interface ValueChange {
  */
 function planWork(
   pass: MotionPass,
-  applied: Map<string, string | number>,
+  applied: Map<string, ValueKeyframesDefinition>,
   store: ValueStore,
-): { changes: ValueChange[]; applied: Map<string, string | number> } {
+  initialValues: Record<string, string | number>,
+): { changes: ValueChange[]; applied: Map<string, ValueKeyframesDefinition> } {
   const changes: ValueChange[] = [];
-  const next = new Map<string, string | number>();
+  const next = new Map<string, ValueKeyframesDefinition>();
 
   for (const [key, entry] of pass.target.entries) {
     next.set(key, entry.value);
-    if (Object.is(applied.get(key), entry.value)) continue;
+    if (isSameTarget(applied.get(key), entry.value)) continue;
     changes.push({ key, value: entry.value, transition: entry.transition });
   }
 
   for (const key of applied.keys()) {
     if (next.has(key)) continue;
 
-    const base = store.baseValue(key) ?? pass.initialValues[key];
+    const base = store.baseValue(key) ?? initialValues[key];
     if (base === undefined) continue;
 
     next.set(key, base);
-    if (Object.is(applied.get(key), base)) continue;
+    if (isSameTarget(applied.get(key), base)) continue;
     changes.push({ key, value: base, transition: pass.fallbackTransition });
   }
 
   return { changes, applied: next };
+}
+
+/**
+ * A keyframe array is compared by contents, never by identity.
+ *
+ * `animate={{ opacity: [0, 1], x: position() }}` rebuilds the whole object every
+ * time `position()` changes, so an equal-but-fresh array arrives on each pass.
+ * Comparing those by identity restarts the opacity sequence from its first
+ * keyframe on every unrelated change, which is the exact defect per-value
+ * diffing exists to prevent. One shallow pass, only ever over a keyframe list.
+ */
+function isSameTarget(
+  current: ValueKeyframesDefinition | undefined,
+  next: ValueKeyframesDefinition,
+): boolean {
+  if (Object.is(current, next)) return true;
+  if (!Array.isArray(current) || !Array.isArray(next)) return false;
+
+  return (
+    current.length === next.length &&
+    current.every((value, index) => Object.is(value, next[index]))
+  );
 }
