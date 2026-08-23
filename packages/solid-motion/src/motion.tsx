@@ -43,8 +43,10 @@ type MotionHost =
  * only a component can render them inside a provider.
  */
 function createMotionComponent<TProps extends object>(host: MotionHost) {
+  const tag = typeof host === "string" ? host : undefined;
+
   return (props: TProps & MotionProps): JSX.Element => {
-    const motion = createMotion(() => props);
+    const motion = createMotion(() => props, tag);
     const forwarded = omit(props, ...motionPropKeys);
     // Motion-driven entries are bound to the element already, so the DOM has no
     // use for them. Nothing observable goes wrong if they slip through, which
@@ -67,6 +69,7 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
       <DynamicComponent
         component={host}
         {...forwarded}
+        {...motion.attrs}
         style={style()}
         ref={[motion.ref, props.ref]}
       />

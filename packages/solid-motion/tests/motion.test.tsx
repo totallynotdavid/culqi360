@@ -12,7 +12,7 @@ import {
   MotionConfig,
   motion,
 } from "../src";
-import { buildInitialStyle } from "../src/initial";
+import { buildInitialRender } from "../src/initial";
 
 describe("motion", () => {
   afterEach(() => document.body.replaceChildren());
@@ -49,7 +49,8 @@ describe("motion", () => {
     // The server has no element, so the two paths are separate code. Them
     // disagreeing is a hydration flash, and they have disagreed before: the
     // raw-value path used to drop the `transitionEnd` the style path kept.
-    for (const [key, value] of Object.entries(buildInitialStyle(target))) {
+    const painted = buildInitialRender(target, "div");
+    for (const [key, value] of Object.entries(painted.style)) {
       expect(String(element.style.getPropertyValue(key))).toBe(String(value));
     }
     expect(element.style.transform).toBe(
@@ -1035,5 +1036,169 @@ describe("whileInView", () => {
     observer.report(element, false);
     flush();
     expect(inView()).toBe(false);
+  });
+
+  it("writes an svg child's geometry as attributes, never as style", async () => {
+    // `x1` is not a CSS property in any browser, so the whole SVG path was
+    // inert: the initial target painted nothing and the animation wrote a
+    // style declaration the renderer ignored.
+    const [wide, setWide] = createSignal(false);
+
+    const { container } = render(() => (
+      <svg viewBox="0 0 100 100">
+        <motion.line
+          initial={{ x1: 0, x2: 0 }}
+          animate={{ x2: wide() ? 100 : 0 }}
+          transition={{ duration: 0.3 }}
+        />
+      </svg>
+    ));
+
+    const line = container.querySelector("line") as SVGLineElement;
+    expect(line.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(line.getAttribute("x1")).toBe("0");
+    expect(line.getAttribute("style")).toBe(null);
+
+    setWide(true);
+    flush();
+
+    // Sampled mid-flight, not at the end: an implementation that jumped
+    // straight to the target would satisfy an end-state assertion.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const midway = Number(line.getAttribute("x2"));
+    expect(midway).toBeGreaterThan(0);
+    expect(midway).toBeLessThan(100);
+    expect(line.getAttribute("style")).toBe(null);
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(line.getAttribute("x2")).toBe("100");
+  });
+
+  it("draws a path on by animating its dash pair", async () => {
+    const { container } = render(() => (
+      <svg viewBox="0 0 100 100">
+        <motion.path
+          d="M0 0 L100 100"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+      </svg>
+    ));
+
+    const path = container.querySelector("path") as SVGPathElement;
+    // `pathLength="1"` normalises the path so the dash pair is a fraction, and
+    // the element has to be born undrawn or it flashes complete.
+    expect(path.getAttribute("pathLength")).toBe("1");
+    expect(path.getAttribute("stroke-dasharray")).toBe("0 1");
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(path.getAttribute("stroke-dasharray")).toBe("1 0");
+  });
+
+  it("holds children back until the parent is done, with beforeChildren", async () => {
+    const variants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+    const [shown, setShown] = createSignal(false);
+
+    const { container } = render(() => (
+      <motion.div
+        variants={variants}
+        initial="hidden"
+        animate={shown() ? "visible" : "hidden"}
+        transition={{ duration: 0.2, when: "beforeChildren" }}
+      >
+        <motion.div variants={variants} transition={{ duration: 0.2 }} />
+      </motion.div>
+    ));
+
+    const [parent, child] = [
+      ...container.querySelectorAll("div"),
+    ] as HTMLElement[];
+    expect(parent.style.opacity).toBe("0");
+    expect(child.style.opacity).toBe("0");
+
+    setShown(true);
+    flush();
+
+    // The parent is underway and the child has not started. Asserting the end
+    // state would pass either way, since both arrive eventually.
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(Number(parent.style.opacity)).toBeGreaterThan(0.2);
+    expect(child.style.opacity).toBe("0");
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(parent.style.opacity).toBe("1");
+    expect(child.style.opacity).toBe("1");
+  });
+
+  it("holds the parent back until its children are done, with afterChildren", async () => {
+    const variants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+    const [shown, setShown] = createSignal(true);
+
+    const { container } = render(() => (
+      <motion.div
+        variants={variants}
+        initial="visible"
+        animate={shown() ? "visible" : "hidden"}
+        transition={{ duration: 0.2, when: "afterChildren" }}
+      >
+        <motion.div variants={variants} transition={{ duration: 0.2 }} />
+      </motion.div>
+    ));
+
+    const [parent, child] = [
+      ...container.querySelectorAll("div"),
+    ] as HTMLElement[];
+    expect(parent.style.opacity).toBe("1");
+
+    setShown(false);
+    flush();
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(Number(child.style.opacity)).toBeLessThan(0.8);
+    expect(parent.style.opacity).toBe("1");
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(parent.style.opacity).toBe("0");
+    expect(child.style.opacity).toBe("0");
+  });
+
+  it("keeps a sequenced exit inside its presence boundary until it is done", async () => {
+    // The gate lives inside `run`, so a pass waiting its turn is still the
+    // current pass and still owns the boundary's hold. Anything that gated
+    // *before* calling `run` would let the count reach zero mid-exit and the
+    // subtree would vanish before it animated.
+    const variants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+    const [shown, setShown] = createSignal(true);
+
+    const { container } = render(() => (
+      <AnimatePresence when={shown()}>
+        {() => (
+          <motion.div
+            variants={variants}
+            initial="visible"
+            animate="visible"
+            exit="hidden"
+            transition={{ duration: 0.2, when: "beforeChildren" }}
+          >
+            <motion.div variants={variants} transition={{ duration: 0.2 }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    ));
+
+    setShown(false);
+    flush();
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const [parent, child] = [
+      ...container.querySelectorAll("div"),
+    ] as HTMLElement[];
+    expect(container.querySelectorAll("div").length).toBe(2);
+    expect(Number(parent.style.opacity)).toBeLessThan(0.9);
+    expect(child.style.opacity).toBe("1");
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(container.querySelectorAll("div").length).toBe(0);
   });
 });

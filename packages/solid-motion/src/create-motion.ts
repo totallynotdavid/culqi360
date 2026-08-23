@@ -9,7 +9,7 @@ import {
 import { useMotionConfig } from "./config";
 import { createMotionController, type MotionPass } from "./controller";
 import { gestureNames, watchGestures } from "./gestures";
-import { buildInitialStyle, toInitialValues } from "./initial";
+import { buildInitialRender, toInitialValues } from "./initial";
 import { readStyleValues } from "./motion-values";
 import { usePresence } from "./presence";
 import { useReducedMotion } from "./reduced-motion";
@@ -18,6 +18,7 @@ import { mergeLayers, withoutMovement } from "./target";
 import type { MotionOptions, TargetAndTransition } from "./types";
 import {
   createVariantScope,
+  sequencePass,
   useVariants,
   type VariantLayer,
   type VariantScope,
@@ -36,6 +37,12 @@ export interface MotionHandle {
    * motion target has to win, or the first frame paints the wrong picture.
    */
   style: Record<string, string | number>;
+  /**
+   * The attributes it must be born carrying, for the same reason. Always empty
+   * unless the element is an SVG child, where geometry like `x1` and `r` is an
+   * attribute and setting it as style does nothing at all.
+   */
+  attrs: Record<string, string | number>;
   ref: (element: HTMLElement | SVGElement) => void;
   /**
    * The variant scope this element offers its descendants, or `null` when it
@@ -65,6 +72,12 @@ export interface MotionHandle {
  */
 export function createMotion<TCustom = unknown>(
   options: () => MotionOptions<TCustom>,
+  /**
+   * The tag being rendered, when the caller knows it. It only decides whether
+   * the initial target is painted as style or as attributes; everything after
+   * the first frame reads the element itself.
+   */
+  tag?: string,
 ): MotionHandle {
   const prefersReducedMotion = useReducedMotion();
   const config = useMotionConfig();
@@ -142,6 +155,10 @@ export function createMotion<TCustom = unknown>(
     ),
   );
 
+  // Built before the pass effect, which reads it: an element that orchestrates
+  // its children has to be able to make them wait on its own pass.
+  const scope = createVariantScope(options, custom, () => merged().transition);
+
   createEffect(
     () => (inherited ? element() : undefined),
     (node) => (node ? inherited?.register(node) : undefined),
@@ -173,12 +190,18 @@ export function createMotion<TCustom = unknown>(
       };
     },
     (next) => {
+      // One per pass, and the controller waits on it from inside `run`, so a
+      // pass held back for `when` is still the current pass: it supersedes what
+      // came before and is itself superseded normally.
+      const sequence = sequencePass(inherited, scope);
+
       const pass: MotionPass = {
         target: next.target,
         delay: next.delay,
         skipAnimations: next.skipAnimations,
         fallbackTransition: next.fallbackTransition,
         definition: next.definition,
+        sequence: sequence?.begin,
         onAnimationStart: next.onAnimationStart,
         onAnimationComplete: next.onAnimationComplete,
         onUpdate: next.onUpdate,
@@ -187,7 +210,7 @@ export function createMotion<TCustom = unknown>(
       if (next.present) {
         // Superseding an exit pass releases the hold that pass was carrying, so
         // returning to the screen needs no bookkeeping of its own.
-        controller.run(pass);
+        controller.run(pass, () => sequence?.settled());
         return;
       }
 
@@ -199,20 +222,29 @@ export function createMotion<TCustom = unknown>(
       // Taking the hold before `run` is what keeps the count from touching zero
       // between two passes of the same exit.
       const release = presence?.hold();
-      controller.run(pass, () => release?.());
+      controller.run(pass, () => {
+        release?.();
+        sequence?.settled();
+      });
     },
   );
 
+  // Bound values are painted here and left out of the controller's baseline:
+  // the caller owns where they sit, so a pass that stops naming one must not
+  // drag it back to whatever it held at mount.
+  const painted = buildInitialRender(
+    paintTarget(bound.painted, initialTarget),
+    tag,
+  );
+
   return {
-    // Bound values are painted here and left out of the controller's baseline:
-    // the caller owns where they sit, so a pass that stops naming one must not
-    // drag it back to whatever it held at mount.
-    style: buildInitialStyle(paintTarget(bound.painted, initialTarget)),
+    style: painted.style,
+    attrs: painted.attrs,
     ref: (node) => {
       controller.mount(node);
       setElement(node);
     },
-    scope: createVariantScope(options, custom, () => merged().transition),
+    scope,
   };
 }
 

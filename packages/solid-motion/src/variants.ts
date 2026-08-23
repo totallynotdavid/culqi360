@@ -10,6 +10,8 @@ export interface Orchestration {
   delayChildren: number;
   staggerChildren: number;
   staggerDirection: number;
+  /** Which side of the family animates first, or `false` for all at once. */
+  when: "beforeChildren" | "afterChildren" | false;
 }
 
 /**
@@ -29,6 +31,25 @@ export interface VariantScope {
   custom: () => unknown;
   register: (element: Element) => () => void;
   delayFor: (element: Element) => number;
+  /** Whose pass waits for whose, when the variant asks for an order. */
+  sequencer: Sequencer;
+}
+
+/**
+ * One pass's place in the queue. `wait` is handed what would have started it and
+ * calls that when its turn comes; `done` reports the pass over, whether it
+ * finished or lost to a later one.
+ */
+export interface PassTurn {
+  wait: (begin: VoidFunction) => void;
+  done: () => void;
+}
+
+export interface Sequencer {
+  /** A turn for a descendant's pass. */
+  child: () => PassTurn;
+  /** A turn for this element's own pass. */
+  self: () => PassTurn;
 }
 
 export const VariantContext = createContext<VariantScope | null>(null);
@@ -61,6 +82,7 @@ function readOrchestration(transition: Transition | undefined): Orchestration {
     delayChildren: options?.delayChildren ?? 0,
     staggerChildren: options?.staggerChildren ?? 0,
     staggerDirection: options?.staggerDirection ?? 1,
+    when: options?.when ?? false,
   };
 }
 
@@ -109,6 +131,103 @@ function createChildRegistry(orchestration: () => Orchestration) {
   };
 }
 
+/**
+ * Orders a variant-controlling element's own pass against its descendants'.
+ *
+ * `when` is the one orchestration option that is not expressible as a delay,
+ * because a spring has no duration to offset by. Motion sequences promises
+ * instead, which it can do because it starts its children's animations itself:
+ * `animateVariant` walks a `variantChildren` set. Nothing here starts anyone
+ * else's animation, so both sides announce themselves to this object and it
+ * decides who waits.
+ *
+ * Announcing is unconditional; waiting is not. A child cannot know at the
+ * moment it starts whether its parent will later run an `afterChildren` pass
+ * that needs to count it, so the count is always kept and only ever read when
+ * the option asks for it.
+ */
+function createSequencer(orchestration: () => Orchestration) {
+  let selfRunning = false;
+  let childrenRunning = 0;
+  const waitingChildren: VoidFunction[] = [];
+  const waitingSelf: VoidFunction[] = [];
+
+  const release = (waiting: VoidFunction[]) => {
+    for (const begin of waiting.splice(0)) begin();
+  };
+
+  const turn = (
+    hold: (queued: VoidFunction) => boolean,
+    enter: VoidFunction,
+    leave: VoidFunction,
+  ): PassTurn => {
+    let started = false;
+
+    return {
+      wait(begin) {
+        // What gets queued is the whole of starting, not just `begin`: a pass
+        // released later has to count itself in exactly as one released now.
+        const run = () => {
+          started = true;
+          enter();
+          begin();
+        };
+
+        if (hold(run)) return;
+        run();
+      },
+      done() {
+        if (!started) return;
+        started = false;
+        leave();
+      },
+    };
+  };
+
+  return {
+    child: () =>
+      turn(
+        (queued) => {
+          if (!selfRunning || orchestration().when !== "beforeChildren") {
+            return false;
+          }
+          waitingChildren.push(queued);
+          return true;
+        },
+        () => (childrenRunning += 1),
+        () => {
+          childrenRunning -= 1;
+          if (childrenRunning === 0) release(waitingSelf);
+        },
+      ),
+
+    self: () =>
+      turn(
+        (queued) => {
+          if (orchestration().when !== "afterChildren") return false;
+
+          // Children run their own effects after this one, so the count is not
+          // final until the next microtask. That is the same reading the
+          // presence boundary takes when it decides an item has no exit to
+          // play, and for the same reason.
+          queueMicrotask(() => {
+            if (childrenRunning > 0) {
+              waitingSelf.push(queued);
+              return;
+            }
+            queued();
+          });
+          return true;
+        },
+        () => (selfRunning = true),
+        () => {
+          selfRunning = false;
+          release(waitingChildren);
+        },
+      ),
+  };
+}
+
 /** Every prop that can carry a variant label, in Motion's own vocabulary. */
 const variantLayers: readonly VariantLayer[] = [
   "initial",
@@ -137,7 +256,8 @@ export function createVariantScope(
   );
   if (!controls) return null;
 
-  const registry = createChildRegistry(() => readOrchestration(transition()));
+  const orchestration = () => readOrchestration(transition());
+  const registry = createChildRegistry(orchestration);
 
   return {
     label: (layer) => {
@@ -147,5 +267,39 @@ export function createVariantScope(
     custom,
     register: registry.register,
     delayFor: registry.delayFor,
+    sequencer: createSequencer(orchestration),
+  };
+}
+
+/**
+ * The turns one pass has to take before it may start, and the reporter that
+ * frees whoever is waiting on it. `undefined` when this element is neither
+ * inside a variant scope nor offering one, which is the common case.
+ */
+export interface PassSequence {
+  begin: (start: VoidFunction) => void;
+  settled: () => void;
+}
+
+export function sequencePass(
+  inherited: VariantScope | null,
+  own: VariantScope | null,
+): PassSequence | undefined {
+  const turns: PassTurn[] = [];
+  // As a child first: an element inside a `beforeChildren` parent has to be let
+  // through before its own children can be made to wait on it.
+  if (inherited) turns.push(inherited.sequencer.child());
+  if (own) turns.push(own.sequencer.self());
+  if (turns.length === 0) return undefined;
+
+  return {
+    begin: (start) =>
+      turns.reduceRight<VoidFunction>(
+        (next, pending) => () => pending.wait(next),
+        start,
+      )(),
+    settled: () => {
+      for (const pending of turns) pending.done();
+    },
   };
 }

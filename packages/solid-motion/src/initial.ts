@@ -1,14 +1,26 @@
 import {
   buildHTMLStyles,
+  buildSVGAttrs,
   camelToDash,
-  type HTMLRenderState,
+  isSVGTag,
   type ResolvedValues,
+  type SVGRenderState,
 } from "motion-dom";
 
+import { attributeName, isSvgTag } from "./svg";
 import type { TargetAndTransition } from "./types";
 
+/** What an element has to be born carrying for its first paint to be right. */
+export interface InitialRender {
+  style: Record<string, string | number>;
+  /** Always empty for an HTML element; SVG geometry is not style. */
+  attrs: Record<string, string | number>;
+}
+
+const EMPTY: InitialRender = { style: {}, attrs: {} };
+
 /**
- * Turns a target into the inline style an element is born with.
+ * Turns a target into the inline style and attributes an element is born with.
  *
  * Pure: no DOM, no element, no browser globals, so it produces byte-identical
  * output on the server and during the client's first render. That is what keeps
@@ -19,23 +31,35 @@ import type { TargetAndTransition } from "./types";
  * commute, so `{ scale, x }` and `{ x, scale }` must both serialise in
  * motion's canonical order or the element visibly jumps the moment the
  * animation engine takes over and writes the order it prefers.
+ *
+ * `tag` decides which builder runs. An SVG child takes its geometry as
+ * attributes, so `x1`, `r` and `pathLength` have to leave as attributes rather
+ * than as CSS the browser drops; `<svg>` itself is styled like any HTML box and
+ * only `viewBox` crosses over.
  */
-export function buildInitialStyle(
+export function buildInitialRender(
   target: TargetAndTransition | undefined,
-): Record<string, string | number> {
-  if (!target) return {};
+  tag: string | undefined,
+): InitialRender {
+  if (!target) return EMPTY;
 
   const { transition: _transition, transitionEnd, ...values } = target;
-  const state: HTMLRenderState = {
+  const state: SVGRenderState = {
     transform: {},
     transformOrigin: {},
     style: {},
     vars: {},
+    attrs: {},
   };
 
   // `transitionEnd` describes where the element lands, so on the initial pass
   // it is part of the starting picture rather than a follow-up write.
-  buildHTMLStyles(state, { ...values, ...transitionEnd } as ResolvedValues);
+  const latest = { ...values, ...transitionEnd } as ResolvedValues;
+  if (isSvgTag(tag)) {
+    buildSVGAttrs(state, latest, isSVGTag(tag));
+  } else {
+    buildHTMLStyles(state, latest);
+  }
 
   // Hyphenated, because this style is handed to a JSX `style` prop rather than
   // written through motion's renderer. Solid sets an object entry with
@@ -49,12 +73,17 @@ export function buildInitialStyle(
     style[camelToDash(key)] = value as string | number;
   }
 
+  const attrs: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(state.attrs)) {
+    attrs[attributeName(key)] = value as string | number;
+  }
+
   // Custom properties are already spelled the way CSS wants them.
-  return { ...style, ...state.vars } as Record<string, string | number>;
+  return { style: { ...style, ...state.vars }, attrs } as InitialRender;
 }
 
 /**
- * The same values `buildInitialStyle` renders, but raw rather than as CSS: an
+ * The same values `buildInitialRender` paints, but raw rather than as CSS: an
  * animation starting from `x` needs the number `20`, not the string `20px`.
  * `transitionEnd` is folded in for the same reason it is there, since on the
  * initial pass there is no transition for it to land after.

@@ -9,6 +9,7 @@ import {
   readTransformValue,
   renderHTML,
   styleEffect,
+  svgEffect,
   transformProps,
   type AnimationPlaybackControlsWithThen,
   type HTMLRenderState,
@@ -17,6 +18,8 @@ import {
   type ValueKeyframesDefinition,
   type VisualElement,
 } from "motion-dom";
+
+import { attributeName } from "./svg";
 
 /**
  * The animated properties of one element, one `MotionValue` each.
@@ -68,10 +71,17 @@ export function createValueStore(
   let observer: ((latest: Record<string, string | number>) => void) | undefined;
   const latest: Record<string, string | number> = {};
 
+  // `svgEffect` routes per key rather than per element: `opacity` and
+  // `transform` are style on an SVG node too, while `x1`, `r` and `viewBox` are
+  // attributes, and `pathLength` becomes the `stroke-dasharray` pair that makes
+  // a path draw itself. Setting any of the latter as style is inert, which is
+  // what SVG animation did here before.
+  const bindValue = isHTMLElement(element) ? styleEffect : svgEffect;
+
   const attach = (key: string, value: MotionValue, base: string | number) => {
     values.set(key, value);
     bases.set(key, base);
-    unbind.push(styleEffect(element, { [key]: value }));
+    unbind.push(bindValue(element, { [key]: value }));
     if (observer) subscribe(key, value);
   };
 
@@ -234,6 +244,15 @@ function readStartValue(
 
   if (transformProps.has(key)) {
     return readTransformValue(element as HTMLElement, key);
+  }
+
+  // The computed style has no reading of `x1` or `r` at all: it answers the
+  // empty string, so an animation from the element's own geometry would have
+  // started from zero and jumped. Attributes first on an SVG node, style after,
+  // since `fill` and `opacity` can be either.
+  if (!isHTMLElement(element)) {
+    const attribute = element.getAttribute(attributeName(key));
+    if (attribute !== null) return toNumberIfUnitless(attribute);
   }
 
   return toNumberIfUnitless(getComputedStyle(element, key) || 0);

@@ -30,6 +30,17 @@ export interface MotionPass {
    * `exit={{ ..., transition }}` is in play.
    */
   skipAnimations: boolean;
+  /**
+   * Holds the pass back until its turn, for `when` orchestration. It is handed
+   * the function that starts the pass and calls it whenever it likes, or never.
+   *
+   * Safe because it sits *inside* `run`: the pass is already the current one by
+   * the time it waits, so it supersedes whatever came before, owns the presence
+   * hold, and is itself released the moment a later pass arrives. A pass that
+   * loses while waiting simply never starts, since starting is generation
+   * guarded like everything else here.
+   */
+  sequence?: (begin: VoidFunction) => void;
   /** Handed back to lifecycle callbacks unchanged, for reporting only. */
   definition: AnimationDefinition;
   onAnimationStart?: (definition: AnimationDefinition) => void;
@@ -116,6 +127,21 @@ export function createMotionController(
       observing = true;
       store.observe((latest) => onUpdate?.(latest));
     }
+
+    if (!pass.sequence) {
+      begin(pass, current);
+      return;
+    }
+    pass.sequence(() => begin(pass, current));
+  };
+
+  /**
+   * The pass proper, once it is allowed to run. Everything before this point is
+   * bookkeeping that a waiting pass must have done already; everything from here
+   * changes what the element is, which a pass that lost must not.
+   */
+  const begin = (pass: MotionPass, current: number) => {
+    if (current !== generation || !store) return;
 
     const work = planWork(pass, applied, store, initialValues);
     applied = work.applied;

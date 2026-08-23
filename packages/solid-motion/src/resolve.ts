@@ -89,7 +89,7 @@ type KeyframeEdge = "first" | "last";
  * actually born carrying.
  *
  * This is the sole owner of that rule, so nothing downstream has to know
- * keyframe arrays exist: `buildInitialStyle` handed `{ x: [0, 100] }` produced
+ * keyframe arrays exist: `buildInitialRender` handed `{ x: [0, 100] }` produced
  * `transform: none` and an `opacity` of the literal string `0,1`, because a CSS
  * builder has no reading of an array. The server emitted that markup and the
  * client painted it, and then the animation corrected it a frame later.
