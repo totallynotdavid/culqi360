@@ -341,3 +341,82 @@ function readScale(element: HTMLElement): number {
   const match = /scale\(([\d.]+)\)/.exec(element.style.transform);
   return match ? Number(match[1]) : 1;
 }
+
+describe("variant propagation", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  const fade = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+
+  it("cascades the parent label to children and staggers them", async () => {
+    const [state, setState] = createSignal("hidden");
+    const { container } = render(() => (
+      <motion.div
+        animate={state()}
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.2 } },
+        }}
+      >
+        <motion.span
+          data-i="0"
+          variants={fade}
+          initial="hidden"
+          transition={{ duration: 0.05 }}
+        />
+        <motion.span
+          data-i="1"
+          variants={fade}
+          initial="hidden"
+          transition={{ duration: 0.05 }}
+        />
+        <motion.span
+          data-i="2"
+          variants={fade}
+          initial="hidden"
+          transition={{ duration: 0.05 }}
+        />
+      </motion.div>
+    ));
+    const opacityOf = (index: number) =>
+      (container.querySelector(`[data-i="${index}"]`) as HTMLElement).style
+        .opacity;
+
+    setState("visible");
+    flush();
+
+    // Halfway through the stagger the last child has not been released yet.
+    await new Promise((resolve) => setTimeout(resolve, 320));
+    expect(opacityOf(0)).toBe("1");
+    expect(opacityOf(2)).toBe("0");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(opacityOf(2)).toBe("1");
+  });
+
+  it("lets a child's own prop win over the inherited label", async () => {
+    const { container } = render(() => (
+      <motion.div animate="visible" variants={{ visible: {} }}>
+        <motion.span
+          data-i="inherits"
+          variants={fade}
+          initial="hidden"
+          transition={{ duration: 0.05 }}
+        />
+        <motion.span
+          data-i="overrides"
+          variants={fade}
+          initial="hidden"
+          animate="hidden"
+          transition={{ duration: 0.05 }}
+        />
+      </motion.div>
+    ));
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const opacityOf = (name: string) =>
+      (container.querySelector(`[data-i="${name}"]`) as HTMLElement).style
+        .opacity;
+    expect(opacityOf("inherits")).toBe("1");
+    expect(opacityOf("overrides")).toBe("0");
+  });
+});

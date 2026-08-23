@@ -22,6 +22,12 @@ export interface TargetEntry {
 export interface MergedTarget {
   entries: Map<string, TargetEntry>;
   transitionEnd: Record<string, string | number>;
+  /**
+   * The transition of the highest-priority active layer. Child orchestration is
+   * read from here, because `staggerChildren` belongs to whichever variant is
+   * currently driving the parent.
+   */
+  transition: Transition | undefined;
 }
 
 /**
@@ -44,12 +50,14 @@ export function mergeLayers(
 ): MergedTarget {
   const entries = new Map<string, TargetEntry>();
   const transitionEnd: Record<string, string | number> = {};
+  let winning = fallbackTransition;
 
   for (const layer of layers) {
     if (!layer.active || !layer.target) continue;
 
     const { transition, transitionEnd: end, ...values } = layer.target;
     const layerTransition = transition ?? fallbackTransition;
+    winning = layerTransition;
 
     for (const [key, value] of Object.entries(values)) {
       if (value === undefined || value === null) continue;
@@ -62,5 +70,5 @@ export function mergeLayers(
     if (end) Object.assign(transitionEnd, end);
   }
 
-  return { entries, transitionEnd };
+  return { entries, transitionEnd, transition: winning };
 }

@@ -20,12 +20,22 @@ import { useReducedMotion } from "./reduced-motion";
 import { resolveDefinition, resolveInitialDefinition } from "./resolve";
 import { mergeLayers, type MergedTarget } from "./target";
 import type {
+  AnimationDefinition,
   MotionComponent,
   MotionProps,
   MotionProxy,
   TargetAndTransition,
   Transition,
 } from "./types";
+import {
+  VariantContext,
+  createChildRegistry,
+  isVariantLabel,
+  readOrchestration,
+  useVariants,
+  type VariantLayer,
+  type VariantScope,
+} from "./variants";
 
 const motionPropKeys = [
   "animate",
@@ -59,7 +69,30 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     const [element, setElement] = createSignal<HTMLElement | SVGElement>();
     const gestures = watchGestures(props, element);
 
-    const custom = () => props.custom ?? presence?.custom();
+    const inherited = useVariants();
+    const custom = () =>
+      props.custom ?? inherited?.custom() ?? presence?.custom();
+
+    // A layer falls back to the ancestor's label only when this element says
+    // nothing about it, matching Motion. An inline target is never inherited:
+    // it means nothing to a child resolving against a different variants map.
+    const definitionFor = (layer: VariantLayer) =>
+      props[layer] !== undefined ? props[layer] : inherited?.label(layer);
+
+    // `initial={true}` is a flag, not a definition; only `initial` can carry it.
+    const resolveLayer = (layer: VariantLayer) => {
+      const definition = definitionFor(layer);
+      return resolveDefinition(
+        definition === true ? undefined : definition,
+        props.variants,
+        custom(),
+      );
+    };
+
+    const reportedDefinition = (layer: VariantLayer): AnimationDefinition => {
+      const definition = definitionFor(layer);
+      return definition === true ? undefined : definition;
+    };
 
     // The initial target is resolved exactly once. It describes the element the
     // browser is handed, so re-resolving it later would describe a paint that
@@ -67,8 +100,11 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     // element's own prop: it means "this subtree was already on screen".
     const initialTarget = untrack(() =>
       resolveInitialDefinition({
-        initial: presence?.initial() === false ? false : props.initial,
-        animate: props.animate,
+        initial:
+          presence?.initial() === false
+            ? false
+            : (definitionFor("initial") as MotionProps["initial"]),
+        animate: reportedDefinition("animate"),
         variants: props.variants,
         custom: custom(),
       }),
@@ -81,47 +117,63 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     );
     const forwarded = omit(props, ...motionPropKeys);
 
+    const fallbackTransition = createMemo(() =>
+      withConfig(
+        props.transition ?? config.transition,
+        config.skipAnimations ?? false,
+      ),
+    );
+
+    // `exit` sits on top of `animate` rather than replacing it, so a key
+    // `animate` owns and `exit` says nothing about keeps its animated value
+    // instead of falling back on the way out.
+    const merged = createMemo(() =>
+      mergeLayers(
+        [
+          { target: resolveLayer("animate"), active: true },
+          ...gestureNames.map((name) => ({
+            target: resolveLayer(name),
+            active: gestures[name](),
+          })),
+          {
+            target: resolveLayer("exit"),
+            active: presence ? !presence.isPresent() : false,
+          },
+        ],
+        fallbackTransition(),
+      ),
+    );
+
+    // Only an element naming variants provides a scope. A plain motion element
+    // in between stays transparent, so an ancestor's labels reach the
+    // descendants that can actually resolve them.
+    const scope = createVariantScope(props, custom, () => merged().transition);
+
+    createEffect(
+      () => (inherited ? element() : undefined),
+      (node) => (node ? inherited?.register(node) : undefined),
+    );
+
     createEffect(
       () => {
         const present = presence ? presence.isPresent() : true;
-        const fallbackTransition = withConfig(
-          props.transition ?? config.transition,
-          config.skipAnimations ?? false,
-        );
         const reducedMotion =
           config.reducedMotion === "always" ||
           (config.reducedMotion === "user" && prefersReducedMotion());
 
-        // `exit` sits on top of `animate` rather than replacing it, so a key
-        // `animate` owns and `exit` says nothing about keeps its animated value
-        // instead of falling back on the way out.
-        const target = mergeLayers(
-          [
-            {
-              target: resolveDefinition(
-                props.animate,
-                props.variants,
-                custom(),
-              ),
-              active: true,
-            },
-            ...gestureNames.map((name) => ({
-              target: resolveDefinition(props[name], props.variants, custom()),
-              active: gestures[name](),
-            })),
-            {
-              target: resolveDefinition(props.exit, props.variants, custom()),
-              active: !present,
-            },
-          ],
-          fallbackTransition,
-        );
+        const target = merged();
+        const node = element();
 
         return {
           present,
-          definition: present ? props.animate : props.exit,
+          definition: present
+            ? reportedDefinition("animate")
+            : reportedDefinition("exit"),
           target: reducedMotion ? withoutMovement(target) : target,
-          fallbackTransition,
+          fallbackTransition: fallbackTransition(),
+          // Read here so the delay tracks the ancestor's orchestration, and so
+          // a sibling entering or leaving restaggers the row.
+          delay: node && inherited ? inherited.delayFor(node) : 0,
           onAnimationStart: props.onAnimationStart,
           onAnimationComplete: props.onAnimationComplete,
           onUpdate: props.onUpdate,
@@ -131,6 +183,7 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
         const pass: MotionPass = {
           target: next.target,
           initialValues,
+          delay: next.delay,
           fallbackTransition: next.fallbackTransition,
           definition: next.definition,
           onAnimationStart: next.onAnimationStart,
@@ -160,7 +213,10 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     const DynamicComponent = Dynamic as unknown as (
       props: Record<string, unknown>,
     ) => JSX.Element;
-    return (
+    // Kept as a function on purpose. Evaluating the element before wrapping it
+    // would create the whole subtree outside the provider, and the descendants
+    // that need the variant scope are exactly the ones inside it.
+    const renderElement = () => (
       <DynamicComponent
         component={host}
         {...forwarded}
@@ -175,6 +231,46 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
         ]}
       />
     );
+
+    if (!scope) return renderElement();
+    return <VariantContext value={scope}>{renderElement()}</VariantContext>;
+  };
+}
+
+const variantLayers: readonly VariantLayer[] = [
+  "initial",
+  "animate",
+  "exit",
+  ...gestureNames,
+];
+
+/**
+ * The scope this element offers its descendants, or `null` when it has no
+ * labels to offer.
+ *
+ * A fresh scope rather than an extension of the ancestor's: Motion builds the
+ * context from a controlling node's own label-valued props, so a parent that
+ * names `animate` but not `whileHover` does not leak a grandparent's
+ * `whileHover` down. Whether an element controls variants is read once, the way
+ * Motion decides it at element creation.
+ */
+function createVariantScope(
+  props: MotionProps,
+  custom: () => unknown,
+  transition: () => Transition | undefined,
+): VariantScope | null {
+  const controls = untrack(() =>
+    variantLayers.some((layer) => isVariantLabel(props[layer])),
+  );
+  if (!controls) return null;
+
+  const registry = createChildRegistry(() => readOrchestration(transition()));
+
+  return {
+    label: (layer) => (isVariantLabel(props[layer]) ? props[layer] : undefined),
+    custom,
+    register: registry.register,
+    delayFor: registry.delayFor,
   };
 }
 
@@ -189,7 +285,11 @@ function withoutMovement(target: MergedTarget): MergedTarget {
     if (!positionalKeys.has(key)) continue;
     entries.set(key, { ...entry, transition: { type: false } as Transition });
   }
-  return { entries, transitionEnd: target.transitionEnd };
+  return {
+    entries,
+    transitionEnd: target.transitionEnd,
+    transition: target.transition,
+  };
 }
 
 function withConfig(

@@ -15,6 +15,8 @@ export interface MotionPass {
   initialValues: Record<string, string | number>;
   /** Used by values falling back after the layer that owned them went away. */
   fallbackTransition: Transition | undefined;
+  /** Stagger offset contributed by a variant-controlling ancestor. */
+  delay: number;
   /** Handed back to lifecycle callbacks unchanged, for reporting only. */
   definition: AnimationDefinition;
   onAnimationStart?: (definition: AnimationDefinition) => void;
@@ -130,7 +132,7 @@ export function createMotionController(): MotionController {
         const animation = store.animate(
           change.key,
           change.value,
-          change.transition,
+          withDelay(change.transition, pass.delay),
         );
         if (animation) animations.push(animation);
       }
@@ -184,6 +186,20 @@ export function createMotionController(): MotionController {
       store = undefined;
     },
   };
+}
+
+/**
+ * A stagger offset adds to whatever delay the transition already asked for,
+ * rather than replacing it, so a variant can stagger its children and still
+ * hold each of them back by its own delay.
+ */
+function withDelay(
+  transition: Transition | undefined,
+  delay: number,
+): Transition | undefined {
+  if (!delay) return transition;
+  const own = (transition as { delay?: number } | undefined)?.delay ?? 0;
+  return { ...transition, delay: own + delay } as Transition;
 }
 
 interface ValueChange {

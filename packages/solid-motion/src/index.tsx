@@ -4,12 +4,7 @@ export {
   usePresence,
   type AnimatePresenceProps,
 } from "./presence";
-export {
-  MotionConfig,
-  MotionConfigContext,
-  defaultMotionConfig,
-  useMotionConfig,
-} from "./config";
+export { MotionConfig, useMotionConfig } from "./config";
 export { useReducedMotion } from "./reduced-motion";
 export type {
   AnimationDefinition,
