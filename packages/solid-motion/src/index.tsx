@@ -1,5 +1,27 @@
-export * from "./components";
-export * from "./types";
-export { MotionState } from "./state";
-export { createStyles, createSVGStyles } from "./state/style";
-export { createVisualElement } from "./state/create-visual-element";
+export { motion } from "./motion";
+export {
+  AnimatePresence,
+  PresenceContext,
+  usePresenceContext,
+  usePresence,
+  type AnimatePresenceProps,
+} from "./presence";
+export {
+  MotionConfig,
+  MotionConfigContext,
+  defaultMotionConfig,
+  useMotionConfig,
+} from "./config";
+export { useReducedMotion } from "./reduced-motion";
+export type {
+  AnimationDefinition,
+  MotionComponent,
+  MotionConfigState,
+  MotionProps,
+  MotionProxy,
+  MotionTarget,
+  TargetAndTransition,
+  Transition,
+  VariantDefinition,
+  VariantMap,
+} from "./types";

@@ -1,4 +1,4 @@
-import { Motion } from "@crm/solid-motion";
+import { motion } from "@crm/solid-motion";
 import { Errored, Show, Loading } from "solid-js";
 
 import { HotkeyBoundary } from "../core/hotkeys/hotkey-boundary";
@@ -16,14 +16,14 @@ export function Router(props: { isMobile: boolean }) {
   return (
     <Container isMobile={props.isMobile}>
       <div class={styles.router}>
-        <Motion.div
+        <motion.div
           class={styles.topBar}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.075, delay: 0.1 }}
         >
           <TopBar isMobile={props.isMobile} />
-        </Motion.div>
+        </motion.div>
 
         <div class={styles.pageBody}>
           <Show when={currentEntry()} keyed>

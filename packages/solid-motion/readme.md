@@ -1,83 +1,90 @@
 # Solid Motion
 
-`@crm/solid-motion` provides SolidJS components backed by Motion's maintained
-DOM animation engine. Culqi360 consumes the package directly from TypeScript
-source, including during server rendering.
+`@crm/solid-motion` is a small Solid 2 animation layer backed by Motion's
+maintained DOM animation engine. It keeps the declarative API familiar while
+owning the lifecycle and presence behavior needed by Solid.
 
 ## API
 
-- `Motion` creates animated HTML and SVG elements.
-- `Presence` and `AnimatePresence` keep removed children mounted until their
-  exit animations finish.
+- `motion` creates animated HTML and SVG elements.
+- `AnimatePresence` keeps keyed, removed items mounted until their exit
+  animations finish.
+- `useReducedMotion` exposes the browser preference as a Solid accessor.
 - `MotionConfig` sets shared animation configuration for its descendants.
-- `MotionState` exposes the underlying animation state when lower-level control
-  is required.
 
 ## Usage
 
 ```tsx
-import { Show } from "solid-js";
+import { createSignal } from "solid-js";
+import { AnimatePresence, motion, useReducedMotion } from "@crm/solid-motion";
 
-import { Motion, Presence } from "@crm/solid-motion";
-
-<Motion.div
+<motion.div
   initial={{ opacity: 0 }}
   animate={{ opacity: 1 }}
   transition={{ duration: 0.2 }}
 >
   Fades in on mount
-</Motion.div>
+</motion.div>;
 
-<Presence>
-  <Show when={open()}>
-    <Motion.div
+const [items, setItems] = createSignal([{ id: "one" }]);
+
+<AnimatePresence each={items()} getKey={(item) => item.id}>
+  {(item) => (
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      Animates before unmounting
-    </Motion.div>
-  </Show>
-</Presence>
+      {item().id}
+    </motion.div>
+  )}
+</AnimatePresence>;
+
+const reducedMotion = useReducedMotion();
 ```
 
-Motion props are reactive. The package supports variants, transitions, exit
-animations, hover, press, focus, viewport gestures, and drag constraints.
-Initial values are rendered as inline styles during server rendering, including
+Motion props are reactive. The package supports target and variant definitions,
+transitions, initial values, exit animations, reduced motion, and the `sync` and
+`wait` presence modes. Initial values are rendered as inline styles, including
 transforms such as `y: 20`.
+
+`AnimatePresence` is intentionally controlled by an `each` collection. This
+gives Solid a stable key boundary and avoids trying to recover removed children
+from arbitrary JSX. Use `item()` inside the child function because the item is
+an accessor that stays current when an existing key receives new data.
+
+## Architecture
+
+The package has four deliberately small layers:
+
+- `motion.tsx` owns the Solid component lifecycle, prop forwarding, DOM refs,
+  and animation cancellation.
+- `resolve.ts` turns targets, variant names, arrays, and custom data into one
+  target before execution.
+- `styles.ts` owns the initial-style SSR path and target-to-CSS conversion.
+- `presence.tsx` owns keyed diffing, nested registration, and the `safeToRemove`
+  boundary used by exit animations.
+
+The `motion` dependency is used only for target execution. It does not own the
+Solid component tree, and the old framework-specific feature tree is not
+vendored into this package.
 
 ## Layout animations
 
-`layout` and `layoutId` register projection state and position elements, but
-FLIP layout animations do not run.
-
-Motion's projection engine needs an element snapshot before a DOM update and a
-measurement after it. Solid effects run after the DOM update, and an ancestor
-layout change does not rerun a child's effect. The projection engine therefore
-observes no usable position delta. Supporting layout animations requires a
-Solid-specific projection driver with a pre-commit measurement pass.
+Layout projection, gestures, drag constraints, and Motion's React-specific
+feature tree are deliberately outside this package. They can be added as
+Solid-owned features later without coupling the core lifecycle to a framework
+adapter copied from Motion React.
 
 ## Development
 
-The Culqi360 application compiles this package's `.tsx` source directly.
-TypeScript declarations are generated in `dist/` so consumers do not type-check
-the vendored engine source.
-
-Run from `packages/solid-motion`:
+The application compiles this package's `.tsx` source directly. Run from
+`packages/solid-motion`:
 
 ```sh
-bun run build:types
 bun run test
+bunx tsc --noEmit -p tsconfig.json
 ```
 
-`bun install` also regenerates declarations through the package's `prepare`
-script.
-
-## Attribution
-
-The framework-independent engine code under `src/state`, `src/features`,
-`src/events`, and the shared type and utility modules is derived from
-[Motion for Vue](https://github.com/motiondivision/motion-vue) and
-[Motion](https://github.com/motiondivision/motion). Both projects use the MIT
-license. Motion for Vue is Copyright Rick Huang, and Motion is Copyright Motion.
-The Solid component, context, and presence layers are original to this package.
+Motion is used as a dependency for DOM target execution. The Solid component,
+context, reduced-motion, and presence layers are owned by this package.

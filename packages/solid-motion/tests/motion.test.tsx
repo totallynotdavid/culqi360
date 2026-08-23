@@ -1,55 +1,145 @@
 import { render } from "@solidjs/testing-library";
-import { Show, createSignal } from "solid-js";
-import { afterEach, describe, expect, it } from "vitest";
+import { type JSX } from "@solidjs/web";
+import { createSignal } from "solid-js";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Motion, Presence, mountedStates } from "../src";
+import { AnimatePresence, motion } from "../src";
 
-describe("<Motion>", () => {
+describe("motion", () => {
   afterEach(() => document.body.replaceChildren());
 
-  it("renders the tag with pass-through attrs and children", () => {
+  it("renders an intrinsic element with pass-through attrs and children", () => {
     const { container } = render(() => (
-      <Motion.div class="card" data-x="1">
+      <motion.div class="card" data-x="1">
         hello
-      </Motion.div>
+      </motion.div>
     ));
-    const el = container.querySelector("div.card") as HTMLElement;
-    expect(el).toBeTruthy();
-    expect(el.getAttribute("data-x")).toBe("1");
-    expect(el.textContent).toBe("hello");
+
+    const element = container.querySelector("div.card") as HTMLElement;
+    expect(element).toBeTruthy();
+    expect(element.dataset.x).toBe("1");
+    expect(element.textContent).toBe("hello");
   });
 
-  it("applies the `initial` variant as inline style before animating", () => {
+  it("renders initial opacity and transform values as inline style", () => {
     const { container } = render(() => (
-      <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        x
-      </Motion.div>
+      <motion.div initial={{ opacity: 0, y: 20 }}>x</motion.div>
     ));
-    const el = container.querySelector("div") as HTMLElement;
-    expect(el.style.opacity).toBe("0");
+
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.opacity).toBe("0");
+    expect(element.style.transform).toContain("translateY(20px)");
   });
 
-  it("registers the mounted element in mountedStates", () => {
-    const { container } = render(() => <Motion.div>y</Motion.div>);
-    const el = container.querySelector("div") as HTMLElement;
-    expect(mountedStates.has(el)).toBe(true);
+  it("resolves named variants with custom data", () => {
+    const { container } = render(() => (
+      <motion.div
+        custom={20}
+        initial="hidden"
+        variants={{
+          hidden: (distance: number) => ({ y: distance, opacity: 0 }),
+        }}
+      />
+    ));
+
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.opacity).toBe("0");
+    expect(element.style.transform).toContain("translateY(20px)");
+  });
+
+  it("wraps a custom component with motion.create", () => {
+    function Badge(props: { children?: JSX.Element; class?: string }) {
+      return <span {...props} />;
+    }
+
+    const MotionBadge = motion.create(Badge);
+    const { container } = render(() => (
+      <MotionBadge class="badge" initial={{ opacity: 0 }}>
+        ready
+      </MotionBadge>
+    ));
+
+    const element = container.querySelector("span.badge") as HTMLElement;
+    expect(element.textContent).toBe("ready");
+    expect(element.style.opacity).toBe("0");
+  });
+
+  it("preserves callback refs in a nested Solid 2 ref tree", () => {
+    const firstRef = vi.fn();
+    const secondRef = vi.fn();
+
+    const { container } = render(() => (
+      <motion.div ref={[[firstRef], secondRef]}>ready</motion.div>
+    ));
+
+    const element = container.querySelector("div");
+    expect(firstRef).toHaveBeenCalledWith(element);
+    expect(secondRef).toHaveBeenCalledWith(element);
   });
 });
 
-describe("<Presence>", () => {
+describe("AnimatePresence", () => {
   afterEach(() => document.body.replaceChildren());
 
-  it("renders present children", () => {
-    const [shown] = createSignal(true);
+  it("keeps an exiting child mounted until its animation settles", async () => {
+    const onStart = vi.fn<() => void>();
+    const onComplete = vi.fn<() => void>();
+    const [items, setItems] = createSignal([{ id: "one" }]);
     const { container } = render(() => (
-      <Presence>
-        <Show when={shown()}>
-          <Motion.div data-probe="p" exit={{ opacity: 0 }}>
-            p
-          </Motion.div>
-        </Show>
-      </Presence>
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <motion.div
+            exit={{ opacity: 0 }}
+            onAnimationStart={onStart}
+            onAnimationComplete={onComplete}
+            transition={{ duration: 0.1 }}
+            data-id={item().id}
+          />
+        )}
+      </AnimatePresence>
     ));
-    expect(container.querySelector('[data-probe="p"]')).toBeTruthy();
+
+    expect(container.querySelector('[data-id="one"]')).toBeTruthy();
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onStart).toHaveBeenCalled();
+    expect(container.querySelector('[data-id="one"]')).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(container.querySelector('[data-id="one"]')).toBeNull();
+    expect(onComplete).toHaveBeenCalled();
+  });
+
+  it("passes initial=false from the boundary to its first child", () => {
+    const { container } = render(() => (
+      <AnimatePresence
+        each={[{ id: "one" }]}
+        getKey={(item) => item.id}
+        initial={false}
+      >
+        {() => (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0 }}
+          />
+        )}
+      </AnimatePresence>
+    ));
+
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.opacity).not.toBe("0");
+  });
+
+  it("removes an item immediately when no exit target is defined", async () => {
+    const [items, setItems] = createSignal([{ id: "one" }]);
+    const { container } = render(() => (
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => <motion.div data-id={item().id} />}
+      </AnimatePresence>
+    ));
+
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 });

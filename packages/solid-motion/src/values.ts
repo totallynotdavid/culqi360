@@ -1,0 +1,154 @@
+import {
+  MotionValue,
+  animateMotionValue,
+  getComputedStyle,
+  readTransformValue,
+  styleEffect,
+  transformProps,
+  type AnimationPlaybackControlsWithThen,
+  type Transition,
+} from "motion-dom";
+
+/**
+ * The animated properties of one element, one `MotionValue` each.
+ *
+ * Everything below the value boundary belongs to motion-dom: `styleEffect`
+ * composes the shared `transform` string in motion's canonical order, applies
+ * per-property unit defaults, routes custom properties through `setProperty`,
+ * and sets `transform-box` on SVG. This module only decides which values exist
+ * and what they are told to do.
+ */
+export interface ValueStore {
+  /**
+   * Animates one property towards `keyframe`, creating and binding the value
+   * on first use. Returns the running animation, or `undefined` when motion
+   * resolved the target instantly and never created one.
+   */
+  animate(
+    key: string,
+    keyframe: string | number,
+    transition: Transition | undefined,
+  ): AnimationPlaybackControlsWithThen | undefined;
+  /** Sets a property without animating, used for `transitionEnd`. */
+  set(key: string, value: string | number): void;
+  /** Subscribes to every animated property's per-frame value. */
+  observe(listener: (latest: Record<string, string | number>) => void): void;
+  /** Stops in-flight animations without unbinding, used between targets. */
+  stop(): void;
+  dispose(): void;
+}
+
+export function createValueStore(
+  element: HTMLElement | SVGElement,
+  /** Where a property starts when the element was rendered carrying it. */
+  initialValues: Record<string, string | number>,
+): ValueStore {
+  const values = new Map<string, MotionValue>();
+  const unbind: VoidFunction[] = [];
+  let observer: ((latest: Record<string, string | number>) => void) | undefined;
+  const latest: Record<string, string | number> = {};
+
+  const ensure = (key: string): MotionValue => {
+    const existing = values.get(key);
+    if (existing) return existing;
+
+    // Created empty, then written. `MotionValueState` only repaints the shared
+    // transform composite when one of its inputs actually changes, so a value
+    // constructed at its starting number would leave `transform` stale until
+    // something else moved. Constructing empty makes the first write a change.
+    const value = new MotionValue<string | number | undefined>(undefined);
+    values.set(key, value as MotionValue);
+    unbind.push(styleEffect(element, { [key]: value as MotionValue }));
+
+    value.jump(readStartValue(element, key, initialValues), false);
+
+    if (observer) subscribe(key, value as MotionValue);
+
+    return value as MotionValue;
+  };
+
+  const subscribe = (key: string, value: MotionValue) => {
+    unbind.push(
+      value.on("change", (current: string | number) => {
+        latest[key] = current;
+        observer?.(latest);
+      }),
+    );
+  };
+
+  return {
+    animate(key, keyframe, transition) {
+      const value = ensure(key);
+
+      // `animateMotionValue` is named on purpose. Motion picks its default
+      // transition from the property name (transforms spring, scale springs
+      // critically damped, everything else eases), and it is what reads
+      // per-property overrides out of `transition`. The `animateSingleValue`
+      // helper passes an empty name and silently loses both.
+      value.start(animateMotionValue(key, value, keyframe, transition));
+
+      return value.animation;
+    },
+
+    set(key, value) {
+      ensure(key).jump(value);
+    },
+
+    observe(listener) {
+      observer = listener;
+      for (const [key, value] of values) subscribe(key, value);
+    },
+
+    stop() {
+      for (const value of values.values()) value.stop();
+    },
+
+    dispose() {
+      for (const cancel of unbind) cancel();
+      for (const value of values.values()) value.destroy();
+      values.clear();
+      unbind.length = 0;
+    },
+  };
+}
+
+/**
+ * Where an animation starts when the target names a property the element was
+ * not rendered with. Transforms have to come out of the computed matrix rather
+ * than the computed style, which reports `transform` as `matrix(...)` and has
+ * no notion of an `x` or a `rotate`.
+ */
+function readStartValue(
+  element: HTMLElement | SVGElement,
+  key: string,
+  initialValues: Record<string, string | number>,
+): string | number {
+  const rendered = initialValues[key];
+  if (rendered !== undefined) return rendered;
+
+  if (transformProps.has(key)) {
+    return readTransformValue(element as HTMLElement, key);
+  }
+
+  return toNumberIfUnitless(getComputedStyle(element, key) || 0);
+}
+
+/**
+ * `getComputedStyle` reports even unitless properties as strings, and motion
+ * refuses to interpolate the string `"1"` towards the number `0` because a bare
+ * string carries no value type it can mix. Motion's own reader gets away with
+ * it by handing the resolver a `VisualElement` that re-types the keyframe from
+ * the DOM; we have no visual element, so the typing happens here instead.
+ *
+ * Anything carrying a unit or a colour stays a string, where motion's value
+ * types do recognise it.
+ */
+function toNumberIfUnitless(value: string | number): string | number {
+  if (typeof value === "number") return value;
+
+  const trimmed = value.trim();
+  if (trimmed === "") return 0;
+
+  const asNumber = Number(trimmed);
+  return Number.isNaN(asNumber) ? trimmed : asNumber;
+}
