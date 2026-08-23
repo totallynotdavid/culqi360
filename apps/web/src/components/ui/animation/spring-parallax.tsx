@@ -1,7 +1,6 @@
+import { motion, useReducedMotion, type Transition } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
-import { onSettled } from "solid-js";
-
-import { prefersReducedMotion } from "./animate";
+import { createEffect, createSignal } from "solid-js";
 
 interface SpringParallaxProps {
   children: JSX.Element;
@@ -13,99 +12,70 @@ interface SpringParallaxProps {
   mass?: number;
 }
 
-// Leave uses an underdamped spring so the element returns to center without a
-// CSS easing curve:
-// >>  x(t) = exp(-zeta * omega0 * t) * (A * sin(omegaD * t) + x0 * cos(omegaD * t))
+/** Follows the pointer instantly; springs back to centre once it leaves. */
+const TRACKING = { type: false } as const satisfies Transition;
+
+/**
+ * A few pixels of pointer parallax.
+ *
+ * `null` is the whole state machine: it means the pointer is gone, which is
+ * both where the element returns to and which transition carries it there.
+ * Tracking stays instant because the offset is already following a continuous
+ * input; only the return home is a physical motion.
+ */
 export function SpringParallax(props: SpringParallaxProps) {
-  let containerRef: HTMLDivElement | null = null;
-  let rafId: number | undefined;
+  const [pointer, setPointer] = createSignal<{ x: number; y: number } | null>(
+    null,
+  );
+  const prefersReducedMotion = useReducedMotion();
 
-  onSettled(() => {
-    // A rAF spring, not a WAAPI animation, so there is no duration to collapse:
-    // under reduced motion the element simply stays put.
-    if (typeof window === "undefined" || !containerRef) {
-      return;
-    }
-    if (prefersReducedMotion()) {
-      return;
-    }
-
-    const range = props.range ?? 2;
-    const stiffness = props.stiffness ?? 100;
-    const damping = props.damping ?? 10;
-    const mass = props.mass ?? 1;
-    const el = containerRef;
-
-    const omega0 = Math.sqrt(stiffness / mass); // undamped angular freq (rad/s)
-    const zeta = damping / (2 * Math.sqrt(stiffness * mass)); // damping ratio
-    const omegaD = omega0 * Math.sqrt(1 - zeta * zeta); // damped angular freq
-
-    let currentX = 0;
-    let currentY = 0;
-
-    const setTranslate = (x: number, y: number) => {
-      currentX = x;
-      currentY = y;
-      el.style.transform = `translate(${x.toFixed(3)}px, ${y.toFixed(3)}px)`;
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (rafId != null) {
-        cancelAnimationFrame(rafId);
-        rafId = undefined;
-      }
-      const x = (e.clientX / window.innerWidth - 0.5) * 2 * range;
-      const y = (e.clientY / window.innerHeight - 0.5) * 2 * range;
-      setTranslate(x, y);
-    };
-
-    const onMouseLeave = () => {
-      const x0 = currentX;
-      const y0 = currentY;
-      // Initial velocity is 0; tracking was instantaneous (direct set).
-      const Ax = (zeta * omega0 * x0) / omegaD;
-      const Ay = (zeta * omega0 * y0) / omegaD;
-      const startMs = performance.now();
-
-      const animate = (now: DOMHighResTimeStamp) => {
-        const t = (now - startMs) / 1000;
-        const envelope = Math.exp(-zeta * omega0 * t);
-        const sin = Math.sin(omegaD * t);
-        const cos = Math.cos(omegaD * t);
-
-        const x = envelope * (Ax * sin + x0 * cos);
-        const y = envelope * (Ay * sin + y0 * cos);
-        setTranslate(x, y);
-
-        if (envelope < 0.001) {
-          setTranslate(0, 0);
-          return;
-        }
-        rafId = requestAnimationFrame(animate);
-      };
-
-      rafId = requestAnimationFrame(animate);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.document.addEventListener("mouseleave", onMouseLeave);
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.document.removeEventListener("mouseleave", onMouseLeave);
-      if (rafId != null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
+  const offset = () => pointer() ?? { x: 0, y: 0 };
+  const returnHome = (): Transition => ({
+    type: "spring",
+    stiffness: props.stiffness ?? 100,
+    damping: props.damping ?? 10,
+    mass: props.mass ?? 1,
   });
 
+  // Not attached at all under reduced motion, rather than attached and
+  // collapsed to zero duration: a parallax is nothing but movement, so the
+  // honest reading of the preference is that it does not run.
+  createEffect(
+    () => prefersReducedMotion(),
+    (reduced) => {
+      // Reset here rather than from the cleanup: turning the preference on
+      // mid-track has to bring the element home, and a cleanup also runs on
+      // disposal, where writing a signal has no one left to read it.
+      setPointer(null);
+      if (reduced) return;
+
+      const range = props.range ?? 2;
+      const onPointerMove = (event: MouseEvent) => {
+        setPointer({
+          x: (event.clientX / window.innerWidth - 0.5) * 2 * range,
+          y: (event.clientY / window.innerHeight - 0.5) * 2 * range,
+        });
+      };
+      const onPointerLeave = () => setPointer(null);
+
+      window.addEventListener("mousemove", onPointerMove);
+      window.document.addEventListener("mouseleave", onPointerLeave);
+
+      return () => {
+        window.removeEventListener("mousemove", onPointerMove);
+        window.document.removeEventListener("mouseleave", onPointerLeave);
+      };
+    },
+  );
+
   return (
-    <div
-      ref={(el) => (containerRef = el)}
+    <motion.div
       class={props.class}
       style={props.style}
+      animate={{ x: offset().x, y: offset().y }}
+      transition={pointer() ? TRACKING : returnHome()}
     >
       {props.children}
-    </div>
+    </motion.div>
   );
 }
