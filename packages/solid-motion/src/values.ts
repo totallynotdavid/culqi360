@@ -1,13 +1,21 @@
 import {
+  DOMKeyframesResolver,
   MotionValue,
   animateMotionValue,
+  buildHTMLStyles,
   getComputedStyle,
+  isHTMLElement,
+  measureViewportBox,
   readTransformValue,
+  renderHTML,
   styleEffect,
   transformProps,
   type AnimationPlaybackControlsWithThen,
+  type HTMLRenderState,
+  type ResolvedValues,
   type Transition,
   type ValueKeyframesDefinition,
+  type VisualElement,
 } from "motion-dom";
 
 /**
@@ -99,6 +107,65 @@ export function createValueStore(
     );
   };
 
+  /**
+   * The view of this element that motion's keyframe resolver works against.
+   *
+   * Animating `height` from a computed pixel value to `auto`, or between any
+   * two incompatible units, needs a measurement: set the target, read the box,
+   * put it back, then animate between the two numbers. Motion already does this
+   * on its own frame loop, batching every element's reads before any writes so
+   * a list of collapsing rows costs one layout pass rather than one each.
+   *
+   * `WithRender` is the five-member interface that machinery actually asks for,
+   * so a value store can satisfy it directly. This is the narrow resolver shim
+   * that adopting `VisualElement` was always the alternative to, and
+   * `VisualElement` would bring a props model, a variant tree, an event system
+   * and a projection node with it, all of which Solid's graph already covers or
+   * this package does not want.
+   *
+   * HTML only. `renderHTML` and `measureViewportBox` both take an HTMLElement,
+   * and without the view SVG keeps exactly the behaviour it has today.
+   */
+  const resolverView = isHTMLElement(element)
+    ? {
+        // Read off the element by `AsyncMotionValueAnimation`, which takes the
+        // resolver class from whatever it is animating against.
+        KeyframeResolver: DOMKeyframesResolver,
+        current: element,
+
+        // Called with a fallback only when the resolver intends to write the
+        // key. Without one it is asking whether the value exists at all, which
+        // is how transforms are stripped before a measurement and put back
+        // after, so creating one there would defeat the question.
+        getValue: (key: string, fallback?: string | number) => {
+          const existing = values.get(key);
+          if (existing || fallback === undefined) return existing;
+          return ensure(key);
+        },
+
+        readValue: (key: string) => readStartValue(element, key, initialValues),
+
+        // Synchronous on purpose. The resolver writes the target, measures and
+        // restores inside one frame step, so a write scheduled for motion's
+        // render step would land after the measurement that needed it.
+        render: () => {
+          const latestValues: ResolvedValues = {};
+          for (const [key, value] of values) latestValues[key] = value.get();
+
+          const state: HTMLRenderState = {
+            transform: {},
+            transformOrigin: {},
+            style: {},
+            vars: {},
+          };
+          buildHTMLStyles(state, latestValues);
+          renderHTML(element, state);
+        },
+
+        measureViewportBox: () => measureViewportBox(element),
+      }
+    : undefined;
+
   return {
     animate(key, keyframe, transition) {
       const value = ensure(key);
@@ -108,7 +175,20 @@ export function createValueStore(
       // critically damped, everything else eases), and it is what reads
       // per-property overrides out of `transition`. The `animateSingleValue`
       // helper passes an empty name and silently loses both.
-      value.start(animateMotionValue(key, value, keyframe, transition));
+      value.start(
+        animateMotionValue(
+          key,
+          value,
+          keyframe,
+          transition,
+          // Typed as `VisualElement` upstream but only ever read structurally:
+          // `KeyframeResolver` in `AsyncMotionValueAnimation`, and the five
+          // `WithRender` members in `KeyframeResolver` and
+          // `DOMKeyframesResolver`. Verified against motion-dom 13.1.1;
+          // nothing else on the parameter is touched on this path.
+          resolverView as unknown as VisualElement,
+        ),
+      );
 
       return value.animation;
     },

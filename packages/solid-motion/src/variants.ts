@@ -42,7 +42,7 @@ export function useVariants(): VariantScope | null {
  * object and is not inheritable, because it means nothing to a child with a
  * different `variants` map.
  */
-export function isVariantLabel(
+function isVariantLabel(
   definition: AnimationDefinition | true | undefined,
 ): definition is string | string[] {
   return (
@@ -52,7 +52,7 @@ export function isVariantLabel(
   );
 }
 
-export function readOrchestration(
+function readOrchestration(
   transition: Transition | undefined,
 ): Orchestration {
   const options = transition as
@@ -75,7 +75,7 @@ export function readOrchestration(
  * it sits in the document. So position is read from the DOM at the moment the
  * delay is needed rather than trusted from when the child appeared.
  */
-export function createChildRegistry(orchestration: () => Orchestration) {
+function createChildRegistry(orchestration: () => Orchestration) {
   const children = new Set<Element>();
 
   return {
@@ -112,7 +112,7 @@ export function createChildRegistry(orchestration: () => Orchestration) {
 }
 
 /** Every prop that can carry a variant label, in Motion's own vocabulary. */
-export const variantLayers: readonly VariantLayer[] = [
+const variantLayers: readonly VariantLayer[] = [
   "initial",
   "animate",
   "exit",

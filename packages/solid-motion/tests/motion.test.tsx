@@ -552,6 +552,76 @@ describe("value-level diffing", () => {
   });
 });
 
+/**
+ * jsdom performs no layout, so every box measures zero. Reporting a natural
+ * height only while the inline height is `auto` is exactly the question the
+ * resolver asks the DOM, which makes the measurement path testable without
+ * pretending jsdom lays anything out.
+ */
+function stubNaturalHeight(element: HTMLElement, natural: number) {
+  element.getBoundingClientRect = () => {
+    const inline = element.style.height;
+    const height =
+      inline === "auto" || inline === "" ? natural : parseFloat(inline) || 0;
+    return {
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 200,
+      bottom: height,
+      width: 200,
+      height,
+      toJSON: () => ({}),
+    } as DOMRect;
+  };
+}
+
+describe("measured keyframes", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("animates height towards a measured auto and lands on auto", async () => {
+    const [open, setOpen] = createSignal(false);
+    const { container } = render(() => (
+      <motion.div
+        initial={{ height: 0 }}
+        animate={open() ? { height: "auto" } : { height: 0 }}
+        transition={{ duration: 0.3, ease: "linear" }}
+      >
+        <p>content</p>
+      </motion.div>
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    stubNaturalHeight(element, 120);
+
+    setOpen(true);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Mid-flight it is a number, which is the whole point: `0px` to `auto` is
+    // not an interpolation any engine can perform without measuring first.
+    const midpoint = parseFloat(element.style.height);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(120);
+
+    // And it has to land on `auto`, not on the pixel height it measured, or
+    // the element stops responding to its own content.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(element.style.height).toBe("auto");
+
+    // Measuring strips scale and rotate first so they cannot skew the box, and
+    // asks whether each one exists rather than creating it. Creating them
+    // hands the element a `transform: none` it never asked for, over the top
+    // of whatever its stylesheet was doing.
+    expect(element.style.transform).toBe("");
+
+    setOpen(false);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    expect(element.style.height).toBe("0px");
+  });
+});
+
 describe("style values", () => {
   afterEach(() => document.body.replaceChildren());
 

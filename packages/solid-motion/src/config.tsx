@@ -9,13 +9,13 @@ import {
 
 import type { MotionConfigState } from "./types";
 
-export const defaultMotionConfig: MotionConfigState = {
+const defaultMotionConfig: MotionConfigState = {
   reducedMotion: "never",
   transition: undefined,
   skipAnimations: false,
 };
 
-export const MotionConfigContext = createContext(defaultMotionConfig);
+const MotionConfigContext = createContext(defaultMotionConfig);
 
 export function useMotionConfig(): MotionConfigState {
   return useContext(MotionConfigContext);

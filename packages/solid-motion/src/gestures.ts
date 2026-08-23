@@ -46,7 +46,7 @@ export interface ViewportOptions {
  * ends on the capture phase so a child calling `stopPropagation` cannot strand
  * it, and drives the same gesture from Enter keydown/keyup for keyboards.
  */
-export function observeGesture(
+function observeGesture(
   name: GestureName,
   element: HTMLElement | SVGElement,
   setActive: (active: boolean) => void,
