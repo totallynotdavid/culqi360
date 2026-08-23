@@ -1,3 +1,4 @@
+import type { DynamicOption } from "motion-dom";
 import { createContext, untrack, useContext } from "solid-js";
 
 import { gestureNames, type GestureName } from "./gestures";
@@ -7,7 +8,13 @@ import type { AnimationDefinition, Transition } from "./types";
 export type VariantLayer = "initial" | "animate" | "exit" | GestureName;
 
 export interface Orchestration {
-  delayChildren: number;
+  /**
+   * A per-child function supersedes `staggerChildren`/`staggerDirection`
+   * entirely, matching motion: `stagger()` (or a caller's own function) already
+   * decides every child's offset, so the constant forms have nothing left to
+   * add. A plain number is the base every child's offset is added to.
+   */
+  delayChildren: number | DynamicOption<number>;
   staggerChildren: number;
   staggerDirection: number;
   /** Which side of the family animates first, or `false` for all at once. */
@@ -73,16 +80,32 @@ function isVariantLabel(
   );
 }
 
+/**
+ * `Transition` already declares every one of these fields; it is motion-dom's
+ * own type, re-exported wholesale. The cast this used to reach through was
+ * pure narrowing theatre, and a dangerous one: it told the compiler
+ * `delayChildren` was always a `number` when the field it was reading is
+ * typed `number | DynamicOption<number>` upstream, so a caller passing
+ * `stagger()` (motion's own recommended replacement for `staggerChildren`,
+ * not a foreign shape) type-checked and then hit `functionValue + offset` in
+ * `delayFor`, coercing the function to its source text as a string. No
+ * warning, no error, a garbled delay.
+ *
+ * `when` keeps its own narrowing, because motion's type also allows an
+ * arbitrary string there for hooking into custom orchestration signals this
+ * package does not implement; anything other than the two literals falls back
+ * to `false` rather than being trusted through.
+ */
 function readOrchestration(transition: Transition | undefined): Orchestration {
-  const options = transition as
-    | (Transition & Partial<Orchestration>)
-    | undefined;
-
   return {
-    delayChildren: options?.delayChildren ?? 0,
-    staggerChildren: options?.staggerChildren ?? 0,
-    staggerDirection: options?.staggerDirection ?? 1,
-    when: options?.when ?? false,
+    delayChildren: transition?.delayChildren ?? 0,
+    staggerChildren: transition?.staggerChildren ?? 0,
+    staggerDirection: transition?.staggerDirection ?? 1,
+    when:
+      transition?.when === "beforeChildren" ||
+      transition?.when === "afterChildren"
+        ? transition.when
+        : false,
   };
 }
 
@@ -110,15 +133,24 @@ function createChildRegistry(orchestration: () => Orchestration) {
       const { delayChildren, staggerChildren, staggerDirection } =
         orchestration();
 
-      if (staggerChildren === 0) return delayChildren;
-
+      // Sibling position is the one input a stagger function needs that a
+      // constant delay does not, so it is resolved once here regardless of
+      // which form `delayChildren` takes.
       const ordered = [...children].sort((a, b) =>
         a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING
           ? -1
           : 1,
       );
       const index = ordered.indexOf(element);
-      if (index === -1) return delayChildren;
+
+      if (typeof delayChildren === "function") {
+        // The base delay is not added in this branch, matching motion: the
+        // function already describes every child's full offset, including
+        // whichever one of them should go first.
+        return index === -1 ? 0 : delayChildren(index, ordered.length);
+      }
+
+      if (staggerChildren === 0 || index === -1) return delayChildren;
 
       const span = (ordered.length - 1) * staggerChildren;
       const offset =

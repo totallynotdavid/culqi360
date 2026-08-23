@@ -2,7 +2,9 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  getOwner,
   onCleanup,
+  runWithOwner,
   untrack,
 } from "solid-js";
 
@@ -83,6 +85,11 @@ export function createMotion<TCustom = unknown>(
   const config = useMotionConfig();
   const presence = usePresence();
 
+  // Captured before `ref` fires: a ref callback runs outside any reactive
+  // owner, so `onCleanup` called from inside it is silently never scheduled.
+  // Registering a child's cleanup needs this owner handed back in explicitly.
+  const owner = getOwner();
+
   // The gestures need the node inside a tracking scope, so it lives in a signal
   // rather than a plain `let` the effects could never observe.
   const [element, setElement] = createSignal<HTMLElement | SVGElement>();
@@ -160,11 +167,6 @@ export function createMotion<TCustom = unknown>(
   const scope = createVariantScope(options, custom, () => merged().transition);
 
   createEffect(
-    () => (inherited ? element() : undefined),
-    (node) => (node ? inherited?.register(node) : undefined),
-  );
-
-  createEffect(
     () => {
       const present = presence ? presence.isPresent() : true;
       const reducedMotion =
@@ -175,6 +177,14 @@ export function createMotion<TCustom = unknown>(
       const node = element();
       const current = options();
 
+      // Resolved here, not in the apply step below: `sequencePass` reads
+      // `orchestration()` on both scopes, which reads a `transition()` memo,
+      // and a memo read from outside a tracking scope is exactly what Solid's
+      // `STRICT_READ_UNTRACKED` warns about. `apply` is not a tracking scope;
+      // this compute function is, so the read belongs here regardless of
+      // whether the resulting object turns out to gate anything.
+      const sequence = sequencePass(inherited, scope);
+
       return {
         present,
         definition: present ? definitionFor("animate") : definitionFor("exit"),
@@ -184,24 +194,20 @@ export function createMotion<TCustom = unknown>(
         // Read here so the delay tracks the ancestor's orchestration, and so a
         // sibling entering or leaving restaggers the row.
         delay: node && inherited ? inherited.delayFor(node) : 0,
+        sequence,
         onAnimationStart: current.onAnimationStart,
         onAnimationComplete: current.onAnimationComplete,
         onUpdate: current.onUpdate,
       };
     },
     (next) => {
-      // One per pass, and the controller waits on it from inside `run`, so a
-      // pass held back for `when` is still the current pass: it supersedes what
-      // came before and is itself superseded normally.
-      const sequence = sequencePass(inherited, scope);
-
       const pass: MotionPass = {
         target: next.target,
         delay: next.delay,
         skipAnimations: next.skipAnimations,
         fallbackTransition: next.fallbackTransition,
         definition: next.definition,
-        sequence: sequence?.begin,
+        sequence: next.sequence?.begin,
         onAnimationStart: next.onAnimationStart,
         onAnimationComplete: next.onAnimationComplete,
         onUpdate: next.onUpdate,
@@ -210,7 +216,7 @@ export function createMotion<TCustom = unknown>(
       if (next.present) {
         // Superseding an exit pass releases the hold that pass was carrying, so
         // returning to the screen needs no bookkeeping of its own.
-        controller.run(pass, () => sequence?.settled());
+        controller.run(pass, () => next.sequence?.settled());
         return;
       }
 
@@ -224,7 +230,7 @@ export function createMotion<TCustom = unknown>(
       const release = presence?.hold();
       controller.run(pass, () => {
         release?.();
-        sequence?.settled();
+        next.sequence?.settled();
       });
     },
   );
@@ -242,6 +248,26 @@ export function createMotion<TCustom = unknown>(
     attrs: painted.attrs,
     ref: (node) => {
       controller.mount(node);
+
+      // Registration happens here, synchronously as the node mounts, and not
+      // from an effect watching `element()`. Solid settles every effect's
+      // compute function to a fixpoint before committing any of their apply
+      // steps, so a sibling registering from an apply callback is always too
+      // late for another sibling's compute function in the same mount: on the
+      // very first pass, every child's delay computed `children.size === 0`
+      // and a stagger never staggered. Registering here runs during the
+      // render walk, strictly before that compute phase starts, so by the
+      // time any sibling asks for its position, every sibling mounted in the
+      // same pass already has one.
+      //
+      // `runWithOwner` is required, not decorative: `ref` runs outside any
+      // owner, so a bare `onCleanup` here is silently discarded and the child
+      // never leaves the registry.
+      if (inherited) {
+        const unregister = inherited.register(node);
+        runWithOwner(owner, () => onCleanup(unregister));
+      }
+
       setElement(node);
     },
     scope,

@@ -11,6 +11,7 @@ import {
   createMotionValue,
   MotionConfig,
   motion,
+  stagger,
 } from "../src";
 import { buildInitialRender } from "../src/initial";
 
@@ -1200,5 +1201,141 @@ describe("whileInView", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 700));
     expect(container.querySelectorAll("div").length).toBe(0);
+  });
+
+  it("staggers children with a stagger() delay function, not just the constant form", async () => {
+    // `stagger()` is motion's own recommended replacement for
+    // staggerChildren/staggerDirection, and it returns a plain function. A
+    // cast that quietly assumed delayChildren was always a number would let
+    // this compile and then coerce the function to its source text at
+    // runtime, so the assertion has to be on the actual delay a middle child
+    // gets, not just "it eventually reaches 1".
+    const variants = {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1 },
+    };
+
+    const { container } = render(() => (
+      <motion.div
+        variants={variants}
+        initial="hidden"
+        animate="visible"
+        transition={{ delayChildren: stagger(0.1) }}
+      >
+        <motion.div variants={variants} transition={{ duration: 0.01 }} />
+        <motion.div variants={variants} transition={{ duration: 0.01 }} />
+        <motion.div variants={variants} transition={{ duration: 0.01 }} />
+      </motion.div>
+    ));
+
+    const [, first, second, third] = [
+      ...container.querySelectorAll("div"),
+    ] as HTMLElement[];
+
+    // Sampled once per stagger step: the first child is already done by the
+    // time the second has even started, which a garbled string delay (or one
+    // that ignored the function and stayed at 0 for everyone) would not
+    // produce.
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(first.style.opacity).toBe("1");
+    expect(second.style.opacity).toBe("0");
+    expect(third.style.opacity).toBe("0");
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(second.style.opacity).toBe("1");
+    expect(third.style.opacity).toBe("0");
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(third.style.opacity).toBe("1");
+  });
+
+  it("staggers children on the very first mount, not only on a later transition", async () => {
+    // Registering a sibling used to happen from an effect apply callback,
+    // watching `element()`. Solid settles every effect's compute function to a
+    // fixpoint before committing any of their applies, so on the entrance
+    // pass every sibling's compute ran before any of them had registered:
+    // `children.size` read 0 for all three and the stagger never staggered.
+    // Registration now happens synchronously from `ref`, which runs during
+    // the render walk, strictly before that compute phase starts.
+    const variants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+
+    const { container } = render(() => (
+      <motion.div
+        variants={variants}
+        initial="hidden"
+        animate="visible"
+        transition={{ staggerChildren: 0.1 }}
+      >
+        <motion.div variants={variants} transition={{ duration: 0.01 }} />
+        <motion.div variants={variants} transition={{ duration: 0.01 }} />
+      </motion.div>
+    ));
+
+    const [, first, second] = [
+      ...container.querySelectorAll("div"),
+    ] as HTMLElement[];
+
+    // Sampled well inside the 100ms gap between the two children's delays:
+    // the defect reached both by now, since neither was ever delayed at all.
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(first.style.opacity).toBe("1");
+    expect(second.style.opacity).toBe("0");
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(second.style.opacity).toBe("1");
+  });
+
+  it("unregisters a removed child, so a stale sibling does not inflate the count", async () => {
+    // A stale entry cannot be seen through index alone: `staggerDirection: -1`
+    // uses the total count too (`span = (length - 1) * staggerChildren`), so a
+    // leaked entry changes every sibling's delay, not just a reordered one.
+    // The unregister function `register` returns has to actually run on
+    // disposal for this to hold; it is wired up with `runWithOwner` because a
+    // bare `onCleanup` called from a ref callback is silently discarded there
+    // and never runs (confirmed by Solid's own `NO_OWNER_CLEANUP` dev warning
+    // while building this fix).
+    const variants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+    const [showTransient, setShowTransient] = createSignal(true);
+
+    const { container } = render(() => (
+      <motion.div
+        variants={variants}
+        initial="hidden"
+        animate="visible"
+        transition={{ staggerChildren: 0.1, staggerDirection: -1 }}
+      >
+        {showTransient() && (
+          <motion.div
+            data-i="transient"
+            variants={variants}
+            transition={{ duration: 0.01 }}
+          />
+        )}
+        <motion.div
+          data-i="kept"
+          variants={variants}
+          transition={{ duration: 0.01 }}
+        />
+      </motion.div>
+    ));
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    setShowTransient(false);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    setShowTransient(true);
+    flush();
+
+    const transient = container.querySelector(
+      '[data-i="transient"]',
+    ) as HTMLElement;
+
+    // Two real children remain: span is one stagger step, so the freshly
+    // re-added transient (index 0, reverse direction) waits exactly that one
+    // step. A leaked first instance makes it three children's worth of span,
+    // doubling the wait, so this window catches it without pinning the exact
+    // extra delay.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(transient.style.opacity).toBe("1");
   });
 });
