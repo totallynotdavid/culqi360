@@ -114,6 +114,32 @@ function observeInView(
 }
 
 /**
+ * Whether an element is in the viewport, as a plain accessor.
+ *
+ * The same observer `whileInView` runs on, without an animation attached. It is
+ * exposed because the package already computes this, and the alternative is an
+ * app reaching for a second IntersectionObserver library to answer a question
+ * this one is already asking: a fetch-more sentinel, a lazily mounted chart, an
+ * analytics impression.
+ *
+ * The node arrives through an accessor because a ref callback fires after the
+ * effect would first run, and a plain variable is invisible to it.
+ */
+export function createInView(
+  element: Accessor<HTMLElement | SVGElement | undefined>,
+  viewport?: ViewportOptions,
+): Accessor<boolean> {
+  const [inView, setInView] = createSignal(false);
+
+  createEffect(
+    () => element(),
+    (node) => (node ? observeInView(node, setInView, viewport) : undefined),
+  );
+
+  return inView;
+}
+
+/**
  * Focus only counts when the browser would have drawn a focus ring. Activating
  * on every `focus` would light the element up on a plain mouse click, which is
  * not what a focus style means.

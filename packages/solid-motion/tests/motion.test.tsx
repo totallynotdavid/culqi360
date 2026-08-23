@@ -7,7 +7,9 @@ import {
   AnimatePresence,
   AnimatePresenceList,
   createMotion,
+  createInView,
   createMotionValue,
+  MotionConfig,
   motion,
 } from "../src";
 import { buildInitialStyle } from "../src/initial";
@@ -577,6 +579,53 @@ function stubNaturalHeight(element: HTMLElement, natural: number) {
   };
 }
 
+describe("MotionConfig", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  const settled = (target: Record<string, unknown>) => (
+    <MotionConfig skipAnimations>
+      <motion.div initial={{ opacity: 0 }} animate={target} />
+    </MotionConfig>
+  );
+
+  it("skips animations whichever transition wins", async () => {
+    // The element-level case worked all along. The other two did not: a target
+    // carrying its own transition replaces the element's, so a flag folded
+    // into the element's transition upstream was dropped exactly when a
+    // variant or an inline `exit={{ ..., transition }}` was in play.
+    const own = render(() => (
+      <MotionConfig skipAnimations>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 2 }}
+        />
+      </MotionConfig>
+    ));
+    const target = render(() =>
+      settled({ opacity: 1, transition: { duration: 2 } }),
+    );
+    const variant = render(() => (
+      <MotionConfig skipAnimations>
+        <motion.div
+          initial="hidden"
+          animate="shown"
+          variants={{
+            hidden: { opacity: 0 },
+            shown: { opacity: 1, transition: { duration: 2 } },
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    for (const { container } of [own, target, variant]) {
+      const element = container.querySelector("div") as HTMLElement;
+      expect(element.style.opacity).toBe("1");
+    }
+  });
+});
+
 describe("measured keyframes", () => {
   afterEach(() => document.body.replaceChildren());
 
@@ -959,5 +1008,29 @@ describe("whileInView", () => {
     observer.report(element, false);
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(element.style.opacity).toBe("1");
+  });
+
+  it("reports visibility on its own, with no animation attached", async () => {
+    const observer = stubObserver();
+    let inView!: () => boolean;
+
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      inView = createInView(node, { margin: "400px" });
+      return <div ref={setNode} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(observer.state.options?.rootMargin).toBe("400px");
+    expect(inView()).toBe(false);
+
+    observer.report(element, true);
+    flush();
+    expect(inView()).toBe(true);
+
+    observer.report(element, false);
+    flush();
+    expect(inView()).toBe(false);
   });
 });

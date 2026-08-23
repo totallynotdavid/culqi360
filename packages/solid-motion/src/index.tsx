@@ -15,6 +15,7 @@ export {
 } from "./presence-list";
 export { MotionConfig, useMotionConfig } from "./config";
 export { useReducedMotion } from "./reduced-motion";
+export { createInView } from "./gestures";
 export type {
   AnimationDefinition,
   MotionComponent,

@@ -1,9 +1,9 @@
 import {
   frame,
   type AnimationPlaybackControlsWithThen,
+  type MotionValue,
   type ValueKeyframesDefinition,
 } from "motion-dom";
-import type { MotionValue } from "motion-dom";
 
 import type { MergedTarget } from "./target";
 import type { AnimationDefinition, Transition } from "./types";
@@ -20,6 +20,16 @@ export interface MotionPass {
   fallbackTransition: Transition | undefined;
   /** Stagger offset contributed by a variant-controlling ancestor. */
   delay: number;
+  /**
+   * Jump to every target instead of animating there.
+   *
+   * Carried on the pass rather than folded into a transition upstream. It has
+   * to reach the transition of every value this pass touches, and a target that
+   * brings its own transition replaces the element's, so anything merged into
+   * the element-level one is dropped exactly when a variant or an inline
+   * `exit={{ ..., transition }}` is in play.
+   */
+  skipAnimations: boolean;
   /** Handed back to lifecycle callbacks unchanged, for reporting only. */
   definition: AnimationDefinition;
   onAnimationStart?: (definition: AnimationDefinition) => void;
@@ -149,7 +159,7 @@ export function createMotionController(
         const animation = store.animate(
           change.key,
           change.value,
-          withDelay(change.transition, pass.delay),
+          passTransition(change.transition, pass),
         );
         if (animation) animations.push(animation);
       }
@@ -203,17 +213,25 @@ export function createMotionController(
 }
 
 /**
- * A stagger offset adds to whatever delay the transition already asked for,
- * rather than replacing it, so a variant can stagger its children and still
- * hold each of them back by its own delay.
+ * The transition one value actually runs with: whatever the winning layer asked
+ * for, plus the two things the pass decides for every value alike.
+ *
+ * A stagger offset adds to the delay the transition already asked for rather
+ * than replacing it, so a variant can stagger its children and still hold each
+ * of them back by its own delay.
  */
-function withDelay(
+function passTransition(
   transition: Transition | undefined,
-  delay: number,
+  pass: MotionPass,
 ): Transition | undefined {
-  if (!delay) return transition;
+  if (!pass.delay && !pass.skipAnimations) return transition;
+
   const own = (transition as { delay?: number } | undefined)?.delay ?? 0;
-  return { ...transition, delay: own + delay } as Transition;
+  return {
+    ...transition,
+    ...(pass.delay ? { delay: own + pass.delay } : undefined),
+    ...(pass.skipAnimations ? { skipAnimations: true } : undefined),
+  } as Transition;
 }
 
 interface ValueChange {

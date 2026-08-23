@@ -15,7 +15,7 @@ import { usePresence } from "./presence";
 import { useReducedMotion } from "./reduced-motion";
 import { resolveDefinition, resolveInitialDefinition } from "./resolve";
 import { mergeLayers, withoutMovement } from "./target";
-import type { MotionOptions, Transition } from "./types";
+import type { MotionOptions, TargetAndTransition } from "./types";
 import {
   createVariantScope,
   useVariants,
@@ -118,11 +118,8 @@ export function createMotion<TCustom = unknown>(
   );
   onCleanup(controller.dispose);
 
-  const fallbackTransition = createMemo(() =>
-    withConfig(
-      options().transition ?? config.transition,
-      config.skipAnimations ?? false,
-    ),
+  const fallbackTransition = createMemo(
+    () => options().transition ?? config.transition,
   );
 
   // `exit` sits on top of `animate` rather than replacing it, so a key `animate`
@@ -166,6 +163,7 @@ export function createMotion<TCustom = unknown>(
         definition: present ? definitionFor("animate") : definitionFor("exit"),
         target: reducedMotion ? withoutMovement(target) : target,
         fallbackTransition: fallbackTransition(),
+        skipAnimations: config.skipAnimations ?? false,
         // Read here so the delay tracks the ancestor's orchestration, and so a
         // sibling entering or leaving restaggers the row.
         delay: node && inherited ? inherited.delayFor(node) : 0,
@@ -178,6 +176,7 @@ export function createMotion<TCustom = unknown>(
       const pass: MotionPass = {
         target: next.target,
         delay: next.delay,
+        skipAnimations: next.skipAnimations,
         fallbackTransition: next.fallbackTransition,
         definition: next.definition,
         onAnimationStart: next.onAnimationStart,
@@ -208,11 +207,7 @@ export function createMotion<TCustom = unknown>(
     // Bound values are painted here and left out of the controller's baseline:
     // the caller owns where they sit, so a pass that stops naming one must not
     // drag it back to whatever it held at mount.
-    style: buildInitialStyle(
-      initialTarget || Object.keys(bound.painted).length > 0
-        ? { ...bound.painted, ...initialTarget }
-        : undefined,
-    ),
+    style: buildInitialStyle(paintTarget(bound.painted, initialTarget)),
     ref: (node) => {
       controller.mount(node);
       setElement(node);
@@ -221,10 +216,18 @@ export function createMotion<TCustom = unknown>(
   };
 }
 
-function withConfig(
-  transition: Transition | undefined,
-  skipAnimations: boolean,
-): Transition | undefined {
-  if (!skipAnimations) return transition;
-  return { ...transition, skipAnimations } as Transition;
+/**
+ * What the element is painted with on its first render: the values the caller
+ * bound through `style`, with the initial target over the top.
+ *
+ * `undefined` when there is nothing to paint, so an element with neither keeps
+ * an empty style object rather than picking up whatever an empty target builds.
+ */
+function paintTarget(
+  painted: Record<string, string | number>,
+  initialTarget: TargetAndTransition | undefined,
+): TargetAndTransition | undefined {
+  const hasBound = Object.keys(painted).length > 0;
+  if (!hasBound) return initialTarget;
+  return { ...painted, ...initialTarget };
 }
