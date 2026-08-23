@@ -1,6 +1,6 @@
-import { A } from "@solidjs/router";
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { Show, splitProps, type JSX } from "solid-js";
+import { Show } from "solid-js";
 
 import styles from "./top-bar-action-button.module.css";
 
@@ -22,34 +22,17 @@ interface TopBarActionButtonProps {
 }
 
 export function TopBarActionButton(props: TopBarActionButtonProps) {
-  const [local] = splitProps(props, [
-    "ariaLabel",
-    "children",
-    "label",
-    "hotkeys",
-    "iconOnly",
-    "href",
-    "onClick",
-    "type",
-    "class",
-    "buttonClass",
-    "disabled",
-    "pressed",
-    "dataTestId",
-    "dataClickOutsideId",
-  ]);
-
   const content = (
     <>
-      <span class={styles.iconSlot}>{local.children}</span>
-      <Show when={local.label || local.hotkeys}>
+      <span class={styles.iconSlot}>{props.children}</span>
+      <Show when={props.label || props.hotkeys}>
         <span class={styles.text}>
-          <Show when={local.label}>
-            <span class={styles.label}>{local.label}</span>
+          <Show when={props.label}>
+            <span class={styles.label}>{props.label}</span>
           </Show>
-          <Show when={local.hotkeys}>
+          <Show when={props.hotkeys}>
             <span class={styles.separator} aria-hidden="true" />
-            <span class={styles.hotkeys}>{local.hotkeys}</span>
+            <span class={styles.hotkeys}>{props.hotkeys}</span>
           </Show>
         </span>
       </Show>
@@ -57,44 +40,44 @@ export function TopBarActionButton(props: TopBarActionButtonProps) {
   );
 
   return (
-    <div class={clsx(styles.root, local.class)}>
+    <div class={clsx(styles.root, props.class)}>
       <Show
-        when={local.href}
+        when={props.href}
         fallback={
           <button
-            type={local.type ?? "button"}
+            type={props.type ?? "button"}
             class={clsx(
               styles.control,
-              local.iconOnly && styles.iconOnly,
-              local.buttonClass,
+              props.iconOnly && styles.iconOnly,
+              props.buttonClass,
             )}
-            onClick={local.onClick}
-            disabled={local.disabled}
-            aria-label={local.ariaLabel}
-            aria-pressed={local.pressed}
-            data-testid={local.dataTestId}
-            data-click-outside-id={local.dataClickOutsideId}
+            onClick={props.onClick}
+            disabled={props.disabled}
+            aria-label={props.ariaLabel}
+            aria-pressed={props.pressed ? "true" : "false"}
+            data-testid={props.dataTestId}
+            data-click-outside-id={props.dataClickOutsideId}
           >
             {content}
           </button>
         }
       >
         {(href) => (
-          <A
+          <a
             href={href()}
             class={clsx(
               styles.control,
-              local.iconOnly && styles.iconOnly,
-              local.buttonClass,
+              props.iconOnly && styles.iconOnly,
+              props.buttonClass,
             )}
-            onClick={local.onClick}
-            aria-label={local.ariaLabel}
-            aria-disabled={local.disabled ? "true" : undefined}
-            data-testid={local.dataTestId}
-            data-click-outside-id={local.dataClickOutsideId}
+            onClick={props.onClick}
+            aria-label={props.ariaLabel}
+            aria-disabled={props.disabled ? "true" : undefined}
+            data-testid={props.dataTestId}
+            data-click-outside-id={props.dataClickOutsideId}
           >
             {content}
-          </A>
+          </a>
         )}
       </Show>
     </div>

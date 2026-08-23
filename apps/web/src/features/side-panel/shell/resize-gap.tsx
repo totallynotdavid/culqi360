@@ -1,5 +1,5 @@
+import type { JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import type { JSX } from "solid-js";
 
 import { SIDE_PANEL_CLICK_OUTSIDE_ID } from "../constants/side-panel-click-outside-id";
 

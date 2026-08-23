@@ -1,4 +1,4 @@
-import { Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 
@@ -11,21 +11,21 @@ export function RecordShowShellSkeleton() {
   return (
     <div class={styles.layout}>
       <div class={styles.rail}>
-        <Index each={RAIL_FIELDS}>
+        <For keyed={false} each={RAIL_FIELDS}>
           {() => (
             <div class={styles.railField}>
               <Skeleton width={72} height={11} />
               <Skeleton width="80%" height={14} />
             </div>
           )}
-        </Index>
+        </For>
       </div>
 
       <div class={styles.content}>
         <div class={styles.tabStrip}>
-          <Index each={TABS}>
+          <For keyed={false} each={TABS}>
             {() => <Skeleton width={84} height={24} radius={6} />}
-          </Index>
+          </For>
         </div>
         <div class={styles.section}>
           <Skeleton height={80} radius={8} />

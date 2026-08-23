@@ -1,13 +1,10 @@
-import {
-  createAsync,
-  type RouteDefinition,
-  useAction,
-  useSubmission,
-} from "@solidjs/router";
-import { Show, type Accessor } from "solid-js";
-import { createStore } from "solid-js/store";
+import { type RouteDefinition, useAction } from "@solidjs/router";
+import { Loading, Show, createMemo, type Accessor } from "solid-js";
+import { createStore } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import {
   SettingsOptionCard,
   SettingsOptionCardCounterRow,
@@ -47,7 +44,7 @@ function RateProposalPolicyEditor(props: {
 }) {
   const initialSnapshot = props.snapshot();
   const updatePolicy = useAction(updateRateProposalPolicyMutation);
-  const submission = useSubmission(updateRateProposalPolicyMutation);
+  const saving = createActionPending(updateRateProposalPolicyMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
   const [draft, setDraft] = createStore({
     validityDays: initialSnapshot.validityDays,
@@ -78,7 +75,11 @@ function RateProposalPolicyEditor(props: {
             value={draft.validityDays}
             min={1}
             max={90}
-            onChange={(value) => setDraft("validityDays", value)}
+            onChange={(validityDays) =>
+              setDraft((current) => {
+                current.validityDays = validityDays;
+              })
+            }
           />
         </SettingsOptionCard>
 
@@ -95,7 +96,7 @@ function RateProposalPolicyEditor(props: {
             type="submit"
             size="sm"
             variant="secondary"
-            loading={submission.pending}
+            loading={saving()}
           >
             Guardar
           </Button>
@@ -110,7 +111,7 @@ function PendingQuotationPolicyEditor(props: {
 }) {
   const initialSnapshot = props.snapshot();
   const updatePolicy = useAction(updatePendingQuotationPolicyMutation);
-  const submission = useSubmission(updatePendingQuotationPolicyMutation);
+  const saving = createActionPending(updatePendingQuotationPolicyMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
   const [draft, setDraft] = createStore({
     enabled: initialSnapshot.enabled,
@@ -149,7 +150,11 @@ function PendingQuotationPolicyEditor(props: {
             title="Aplicar límite de clientes pendientes"
             description="Desactivado de forma predeterminada. Al activarlo, el ejecutivo deberá aceptar, enviar a revisión o cerrar sus cotizaciones pendientes antes de registrar nuevos clientes."
             value={draft.enabled}
-            onChange={(value) => setDraft("enabled", value)}
+            onChange={(enabled) =>
+              setDraft((current) => {
+                current.enabled = enabled;
+              })
+            }
           />
 
           <Show when={draft.enabled}>
@@ -159,7 +164,11 @@ function PendingQuotationPolicyEditor(props: {
               value={draft.limit}
               min={1}
               max={50}
-              onChange={(value) => setDraft("limit", value)}
+              onChange={(limit) =>
+                setDraft((current) => {
+                  current.limit = limit;
+                })
+              }
             />
           </Show>
         </SettingsOptionCard>
@@ -177,7 +186,7 @@ function PendingQuotationPolicyEditor(props: {
             type="submit"
             size="sm"
             variant="secondary"
-            loading={submission.pending}
+            loading={saving()}
           >
             Guardar
           </Button>
@@ -188,25 +197,17 @@ function PendingQuotationPolicyEditor(props: {
 }
 
 export default function QuotationPoliciesPage() {
-  const rateProposalPolicy = createAsync(() => rateProposalPolicyQuery(), {
-    initialValue: null,
-  });
-  const pendingQuotationPolicy = createAsync(
-    () => pendingQuotationPolicyQuery(),
-    {
-      initialValue: null,
-    },
+  const rateProposalPolicy = createMemo(() => rateProposalPolicyQuery());
+  const pendingQuotationPolicy = createMemo(() =>
+    pendingQuotationPolicyQuery(),
   );
 
   return (
     <SettingsPageLayout>
-      <Show when={rateProposalPolicy()}>
-        {(snapshot) => <RateProposalPolicyEditor snapshot={snapshot} />}
-      </Show>
-
-      <Show when={pendingQuotationPolicy()}>
-        {(snapshot) => <PendingQuotationPolicyEditor snapshot={snapshot} />}
-      </Show>
+      <Loading fallback={<Spinner />}>
+        <RateProposalPolicyEditor snapshot={rateProposalPolicy} />
+        <PendingQuotationPolicyEditor snapshot={pendingQuotationPolicy} />
+      </Loading>
     </SettingsPageLayout>
   );
 }

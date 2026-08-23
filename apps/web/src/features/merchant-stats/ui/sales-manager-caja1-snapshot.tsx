@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { ErrorBoundary, Show, Suspense } from "solid-js";
+import { Errored, Show, Loading, createMemo } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import { AppPageBody } from "~/components/layout/page";
@@ -9,13 +8,13 @@ import { WidgetSkeleton } from "~/features/widgets/widget-skeleton";
 import { commissionManagerDashboardQuery } from "~/rpc/merchant-stats/commission-scheme";
 
 export function SalesManagerCaja1Snapshot() {
-  const view = createAsync(() => commissionManagerDashboardQuery());
+  const view = createMemo(() => commissionManagerDashboardQuery());
 
   return (
     <AppPageBody>
       <WidgetCanvas>
-        <ErrorBoundary fallback={<SnapshotError />}>
-          <Suspense fallback={<WidgetSkeleton />}>
+        <Loading fallback={<WidgetSkeleton />}>
+          <Errored fallback={<SnapshotError />}>
             <Show when={view()}>
               {(readyView) => (
                 <MassMarketCaja1Section
@@ -24,8 +23,8 @@ export function SalesManagerCaja1Snapshot() {
                 />
               )}
             </Show>
-          </Suspense>
-        </ErrorBoundary>
+          </Errored>
+        </Loading>
       </WidgetCanvas>
     </AppPageBody>
   );

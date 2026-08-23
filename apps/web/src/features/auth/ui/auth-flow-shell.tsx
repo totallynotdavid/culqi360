@@ -1,7 +1,8 @@
 "use client";
 
 import { ResponsiveImage } from "@crm/images";
-import { Show, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show } from "solid-js";
 
 import { PLATFORM_NAME } from "~/shared/branding";
 import { PLATFORM_LOGO } from "~/shared/branding-logo";

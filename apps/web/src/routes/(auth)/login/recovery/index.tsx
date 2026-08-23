@@ -1,7 +1,7 @@
-import { createAsync, useSearchParams, useSubmission } from "@solidjs/router";
-import { createMemo, createSignal, Show, Suspense } from "solid-js";
+import { useSearchParams, useSubmissions } from "@solidjs/router";
+import { createMemo, createSignal, Show, Loading } from "solid-js";
 
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 import { EnterTransition } from "~/components/ui/animation/enter-transition";
 import { Button } from "~/components/ui/input/button";
 import { Input } from "~/components/ui/input/input";
@@ -20,19 +20,19 @@ import pageStyles from "~/features/auth/ui/login-page.module.css";
 
 export default function LoginRecoveryPage() {
   const [searchParams] = useSearchParams();
-  const recoverySubmission = useSubmission(recoveryLoginMutation);
+  const recoverySubmissions = useSubmissions(recoveryLoginMutation);
   const [recoveryCode, setRecoveryCode] = createSignal("");
   const flowId = () => parseLoginFlowId(searchParams.flow);
-  const loginFlow = createAsync(() => {
+  const loginFlow = createMemo(() => {
     const currentFlowId = flowId();
     return currentFlowId
       ? loginFlowQuery(currentFlowId)
       : Promise.resolve(null);
   });
-  const submitError = () =>
-    recoverySubmission.error
-      ? parseWireError(recoverySubmission.error)
-      : undefined;
+  const submitError = () => {
+    const error = recoverySubmissions.at(-1)?.error;
+    return error ? parseWireError(error) : undefined;
+  };
 
   const flowExpiredAtSubmit = () => {
     const submitFailure = submitError();
@@ -43,9 +43,6 @@ export default function LoginRecoveryPage() {
   // has no user for recovery-code redemption.
   const recoveryFlow = createMemo(() => {
     const flow = loginFlow();
-    if (flow === undefined && flowId()) {
-      return undefined;
-    }
     if (flowExpiredAtSubmit()) {
       return null;
     }
@@ -75,7 +72,7 @@ export default function LoginRecoveryPage() {
       description="Ingresa uno de los códigos que guardaste al configurar tu seguridad."
     >
       <div class={pageStyles.formStack}>
-        <Suspense
+        <Loading
           fallback={
             <output class={pageStyles.loadingStack} aria-live="polite">
               <p class={pageStyles.loadingLabel}>Cargando recuperación</p>
@@ -136,11 +133,7 @@ export default function LoginRecoveryPage() {
                     <a href="/login" class={linkStyles.passkeyLink}>
                       Usar otra cuenta
                     </a>
-                    <Button
-                      type="submit"
-                      class={styles.full}
-                      loading={recoverySubmission.pending}
-                    >
+                    <Button type="submit" class={styles.full}>
                       Iniciar sesión
                     </Button>
                   </div>
@@ -148,7 +141,7 @@ export default function LoginRecoveryPage() {
               </EnterTransition>
             )}
           </Show>
-        </Suspense>
+        </Loading>
         <div class={shellStyles.footerNote}>
           <LegalFooter />
         </div>

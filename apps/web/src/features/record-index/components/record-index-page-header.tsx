@@ -1,5 +1,5 @@
+import { Dynamic } from "@solidjs/web";
 import { Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
 
 import { AppHeaderActions } from "~/components/layout/app-header/app-header-actions";
 import { TintedIconTile } from "~/components/ui/display/tinted-icon-tile/tinted-icon-tile";

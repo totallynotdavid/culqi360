@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { Match, Show, Switch, createMemo } from "solid-js";
 
 import ChevronLeft from "~/components/icons/chevron-left";
@@ -49,9 +48,9 @@ export function MobileBackControl(props: MobileBackControlProps) {
           </Match>
           <Match when={linkAction()} keyed>
             {(action) => (
-              <A class={styles.link} href={action.href} title={action.label}>
+              <a class={styles.link} href={action.href} title={action.label}>
                 {action.label}
-              </A>
+              </a>
             )}
           </Match>
         </Switch>

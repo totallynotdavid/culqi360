@@ -1,17 +1,14 @@
-import {
-  revalidate,
-  useAction,
-  useNavigate,
-  useSubmission,
-} from "@solidjs/router";
+import { revalidate, useAction, useNavigate } from "@solidjs/router";
 import { Match, Switch } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { AppPageBody } from "~/components/layout/page";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { Button } from "~/components/ui/input/button";
 import { actionErrorMessage } from "~/contracts/errors";
+import { PUBLISHED_GPV_KEYS } from "~/contracts/query-keys";
 import { hasPermission } from "~/domain/auth/access/rbac";
 import {
   TabStrip,
@@ -21,7 +18,6 @@ import {
 import { CommissionTab } from "./commission/commission-tab";
 import { CulqiView } from "./culqi/culqi-view";
 import { requestMerchantGpvExportMutation } from "./data/mutations";
-import { PUBLISHED_GPV_QUERY_KEYS } from "./data/revalidation";
 import { GpvFilterBar } from "./gpv-filter-bar";
 import { type GpvTabId, useGpvView } from "./gpv-view";
 import { AttributionGrid } from "./grids/attribution-grid";
@@ -37,11 +33,17 @@ const BASE_GPV_TABS: ReadonlyArray<TabItem<GpvTabId>> = [
   { id: "culqi", label: "Vista Culqi" },
 ];
 
+// revalidate only marks the queries stale; a failed refetch surfaces at the
+// read site through the boundary, not here.
+function refreshData(): void {
+  revalidate([...PUBLISHED_GPV_KEYS]);
+}
+
 export function MerchantGpvDashboard() {
   const view = useGpvView();
   const navigate = useNavigate();
   const requestExport = useAction(requestMerchantGpvExportMutation);
-  const exportSubmission = useSubmission(requestMerchantGpvExportMutation);
+  const exporting = createActionPending(requestMerchantGpvExportMutation);
   const { enqueueErrorSnackBar } = useSnackBar();
   const { currentUser } = useAuthenticatedSession();
 
@@ -64,14 +66,6 @@ export function MerchantGpvDashboard() {
     }
   }
 
-  async function refreshData() {
-    try {
-      await revalidate(PUBLISHED_GPV_QUERY_KEYS);
-    } catch (error) {
-      enqueueErrorSnackBar(actionErrorMessage(error));
-    }
-  }
-
   return (
     <AppPageBody>
       <TabStrip
@@ -83,7 +77,7 @@ export function MerchantGpvDashboard() {
             <Button
               variant="secondary"
               size="sm"
-              loading={exportSubmission.pending}
+              loading={exporting()}
               onClick={() => void exportReport()}
             >
               Exportar resultado
@@ -97,7 +91,7 @@ export function MerchantGpvDashboard() {
               Importar reporte
             </Button>
 
-            <Button variant="secondary" onClick={() => void refreshData()}>
+            <Button variant="secondary" onClick={refreshData}>
               Recargar
             </Button>
           </div>

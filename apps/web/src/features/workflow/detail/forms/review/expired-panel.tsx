@@ -27,7 +27,7 @@ export function ExpiredPanel(props: { leadId: string; canRestart: boolean }) {
     setSubmitting(true);
     try {
       await restart({ leadId: props.leadId });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       setErrorMessage(actionErrorMessage(caught));
     } finally {

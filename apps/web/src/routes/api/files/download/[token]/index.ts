@@ -1,4 +1,4 @@
-import type { APIEvent } from "@solidjs/start/server";
+import type { APIEvent } from "filesystem-routing/api";
 
 import { getApplication } from "~/server/composition/application";
 import { buildFileDownloadHeaders } from "~/server/files/headers";
@@ -10,7 +10,7 @@ export async function GET(
   event: Pick<APIEvent, "params" | "request">,
 ): Promise<Response> {
   try {
-    const token = event.params.token;
+    const token = event.params?.token;
     if (!token || typeof token !== "string" || token.length < 16) {
       return new Response("Invalid token", { status: 400 });
     }

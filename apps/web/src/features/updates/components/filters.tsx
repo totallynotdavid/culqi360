@@ -19,10 +19,10 @@ export function UpdatesFilters(props: UpdatesFiltersProps) {
       <For each={props.options}>
         {(option) => (
           <button
-            classList={{
-              [styles.filterButton]: true,
-              [styles.filterButtonActive]: props.active === option.value,
-            }}
+            class={[
+              styles.filterButton,
+              props.active === option.value && styles.filterButtonActive,
+            ]}
             onClick={() => props.onChange(option.value)}
             type="button"
           >

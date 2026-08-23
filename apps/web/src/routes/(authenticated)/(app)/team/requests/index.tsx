@@ -1,4 +1,5 @@
-import { createAsync, useAction } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
+import { createMemo, Loading } from "solid-js";
 
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
 import List from "~/components/icons/list";
@@ -11,26 +12,15 @@ import {
   rejectCapacityRequestMutation,
 } from "~/features/capacity/data/mutations";
 import { DataGrid } from "~/features/data-grid/components/grid";
-import type { DataGridSource } from "~/features/data-grid/model/source";
 import type { DataGridColumn } from "~/features/data-grid/model/types";
 import { pendingCapacityRequestsQuery } from "~/rpc/capacity/pending-capacity-requests";
 
 import styles from "./requests-page.module.css";
 
 export default function TeamRequestsPage() {
-  const requests = createAsync(() => pendingCapacityRequestsQuery());
+  const requests = createMemo(() => pendingCapacityRequestsQuery());
   const approveRequest = useAction(approveCapacityRequestMutation);
   const rejectRequest = useAction(rejectCapacityRequestMutation);
-
-  const source = (): DataGridSource<PendingCapacityRequestView> => {
-    const rows = requests();
-
-    if (rows === undefined) {
-      return { status: "pending", rows: [] };
-    }
-
-    return { status: "ready", rows };
-  };
 
   const columns = [
     {
@@ -98,15 +88,24 @@ export default function TeamRequestsPage() {
     },
   ] satisfies ReadonlyArray<DataGridColumn<PendingCapacityRequestView>>;
 
+  const renderGrid = (
+    rows: ReadonlyArray<PendingCapacityRequestView>,
+    emptyState: string,
+  ) => (
+    <DataGrid
+      ariaLabel="Solicitudes del equipo"
+      columns={columns}
+      emptyState={emptyState}
+      rowId={(row) => row.id}
+      source={{ rows }}
+    />
+  );
+
   return (
     <div class={styles.page}>
-      <DataGrid
-        ariaLabel="Solicitudes del equipo"
-        columns={columns}
-        emptyState="No hay solicitudes pendientes."
-        rowId={(row) => row.id}
-        source={source()}
-      />
+      <Loading fallback={renderGrid([], "Cargando solicitudes...")}>
+        {renderGrid(requests(), "No hay solicitudes pendientes.")}
+      </Loading>
     </div>
   );
 }

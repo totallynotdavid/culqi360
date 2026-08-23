@@ -59,12 +59,12 @@ export function WidgetCardActions(
 ) {
   return (
     <div
-      class={props.class}
-      classList={{
-        [styles.actions]: true,
-        [styles.actionsStart]: props.align === "start",
-        [styles.actionsStack]: props.stack,
-      }}
+      class={[
+        styles.actions,
+        props.align === "start" && styles.actionsStart,
+        props.stack && styles.actionsStack,
+        props.class,
+      ]}
     >
       {props.children}
     </div>

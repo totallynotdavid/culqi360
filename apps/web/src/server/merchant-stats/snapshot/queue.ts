@@ -1,10 +1,9 @@
+import { PUBLISHED_GPV_KEYS, QUERY_KEYS } from "~/contracts/query-keys";
+import { publishJobEvent } from "~/server/jobs/publish";
 import type { DatabaseExecutor } from "~/server/platform/database/executor";
 import { createJobQueue } from "~/server/platform/jobs/job-queue";
 
-import {
-  buildGpvSnapshotProgressEvent,
-  publishGpvSnapshotProgress,
-} from "./progress";
+import { buildGpvSnapshotJobEvent } from "./progress";
 import { createGpvSnapshotJobRepo, type GpvSnapshotJobRow } from "./repo";
 import { createGpvSnapshotRunner, type GpvSnapshotRunner } from "./runner";
 
@@ -28,10 +27,7 @@ export function createGpvSnapshotQueue(
         await deps.db.transaction().execute(async (trx) => {
           const transactionRepo = createGpvSnapshotJobRepo(trx);
           const persisted = await transactionRepo.updateProgress(id, progress);
-          await publishGpvSnapshotProgress(
-            trx,
-            buildGpvSnapshotProgressEvent(persisted),
-          );
+          await publishJobEvent(trx, buildGpvSnapshotJobEvent(persisted));
         });
       },
     });
@@ -69,9 +65,26 @@ export function createGpvSnapshotQueue(
           .execute();
       }
 
-      await publishGpvSnapshotProgress(
+      const snapshot = await deps.db
+        .selectFrom("gpv_snapshots")
+        .select("state")
+        .where("id", "=", settled.snapshot_id)
+        .executeTakeFirstOrThrow();
+
+      // A finished import always changes the snapshot itself, and changes every
+      // dashboard behind it only when the snapshot went live. Saying so here is
+      // what lets the browser stop inferring it from a state transition.
+      const stale =
+        snapshot.state === "active"
+          ? [QUERY_KEYS.merchantStats.gpvSnapshot, ...PUBLISHED_GPV_KEYS]
+          : [QUERY_KEYS.merchantStats.gpvSnapshot];
+
+      await publishJobEvent(
         deps.db,
-        buildGpvSnapshotProgressEvent(settled),
+        buildGpvSnapshotJobEvent(settled, {
+          snapshotState: snapshot.state,
+          stale,
+        }),
       );
     },
   });

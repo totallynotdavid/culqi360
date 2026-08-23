@@ -61,7 +61,13 @@ function isAlive(pid: number): boolean {
 
 async function isHealthy(): Promise<boolean> {
   try {
-    const response = await fetch(`${BASE_URL}/login`);
+    // Start mode renders a page only for an HTML-accepting GET; anything else
+    // falls through to Vite's own pipeline and 404s, which would read as an
+    // unhealthy server forever.
+    const response = await fetch(`${BASE_URL}/login`, {
+      headers: { accept: "text/html" },
+    });
+
     return response.ok;
   } catch {
     return false;
@@ -120,8 +126,6 @@ async function spawnDetached(dbUrl: string): Promise<number> {
       WEB_DB_URL: dbUrl,
       PORT: String(PORT),
       HOST: "127.0.0.1",
-      NITRO_PORT: String(PORT),
-      NITRO_HOST: "127.0.0.1",
 
       // Application-generated links must point at the preview server.
       APP_PUBLIC_ORIGIN: BASE_URL,

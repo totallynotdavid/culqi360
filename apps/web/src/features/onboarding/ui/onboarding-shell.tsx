@@ -1,5 +1,6 @@
 import { ResponsiveImage } from "@crm/images";
-import { type JSX, Show } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show } from "solid-js";
 
 import { PLATFORM_NAME } from "~/shared/branding";
 import { PLATFORM_LOGO } from "~/shared/branding-logo";
@@ -42,10 +43,7 @@ export function OnboardingShell(props: OnboardingShellProps) {
         <div class={styles.headerRight} />
       </header>
 
-      <div
-        class={styles.stepPage}
-        classList={{ [styles.stepPageCentered]: props.centered }}
-      >
+      <div class={[styles.stepPage, props.centered && styles.stepPageCentered]}>
         {props.children}
       </div>
     </div>

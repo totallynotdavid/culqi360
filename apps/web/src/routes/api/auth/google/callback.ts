@@ -1,3 +1,5 @@
+import type { APIEvent } from "filesystem-routing/api";
+
 import {
   appendClearedGoogleOAuthCookies,
   readGoogleOAuthCookies,
@@ -11,8 +13,6 @@ import {
 } from "~/server/platform/http/request-context-storage";
 import { isErr } from "~/shared/result";
 
-import type { ApiRequestEvent } from "../../request-event";
-
 function badRequest(): Response {
   return new Response("Bad request", { status: 400 });
 }
@@ -25,7 +25,7 @@ function redirectToLogin(url: URL, error: string): Response {
   return new Response(null, { status: 302, headers: clearHeaders });
 }
 
-export async function GET(event: ApiRequestEvent): Promise<Response> {
+export async function GET(event: APIEvent): Promise<Response> {
   const url = new URL(event.request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");

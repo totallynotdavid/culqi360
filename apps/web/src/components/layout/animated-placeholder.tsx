@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createSignal, onSettled } from "solid-js";
 
 import { SpringParallax } from "~/components/ui/animation/spring-parallax";
 
@@ -54,7 +54,7 @@ export function AnimatedPlaceholder(props: AnimatedPlaceholderProps) {
 
   const [isDark, setIsDark] = createSignal(false);
 
-  onMount(() => {
+  onSettled(() => {
     const root = document.documentElement;
     const update = () => setIsDark(root.getAttribute("data-theme") === "dark");
     update();
@@ -65,7 +65,7 @@ export function AnimatedPlaceholder(props: AnimatedPlaceholderProps) {
       attributeFilter: ["data-theme"],
     });
 
-    onCleanup(() => observer.disconnect());
+    return () => observer.disconnect();
   });
 
   const bg = () => (isDark() ? BG_DARK : BG_LIGHT)[props.type];

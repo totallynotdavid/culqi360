@@ -4,35 +4,30 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "solid": "./src/index.tsx",
-      "default": "./src/index.tsx"
-    }
+    ".": "./src/index.tsx"
   },
   "scripts": {
-    "build:types": "tsc -p tsconfig.build.json",
-    "prepare": "tsc -p tsconfig.build.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@solid-primitives/props": "^3.2.4",
-    "@solid-primitives/refs": "^1.1.4",
-    "@solid-primitives/transition-group": "^1.1.2",
+    "@solid-primitives/props": "^4.0.0-next.3",
+    "@solid-primitives/refs": "^3.0.0-next.2",
+    "@solid-primitives/transition-group": "^2.0.0-next.2",
     "framer-motion": "^12.42.2",
     "hey-listen": "^1.0.8",
     "motion-dom": "^12.42.2",
     "motion-utils": "^12.39.0"
   },
   "devDependencies": {
-    "@solidjs/testing-library": "^0.8.10",
+    "@solidjs/testing-library": "^1.0.0-beta.2",
+    "@solidjs/vite-plugin": "^3.0.0-next.31",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
     "vite": "^8.1.4",
-    "vite-plugin-solid": "^2.11.12",
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
-    "solid-js": "^1.9.14"
+    "@solidjs/web": "^2.0.0-rc.1",
+    "solid-js": "^2.0.0-rc.1"
   }
 }

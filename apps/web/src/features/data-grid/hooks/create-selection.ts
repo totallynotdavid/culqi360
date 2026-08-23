@@ -17,8 +17,7 @@ export function createDataGridSelection<T>(
   const someSelected = () =>
     rows().some((row) => selectedIds().has(rowId(row))) && !allSelected();
 
-  createEffect(() => {
-    const validIds = rowIds();
+  createEffect(rowIds, (validIds) => {
     setSelectedIds((current) => {
       const next = new Set([...current].filter((id) => validIds.has(id)));
       return setsEqual(current, next) ? current : next;

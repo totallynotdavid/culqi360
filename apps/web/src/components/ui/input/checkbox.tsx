@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { createEffect, Show, type JSX, splitProps } from "solid-js";
+import { createEffect, Show, omit } from "solid-js";
 
 import Check from "~/components/icons/check";
 import Minus from "~/components/icons/minus";
@@ -18,7 +19,8 @@ export interface CheckboxProps extends Omit<
 
 export function Checkbox(props: CheckboxProps) {
   let input: HTMLInputElement | undefined;
-  const [local, others] = splitProps(props, [
+  const others = omit(
+    props,
     "class",
     "label",
     "checked",
@@ -26,47 +28,50 @@ export function Checkbox(props: CheckboxProps) {
     "size",
     "hoverable",
     "disabled",
-  ]);
+  );
 
-  const isOn = () => Boolean(local.checked) || Boolean(local.indeterminate);
-  const hoverable = () => local.hoverable ?? true;
+  const isOn = () => Boolean(props.checked) || Boolean(props.indeterminate);
+  const hoverable = () => props.hoverable ?? true;
 
-  createEffect(() => {
-    if (input) {
-      input.indeterminate = Boolean(local.indeterminate);
-    }
-  });
+  createEffect(
+    () => Boolean(props.indeterminate),
+    (indeterminate) => {
+      if (input) {
+        input.indeterminate = indeterminate;
+      }
+    },
+  );
 
   return (
     <label
       class={clsx(
         styles.checkboxRoot,
-        local.size === "large" ? styles.checkboxLarge : styles.checkboxSmall,
+        props.size === "large" ? styles.checkboxLarge : styles.checkboxSmall,
         hoverable() && styles.checkboxHoverable,
         isOn() && styles.checkboxOn,
-        local.disabled && styles.checkboxDisabled,
-        local.class,
+        props.disabled && styles.checkboxDisabled,
+        props.class,
       )}
     >
       <input
         type="checkbox"
         class={styles.checkboxInput}
-        checked={local.checked}
-        disabled={local.disabled}
+        checked={props.checked}
+        disabled={props.disabled}
         {...others}
         ref={(element) => (input = element)}
       />
       <span class={styles.checkboxBox}>
         <Show when={isOn()}>
-          {local.indeterminate ? (
+          {props.indeterminate ? (
             <Minus class={styles.checkboxIcon} />
           ) : (
             <Check class={styles.checkboxIcon} />
           )}
         </Show>
       </span>
-      <Show when={local.label}>
-        <span class={styles.checkboxText}>{local.label}</span>
+      <Show when={props.label}>
+        <span class={styles.checkboxText}>{props.label}</span>
       </Show>
     </label>
   );

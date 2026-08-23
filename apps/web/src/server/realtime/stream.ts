@@ -1,10 +1,6 @@
-import { createEventStream, type H3Event } from "h3";
-
 import type { RealtimeMessage } from "~/contracts/realtime/channel";
 
 import type { RealtimePeer, TopicHub } from "./topic-hub";
-
-type EventStream = ReturnType<typeof createEventStream>;
 
 export interface RealtimeSink {
   send: (messages: RealtimeMessage[]) => void;
@@ -66,37 +62,118 @@ export async function attachRealtimeSubscription(
   return true;
 }
 
-function streamSink(stream: EventStream): RealtimeSink {
+const encoder = new TextEncoder();
+
+function encodeFrame(message: RealtimeMessage): string {
+  const id = message.id ? `id: ${message.id}\n` : "";
+  return `${id}data: ${message.data}\n\n`;
+}
+
+interface SseStream {
+  sink: RealtimeSink;
+  body: ReadableStream<Uint8Array>;
+}
+
+/**
+ * A `text/event-stream` body over web streams, replacing H3's `createEventStream`.
+ *
+ * The consumer cancelling the stream is what a client disconnect looks like
+ * here, so `cancel` is the close signal the hub needs to drop the peer. Writes
+ * after close are dropped rather than thrown: broadcasts race disconnects by
+ * nature, and the hub removes the peer on the same signal.
+ */
+function createSseStream(): SseStream {
+  let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const closedListeners = new Set<() => void>();
+  let closed = false;
+
+  function markClosed(): void {
+    if (closed) {
+      return;
+    }
+
+    closed = true;
+    controller = null;
+
+    for (const listener of closedListeners) {
+      listener();
+    }
+
+    closedListeners.clear();
+  }
+
+  const body = new ReadableStream<Uint8Array>({
+    start(streamController) {
+      controller = streamController;
+    },
+    cancel() {
+      markClosed();
+    },
+  });
+
+  function write(chunk: string): void {
+    if (!controller) {
+      return;
+    }
+
+    try {
+      controller.enqueue(encoder.encode(chunk));
+    } catch {
+      markClosed();
+    }
+  }
+
   return {
-    send: (messages) =>
-      void stream.push(
-        messages.map((message) =>
-          message.id
-            ? { id: message.id, data: message.data }
-            : { data: message.data },
-        ),
-      ),
-    ping: () => void stream.pushComment("ping"),
-    close: () => void stream.close(),
-    onClosed: (listener) => stream.onClosed(listener),
+    body,
+
+    sink: {
+      send: (messages) => write(messages.map(encodeFrame).join("")),
+      ping: () => write(": ping\n\n"),
+
+      close: () => {
+        const open = controller;
+        markClosed();
+
+        try {
+          open?.close();
+        } catch {
+          // Already closed by the consumer.
+        }
+      },
+
+      onClosed: (listener) => {
+        if (closed) {
+          listener();
+          return;
+        }
+
+        closedListeners.add(listener);
+      },
+    },
   };
 }
 
-// Access denial leaves the response untouched for the caller.
+// Access denial returns null so the caller decides the status code.
 export async function openRealtimeStream(
   hub: TopicHub,
-  h3Event: H3Event,
   entry: StreamEntry,
   cursor: string | null,
-): Promise<EventStream | null> {
-  const stream = createEventStream(h3Event);
+): Promise<Response | null> {
+  const { sink, body } = createSseStream();
 
-  const attached = await attachRealtimeSubscription(
-    hub,
-    streamSink(stream),
-    entry,
-    cursor,
-  );
+  const attached = await attachRealtimeSubscription(hub, sink, entry, cursor);
 
-  return attached ? stream : null;
+  if (!attached) {
+    return null;
+  }
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      // Tells nginx and similar proxies not to buffer the stream.
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

@@ -36,15 +36,14 @@ export function Gauge(props: GaugeProps) {
           <>
             <div class={styles.track}>
               <div
-                class={styles.fill}
-                classList={{ [styles.fillHit]: hit() }}
+                class={[styles.fill, hit() && styles.fillHit]}
                 style={{
                   width: `${Math.min(props.actual / target(), 1) * 100}%`,
                 }}
               />
             </div>
             <div class={styles.legend}>
-              <span classList={{ [styles.hitText]: hit() }}>
+              <span class={hit() && styles.hitText}>
                 {formatPercent(props.actual / target())} del objetivo
               </span>
               <Show when={props.caption}>

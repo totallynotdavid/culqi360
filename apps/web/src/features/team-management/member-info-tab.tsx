@@ -1,6 +1,6 @@
 import { useAction } from "@solidjs/router";
 import { For, Show, onCleanup } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";
@@ -94,7 +94,10 @@ export function MemberInfoTab(props: { detail: MemberDetail }) {
               label="Nombres"
               value={draft.names}
               onInput={(event) => {
-                setDraft("names", event.currentTarget.value);
+                const names = event.currentTarget.value;
+                setDraft((current) => {
+                  current.names = names;
+                });
                 scheduleProfileSave();
               }}
               disabled={disabled()}
@@ -104,7 +107,10 @@ export function MemberInfoTab(props: { detail: MemberDetail }) {
               label="Primer apellido"
               value={draft.firstSurname}
               onInput={(event) => {
-                setDraft("firstSurname", event.currentTarget.value);
+                const firstSurname = event.currentTarget.value;
+                setDraft((current) => {
+                  current.firstSurname = firstSurname;
+                });
                 scheduleProfileSave();
               }}
               disabled={disabled()}
@@ -114,7 +120,10 @@ export function MemberInfoTab(props: { detail: MemberDetail }) {
               label="Segundo apellido"
               value={draft.secondSurname}
               onInput={(event) => {
-                setDraft("secondSurname", event.currentTarget.value);
+                const secondSurname = event.currentTarget.value;
+                setDraft((current) => {
+                  current.secondSurname = secondSurname;
+                });
                 scheduleProfileSave();
               }}
               disabled={disabled()}
@@ -127,7 +136,10 @@ export function MemberInfoTab(props: { detail: MemberDetail }) {
               label="Equipo"
               value={draft.teamId}
               onInput={(event) => {
-                setDraft("teamId", event.currentTarget.value);
+                const teamId = event.currentTarget.value;
+                setDraft((current) => {
+                  current.teamId = teamId;
+                });
                 saveProfileNow();
               }}
               disabled={disabled()}
@@ -143,7 +155,10 @@ export function MemberInfoTab(props: { detail: MemberDetail }) {
                 label="Categoría"
                 value={draft.category}
                 onInput={(event) => {
-                  setDraft("category", event.currentTarget.value);
+                  const category = event.currentTarget.value;
+                  setDraft((current) => {
+                    current.category = category;
+                  });
                   saveProfileNow();
                 }}
                 disabled={disabled()}
@@ -171,7 +186,9 @@ export function MemberInfoTab(props: { detail: MemberDetail }) {
           value={draft.expiresOn}
           disabled={disabled()}
           onInput={(value) => {
-            setDraft("expiresOn", value);
+            setDraft((current) => {
+              current.expiresOn = value;
+            });
             if (!value || parseCalendarDate(value)) {
               void saveExpiry(value);
             }

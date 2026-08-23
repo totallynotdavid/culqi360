@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import {
   reduceSidePanelPatch,
@@ -40,7 +40,7 @@ export function createSidePanelStore(options?: SidePanelStoreOptions) {
       return;
     }
 
-    setState(patch);
+    setState((draft) => Object.assign(draft, patch));
   }
 
   const openPanel = (page: SidePanelPageDefinition) => {
@@ -92,7 +92,9 @@ export function createSidePanelStore(options?: SidePanelStoreOptions) {
       return;
     }
 
-    setState("pageStateById", updatedPageStateById);
+    setState((draft) => {
+      draft.pageStateById = updatedPageStateById;
+    });
   };
 
   const setPanelWidth = (width: number) => {

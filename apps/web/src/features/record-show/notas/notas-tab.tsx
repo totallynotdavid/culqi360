@@ -46,7 +46,7 @@ function NotasView(props: { data: LeadDetailView }) {
     setErrorMessage(null);
     try {
       await add({ leadId: props.data.lead.id, body: trimmed });
-      await revalidateWorkflowLead(props.data.lead.id);
+      revalidateWorkflowLead(props.data.lead.id);
       setBody("");
     } catch (caught) {
       setErrorMessage(actionErrorMessage(caught));

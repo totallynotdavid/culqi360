@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import { ScrollWrapper } from "~/components/ui/utilities/scroll-wrapper";
 
@@ -24,11 +24,7 @@ export function WidgetGridItem(props: {
   span: WidgetSpan;
   children: JSX.Element;
 }) {
-  return (
-    <div classList={{ [styles.item]: true, [styles[props.span]]: true }}>
-      {props.children}
-    </div>
-  );
+  return <div class={[styles.item, styles[props.span]]}>{props.children}</div>;
 }
 
 export function WidgetStack(props: { children: JSX.Element }) {

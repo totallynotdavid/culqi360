@@ -1,6 +1,6 @@
 import type { Options } from "../../types";
 
-/** splitProps removes these engine props so they are not rendered as DOM attributes. */
+/** Omitted from the rendered element so engine props never reach the DOM. */
 export const OPTION_KEYS = [
   "initial",
   "animate",

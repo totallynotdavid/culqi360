@@ -1,4 +1,4 @@
-import type { APIEvent } from "@solidjs/start/server";
+import type { APIEvent } from "filesystem-routing/api";
 
 import { hasPermission } from "~/domain/auth/access/rbac";
 import type { DomainError } from "~/domain/errors";
@@ -30,7 +30,7 @@ export async function PUT(event: APIEvent): Promise<Response> {
       return new Response("Forbidden", { status: 403 });
     }
 
-    const uploadId = event.params.uploadId;
+    const uploadId = event.params?.uploadId;
 
     if (!uploadId) {
       return new Response("Not found", { status: 404 });
@@ -50,7 +50,8 @@ export async function PUT(event: APIEvent): Promise<Response> {
       return new Response("Request body is required", { status: 400 });
     }
 
-    const result = await getApplication().dataSourceUploads.uploadBlob(
+    const application = getApplication();
+    const result = await application.dataSourceUploads.uploadBlob(
       uploadId,
       body,
       contentLength,
@@ -59,6 +60,10 @@ export async function PUT(event: APIEvent): Promise<Response> {
     if (isErr(result)) {
       return domainErrorResponse(result.error);
     }
+
+    // Accepting the blob is what starts the engine working, so this is where the
+    // server takes over following it. The browser subscribes and never polls.
+    application.ingestJobs.track(result.value.jobId);
 
     return Response.json(result.value, { status: 200 });
   } catch {

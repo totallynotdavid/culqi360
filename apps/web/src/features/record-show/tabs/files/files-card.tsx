@@ -75,7 +75,7 @@ export function FilesCard(props: FilesCardProps) {
 
     try {
       await Promise.all(files.map((file) => uploadAttachmentFile(file)));
-      await refetch();
+      refetch();
     } catch (caught) {
       setFileActionErrorMessage(
         caught instanceof Error

@@ -1,0 +1,22 @@
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
+.offline {
+  background: var(--warning);
+  color: var(--warning-foreground);
+}
+
+.denied {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}

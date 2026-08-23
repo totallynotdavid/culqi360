@@ -45,3 +45,56 @@ export interface IngestSource {
   source_key: string;
   source_name: string;
 }
+
+/** The kind-specific half of an ingest job's live state. */
+export interface IngestJobDetail {
+  step: IngestJobStep;
+  sourceKey: string;
+  gate: IngestGateResult | null;
+}
+
+const INGEST_JOB_STEPS: readonly IngestJobStep[] = [
+  "queued",
+  "staging",
+  "gating",
+  "merging",
+  "validating",
+  "materializing",
+  "complete",
+];
+
+function isGateResult(value: unknown): value is IngestGateResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "passed" in value &&
+    typeof value.passed === "boolean" &&
+    "checks" in value &&
+    Array.isArray(value.checks)
+  );
+}
+
+export function parseIngestJobDetail(value: unknown): IngestJobDetail | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("step" in value) ||
+    !("sourceKey" in value) ||
+    !("gate" in value)
+  ) {
+    return null;
+  }
+
+  const { step, sourceKey, gate } = value;
+  const knownStep = INGEST_JOB_STEPS.find((candidate) => candidate === step);
+
+  if (knownStep === undefined || typeof sourceKey !== "string") {
+    return null;
+  }
+
+  return {
+    step: knownStep,
+    sourceKey,
+    gate: isGateResult(gate) ? gate : null,
+  };
+}

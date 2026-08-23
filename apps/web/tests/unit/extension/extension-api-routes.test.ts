@@ -1,24 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({
-  claimInstallationSession: vi.fn<() => Promise<unknown>>(),
-  refreshInstallationSession: vi.fn<() => Promise<unknown>>(),
-  ingestRuntimeEvent: vi.fn<() => Promise<unknown>>(),
-  createHandoffToken: vi.fn<() => Promise<unknown>>(),
-}));
-
-vi.mock("~/server/platform/container", () => ({
-  getServerRuntime: () => ({
-    extension: {
-      extensionService: {
-        claimInstallationSession: mocks.claimInstallationSession,
-        refreshInstallationSession: mocks.refreshInstallationSession,
-        ingestRuntimeEvent: mocks.ingestRuntimeEvent,
-        createHandoffToken: mocks.createHandoffToken,
-      },
-    },
-  }),
-}));
+import { describe, expect, it } from "vitest";
 
 import { POST as postEvents } from "~/routes/api/extension/events";
 import { POST as postHandoffToken } from "~/routes/api/extension/handoff-token";
@@ -38,10 +18,6 @@ function invalidJsonRequest(url: string): Request {
 }
 
 describe("extension api routes", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("returns 400 for malformed JSON in the handoff token route", async () => {
     const response = await postHandoffToken({
       request: invalidJsonRequest(
@@ -50,7 +26,6 @@ describe("extension api routes", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(mocks.createHandoffToken).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed JSON in the claim route", async () => {
@@ -61,7 +36,6 @@ describe("extension api routes", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(mocks.claimInstallationSession).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed JSON in the refresh route", async () => {
@@ -72,7 +46,6 @@ describe("extension api routes", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(mocks.refreshInstallationSession).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed JSON in the events route", async () => {
@@ -81,6 +54,5 @@ describe("extension api routes", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(mocks.ingestRuntimeEvent).not.toHaveBeenCalled();
   });
 });

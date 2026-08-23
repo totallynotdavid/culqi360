@@ -1,4 +1,5 @@
-import { Show, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show, type StoreSetter } from "solid-js";
 
 import {
   BandTableField,
@@ -19,6 +20,32 @@ import type {
 } from "~/domain/merchant-stats/commission";
 
 import styles from "./fields.module.css";
+
+/**
+ * Scopes a draft setter to one optional section of the scheme.
+ *
+ * Each section renders behind a `ConfigurableSection`, so it is always present
+ * when one of its fields fires. The setter callback runs after that check
+ * though, so without this the narrowing has to be re-asserted at every single
+ * field. Skipping the mutation when the section is gone is the honest reading
+ * of "the user turned this section off mid-edit".
+ */
+export function createSectionSetter<
+  TDraft extends object,
+  TSection extends object,
+>(
+  setDraft: () => StoreSetter<TDraft>,
+  select: (draft: TDraft) => TSection | null,
+): (mutate: (section: TSection) => void) => void {
+  return (mutate) =>
+    setDraft()((draft) => {
+      const section = select(draft);
+
+      if (section) {
+        mutate(section);
+      }
+    });
+}
 
 export function NumberField(props: {
   label: string;

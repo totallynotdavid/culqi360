@@ -1,4 +1,4 @@
-import type { AuthSession } from "~/domain/auth/access/session-types";
+import type { UserId } from "~/domain/ids";
 import type {
   AvatarDomainErrorCode,
   AvatarService,
@@ -30,16 +30,20 @@ function mapAvatarErrorResponse(
   return exhaustiveCode satisfies never;
 }
 
-export async function respondToAvatarRequest(
+/**
+ * Serves one user's avatar bytes as a conditional response.
+ *
+ * Who is allowed to ask is the route's business and differs per route (your own
+ * avatar versus a teammate's), so this takes an already-authorized user id and
+ * owns only what both routes agree on: the version ETag, the 304, and the
+ * error-code mapping.
+ */
+export async function respondWithAvatar(
   request: Request,
-  session: AuthSession | null,
+  userId: UserId,
   avatars: Pick<AvatarService, "get">,
 ): Promise<Response> {
-  if (!session) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const avatarResult = await avatars.get(session.userId);
+  const avatarResult = await avatars.get(userId);
 
   if (!avatarResult.ok) {
     const errorResponse = mapAvatarErrorResponse(avatarResult.error.code);
@@ -47,7 +51,7 @@ export async function respondToAvatarRequest(
   }
 
   const avatar = avatarResult.value;
-  const etag = `"avatar-${session.userId}-v${avatar.version}"`;
+  const etag = `"avatar-${userId}-v${avatar.version}"`;
 
   if (request.headers.get("if-none-match") === etag) {
     return new Response(null, {

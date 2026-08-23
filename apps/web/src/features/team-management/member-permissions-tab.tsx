@@ -1,6 +1,7 @@
-import { useAction, useSubmission } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog";
@@ -17,7 +18,7 @@ import styles from "./team-management.module.css";
 
 export function MemberPermissionsTab(props: { detail: MemberDetail }) {
   const changeRole = useAction(changeMemberRoleMutation);
-  const submission = useSubmission(changeMemberRoleMutation);
+  const saving = createActionPending(changeMemberRoleMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
   // Selecting a role stages it; the change only commits once confirmed, so the
@@ -87,7 +88,7 @@ export function MemberPermissionsTab(props: { detail: MemberDetail }) {
           )} a ${getRoleLabel(displayRole())}?`}
           confirmLabel="Actualizar rol"
           confirmDisabled={confirmDisabled()}
-          loading={submission.pending}
+          loading={saving()}
           onConfirm={() => void confirmRoleChange()}
           onClose={() => setPendingRole(null)}
         >

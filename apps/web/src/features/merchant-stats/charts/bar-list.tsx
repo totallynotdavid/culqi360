@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 
 import { Present } from "~/components/ui/control-flow/present";
@@ -48,9 +47,9 @@ export function BarList(props: BarListProps) {
                   }
                 >
                   {(href) => (
-                    <A class={styles.labelLink} href={href()} title={row.label}>
+                    <a class={styles.labelLink} href={href()} title={row.label}>
                       {row.label}
-                    </A>
+                    </a>
                   )}
                 </Show>
                 <span class={styles.value}>{formatSoles(row.value)}</span>
@@ -64,8 +63,7 @@ export function BarList(props: BarListProps) {
               </div>
               <div class={styles.track}>
                 <div
-                  class={styles.fill}
-                  classList={{ [styles.fillHit]: hitsTarget() }}
+                  class={[styles.fill, hitsTarget() && styles.fillHit]}
                   style={{ width: width() }}
                 />
                 <Show when={targetLeft()}>

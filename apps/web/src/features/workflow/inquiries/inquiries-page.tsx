@@ -1,6 +1,7 @@
 import { revalidate, useAction, useSearchParams } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
+import { createSignal, Errored, Loading, Show } from "solid-js";
 
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";
 import CalendarDays from "~/components/icons/calendar-days";
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
@@ -56,7 +57,7 @@ export function InquiriesPage() {
     setErrorMessage(null);
     try {
       await createInquiry({ ruc: value });
-      await revalidate(inquiryListQuery.key);
+      revalidate(inquiryListQuery.key);
       setRuc("");
       setSearchParams({ ruc: undefined });
     } catch (submitError) {
@@ -189,13 +190,21 @@ export function InquiriesPage() {
         </Show>
       </div>
 
-      <DataGrid
-        ariaLabel="Consultas de disponibilidad"
-        columns={columns}
-        emptyState="Aún no has consultado ningún RUC."
-        rowId={(row) => row.id}
-        source={source()}
-      />
+      <Loading fallback={<Spinner size="lg" />}>
+        <Errored
+          fallback={
+            <p class={styles.error}>No se pudieron cargar las consultas.</p>
+          }
+        >
+          <DataGrid
+            ariaLabel="Consultas de disponibilidad"
+            columns={columns}
+            emptyState="Aún no has consultado ningún RUC."
+            rowId={(row) => row.id}
+            source={source()}
+          />
+        </Errored>
+      </Loading>
     </div>
   );
 }

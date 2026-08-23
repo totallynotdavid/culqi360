@@ -1,49 +1,62 @@
-import { createEffect, createSignal, on, type Accessor } from "solid-js";
+import {
+  action,
+  createOptimistic,
+  createSignal,
+  type Accessor,
+} from "solid-js";
 
 import type { CurrentUserView } from "~/contracts/auth";
 import { codeIs } from "~/contracts/error-codes";
 import { parseWireError } from "~/contracts/errors";
 import type { CreateLeadInput } from "~/contracts/workflow/inputs";
-import { shortName } from "~/domain/identity/display-name";
 import type { RecordTabId } from "~/features/record-show/model/record-tab-id";
-import {
-  addOptimisticLead,
-  createOptimisticLeadRow,
-} from "~/features/workflow/data/optimistic-leads";
 import {
   toCommercialScopePayload,
   type CommercialScopeFormValues,
 } from "~/features/workflow/forms/commercial-scope/values";
 
-import { createCommandController } from "../../core/commands/create-command-controller";
-import { createOptimisticTransactionStore } from "../../core/optimistic/create-optimistic-transaction-store";
-
 type CreateLeadControllerInput = {
   draftRuc: Accessor<string>;
   inquiryId: Accessor<string | null>;
   validRuc: Accessor<string | null>;
-  previewName: Accessor<string | null>;
-  scope: Accessor<CommercialScopeFormValues>;
   currentUser: Accessor<CurrentUserView>;
+  scope: Accessor<CommercialScopeFormValues>;
   createLead: (input: CreateLeadInput) => Promise<{ leadId: string }>;
   onLeadCreated: (input: { leadId: string; ruc: string }) => void;
   setActiveTab: (tab: RecordTabId) => void;
 };
 
 export function createCreateLeadController(input: CreateLeadControllerInput) {
-  const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+  // Writable memo: editing the RUC recomputes it back to null, so a stale
+  // failure never outlives the input it was about.
+  const [errorMessage, setErrorMessage] = createSignal<string | null>(() => {
+    input.draftRuc();
 
-  createEffect(
-    on(input.draftRuc, () => setErrorMessage(null), { defer: true }),
-  );
-
-  const optimisticTransactions = createOptimisticTransactionStore();
-  const createCommand = createCommandController({
-    run: input.createLead,
+    return null;
   });
 
-  async function submit() {
-    if (createCommand.pending()) {
+  // Tentative for the action's lifetime: it reverts to false when the
+  // transaction settles, so there is no finally clause to keep in sync.
+  const [submitting, setSubmitting] = createOptimistic(false);
+
+  // The explicit Generator signature names what the yield hands back, so the
+  // action body reads the created lead without an assertion off `any`.
+  const createLead = action(function* (
+    payload: CreateLeadInput,
+  ): Generator<Promise<{ leadId: string }>, void, { leadId: string }> {
+    setSubmitting(true);
+
+    const result = yield input.createLead(payload);
+
+    input.onLeadCreated({ leadId: result.leadId, ruc: payload.ruc });
+  });
+
+  // Non-reactive because it only guards re-entry within one turn; the reactive
+  // flag above is what the UI renders.
+  let inFlight: Promise<unknown> | null = null;
+
+  async function submit(): Promise<void> {
+    if (inFlight) {
       return;
     }
 
@@ -65,57 +78,30 @@ export function createCreateLeadController(input: CreateLeadControllerInput) {
 
     setErrorMessage(null);
 
-    const user = input.currentUser();
-    const userName = shortName(user);
-
-    // clock-boundary: form submission. `apply` may replay, so keep the
-    // original submission timestamp rather than re-reading the clock.
-    const submittedAt = Date.now();
-
-    const txId = optimisticTransactions.begin({
-      apply: () =>
-        addOptimisticLead(
-          ["mine", "review", "all"],
-          createOptimisticLeadRow({
-            ruc,
-            legalName: input.previewName(),
-            address: null,
-            executiveId: user.id,
-            executiveName: userName,
-            createdBy: user.id,
-            createdByName: userName,
-            createdAt: submittedAt,
-          }),
-        ),
+    inFlight = createLead({
+      ruc,
+      inquiryId: input.inquiryId() ?? undefined,
+      ...scopePayload.value,
     });
 
     try {
-      const result = await createCommand.run({
-        ruc,
-        inquiryId: input.inquiryId() ?? undefined,
-        ...scopePayload.value,
-      });
-
-      optimisticTransactions.commit(txId);
-      input.onLeadCreated({ leadId: result.leadId, ruc });
+      await inFlight;
     } catch (submitError) {
-      optimisticTransactions.rollback(txId);
-
       const wire = parseWireError(submitError);
 
-      if (codeIs(wire, "invalid_ruc") || codeIs(wire, "ruc_required")) {
-        setErrorMessage(wire.message);
-        input.setActiveTab("registro");
-        return;
-      }
-
       setErrorMessage(wire.message);
+
+      if (codeIs(wire, "invalid_ruc") || codeIs(wire, "ruc_required")) {
+        input.setActiveTab("registro");
+      }
+    } finally {
+      inFlight = null;
     }
   }
 
   return {
     errorMessage,
-    submitting: createCommand.pending,
+    submitting,
     submit,
   };
 }

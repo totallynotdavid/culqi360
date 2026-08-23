@@ -1,4 +1,4 @@
-import { createAsync } from "@solidjs/router";
+import { createMemo } from "solid-js";
 import type { Accessor } from "solid-js";
 
 import type { FilterOptions } from "~/contracts/merchant-stats/views";
@@ -12,6 +12,6 @@ const EMPTY_OPTIONS: FilterOptions = {
 };
 
 export function useFilterOptions(): Accessor<FilterOptions> {
-  const options = createAsync(() => merchantFilterOptionsQuery());
+  const options = createMemo(() => merchantFilterOptionsQuery());
   return () => options() ?? EMPTY_OPTIONS;
 }

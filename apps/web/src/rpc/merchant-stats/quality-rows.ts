@@ -2,6 +2,7 @@ import { query } from "@solidjs/router";
 
 import type { Page } from "~/contracts/merchant-stats/views";
 import type { QualityIssue } from "~/contracts/merchant-stats/vocabulary";
+import { QUERY_KEYS } from "~/contracts/query-keys";
 import { getQualityRows } from "~/server/merchant-stats/ui/quality";
 
 export const qualityRowsQuery = query(
@@ -9,5 +10,5 @@ export const qualityRowsQuery = query(
     "use server";
     return getQualityRows(input);
   },
-  "merchant-stats.quality-rows",
+  QUERY_KEYS.merchantStats.qualityRows,
 );

@@ -1,5 +1,5 @@
 import { useParams, type RouteSectionProps } from "@solidjs/router";
-import { Suspense } from "solid-js";
+import { Loading } from "solid-js";
 
 import { PageCardLayout } from "~/components/ui/layout/page-card/page-card-layout";
 import { RecordShowHeader } from "~/features/record-show/header/record-show-header";
@@ -18,9 +18,7 @@ export function RecordShowShell(props: RouteSectionProps) {
         </RecordShowHeader>
       }
     >
-      <Suspense fallback={<RecordShowShellSkeleton />}>
-        {props.children}
-      </Suspense>
+      <Loading fallback={<RecordShowShellSkeleton />}>{props.children}</Loading>
     </PageCardLayout>
   );
 }

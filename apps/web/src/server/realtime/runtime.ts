@@ -1,5 +1,3 @@
-import type { H3Event } from "h3";
-
 import type { AuthSession } from "~/domain/auth/access/session-types";
 import {
   createPgListener,
@@ -28,23 +26,23 @@ export interface RealtimeOpenRequest {
   cursor: string | null;
 }
 
-type RealtimeStream = NonNullable<
-  Awaited<ReturnType<typeof openRealtimeStream>>
->;
-
 export interface RealtimeService {
   start(): void;
   stop(): Promise<void>;
+  /**
+   * The caller supplies the session because middleware already resolved it onto
+   * the request context; resolving it again here would drag the request event
+   * through the whole subsystem.
+   */
   openStream(
-    h3Event: H3Event,
+    session: AuthSession | null,
     request: RealtimeOpenRequest,
-  ): Promise<Result<RealtimeStream, RealtimeOpenError>>;
+  ): Promise<Result<Response, RealtimeOpenError>>;
 }
 
 export function createRealtimeService(input: {
   channels: readonly RealtimeChannel[];
   databaseUrl: () => string;
-  resolveSession: (h3Event: H3Event) => Promise<AuthSession | null>;
 }): RealtimeService {
   const hub = new TopicHub();
   let sweepTimer: ReturnType<typeof setInterval> | null = null;
@@ -112,11 +110,9 @@ export function createRealtimeService(input: {
   }
 
   async function openStream(
-    h3Event: H3Event,
+    session: AuthSession | null,
     request: RealtimeOpenRequest,
-  ): Promise<Result<RealtimeStream, RealtimeOpenError>> {
-    const session = await input.resolveSession(h3Event);
-
+  ): Promise<Result<Response, RealtimeOpenError>> {
     if (!session || session.sessionClass !== "app") {
       return Err("unauthenticated");
     }
@@ -137,12 +133,7 @@ export function createRealtimeService(input: {
       return Err("unavailable");
     }
 
-    const stream = await openRealtimeStream(
-      hub,
-      h3Event,
-      entry,
-      request.cursor,
-    );
+    const stream = await openRealtimeStream(hub, entry, request.cursor);
 
     return stream ? Ok(stream) : Err("not_found");
   }

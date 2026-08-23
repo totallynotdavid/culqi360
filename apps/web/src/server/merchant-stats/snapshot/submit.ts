@@ -2,8 +2,8 @@ import { fail, type DomainError } from "~/domain/errors";
 import type { GpvSnapshotId, GpvSnapshotJobId, UserId } from "~/domain/ids";
 import type { StoreFileDeps } from "~/server/files/service/contracts";
 import { storeUploadedFile } from "~/server/files/service/store-uploaded-file";
-import type { FileStorage } from "~/server/files/storage";
 import type { DatabaseExecutor } from "~/server/platform/database/executor";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { OperationContext } from "~/server/platform/operation/context";
 import { Err, Ok, type Result } from "~/shared/result";
 
@@ -21,7 +21,7 @@ export interface SubmitGpvSnapshotInput {
 
 export interface SubmitGpvSnapshotDeps {
   db: DatabaseExecutor;
-  files: StoreFileDeps & { storage: FileStorage };
+  files: StoreFileDeps & { storage: BlobStore };
 }
 
 export interface SubmittedGpvSnapshot {

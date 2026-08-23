@@ -1,6 +1,7 @@
-import { useAction, useSubmission } from "@solidjs/router";
+import { useAction, useSubmissions } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Button } from "~/components/ui/input/button";
 import { Input } from "~/components/ui/input/input";
@@ -34,8 +35,9 @@ export function LoginRetriesCard() {
   const [email, setEmail] = createSignal("");
   const { enqueueErrorSnackBar, enqueueInfoSnackBar } = useSnackBar();
   const lookup = useAction(loginRetryReportMutation);
-  const submission = useSubmission(loginRetryReportMutation);
-  const report = () => submission.result;
+  const reports = useSubmissions(loginRetryReportMutation);
+  const looking = createActionPending(loginRetryReportMutation);
+  const report = () => reports.at(-1)?.result;
 
   async function handleLookup(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -62,11 +64,7 @@ export function LoginRetriesCard() {
           required
         />
 
-        <Button
-          type="submit"
-          loading={submission.pending}
-          disabled={submission.pending}
-        >
+        <Button type="submit" loading={looking()}>
           Ver reporte
         </Button>
       </form>

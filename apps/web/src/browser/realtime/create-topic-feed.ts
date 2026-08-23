@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, type Accessor } from "solid-js";
+import { createSignal, type Accessor } from "solid-js";
 
 import type { RealtimeChannelName } from "~/contracts/realtime/channel";
 
@@ -23,11 +23,11 @@ export function createTopicFeed<T>({
   records: Accessor<T[]>;
   connection: Accessor<ConnectionState>;
 } {
-  const [records, setRecords] = createSignal<T[]>([]);
+  const [records, setRecords] = createSignal<T[]>(() => {
+    resetKey?.();
 
-  if (resetKey) {
-    createEffect(on(resetKey, () => setRecords([])));
-  }
+    return [];
+  });
 
   const connection = createTopicConnection({
     channel,

@@ -1,5 +1,5 @@
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
+import { createSignal, onSettled, Show } from "solid-js";
 
 import { useDataGrid } from "../context/instance-context";
 import {
@@ -24,7 +24,7 @@ export function DataGridDragSelectEffect(props: {
   >();
   const selectionController = props.selection;
 
-  onMount(() => {
+  onSettled(() => {
     const scrollWrapper = grid.getScrollWrapper();
     if (!scrollWrapper) {
       return;
@@ -167,13 +167,13 @@ export function DataGridDragSelectEffect(props: {
     scrollContainer.addEventListener("pointerup", handlePointerUp);
     scrollContainer.addEventListener("pointercancel", handlePointerCancel);
 
-    onCleanup(() => {
+    return () => {
       reset();
       scrollContainer.removeEventListener("pointerdown", handlePointerDown);
       scrollContainer.removeEventListener("pointermove", handlePointerMove);
       scrollContainer.removeEventListener("pointerup", handlePointerUp);
       scrollContainer.removeEventListener("pointercancel", handlePointerCancel);
-    });
+    };
   });
 
   const overlayMount = () => grid.getScrollWrapper();

@@ -1,5 +1,4 @@
-import { createAsync } from "@solidjs/router";
-import { For, Show, createEffect, createSignal, on } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 
 import { readFileText } from "~/browser/file/read-file-text";
 import { EmptyState } from "~/components/feedback/empty-state/empty";
@@ -63,7 +62,7 @@ function downloadBulkImportTemplate(role: Role): void {
 }
 
 export function BulkImportSection() {
-  const bulkImportSetup = createAsync(() => bulkImportSetupQuery());
+  const bulkImportSetup = createMemo(() => bulkImportSetupQuery());
   const [role, setRole] = createSignal("");
   const [csvFile, setCsvFile] = createSignal<File | null>(null);
   const [preview, setPreview] = createSignal<BulkPreviewResult | null>(null);
@@ -72,17 +71,15 @@ export function BulkImportSection() {
   const [isImporting, setIsImporting] = createSignal(false);
   const { enqueueErrorSnackBar } = useSnackBar();
 
-  createEffect(
-    on(bulkImportSetup, (setup) => {
-      if (!setup) {
-        return;
-      }
+  createEffect(bulkImportSetup, (setup) => {
+    if (!setup) {
+      return;
+    }
 
-      if (!setup.assignableRoles.some((option) => option.value === role())) {
-        setRole(setup.assignableRoles[0]?.value ?? "");
-      }
-    }),
-  );
+    if (!setup.assignableRoles.some((option) => option.value === role())) {
+      setRole(setup.assignableRoles[0]?.value ?? "");
+    }
+  });
 
   async function handlePreview(): Promise<void> {
     const file = csvFile();

@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import { WithTooltip } from "~/components/ui/overflow-tooltip/overflow-tooltip";
 
@@ -51,7 +51,11 @@ export function NavigationDrawerActionItem(
             onClick={props.onClick}
             disabled={props.unavailable}
             aria-expanded={
-              props.showChevron ? props.chevronExpanded : undefined
+              props.showChevron
+                ? props.chevronExpanded
+                  ? "true"
+                  : "false"
+                : undefined
             }
             style={frame.style()}
           >

@@ -1,5 +1,5 @@
+import type { JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import type { JSX } from "solid-js";
 
 import styles from "./field.module.css";
 

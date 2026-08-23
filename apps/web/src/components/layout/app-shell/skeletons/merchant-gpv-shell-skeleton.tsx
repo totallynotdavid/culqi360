@@ -1,4 +1,4 @@
-import { Index } from "solid-js";
+import { For } from "solid-js";
 
 import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { WidgetSkeleton } from "~/features/widgets/widget-skeleton";
@@ -12,9 +12,9 @@ export function MerchantGpvShellSkeleton() {
   return (
     <div class={styles.root}>
       <div class={styles.tabStrip}>
-        <Index each={TABS}>
+        <For keyed={false} each={TABS}>
           {() => <Skeleton width={100} height={24} radius={6} />}
-        </Index>
+        </For>
       </div>
 
       <div class={styles.filterBar}>
@@ -23,7 +23,9 @@ export function MerchantGpvShellSkeleton() {
       </div>
 
       <div class={styles.grid}>
-        <Index each={WIDGETS}>{() => <WidgetSkeleton />}</Index>
+        <For keyed={false} each={WIDGETS}>
+          {() => <WidgetSkeleton />}
+        </For>
       </div>
     </div>
   );

@@ -13,8 +13,8 @@ x-app: &app
     - .env
   environment:
     NODE_ENV: production
-    NITRO_HOST: 0.0.0.0
-    NITRO_PORT: 3000
+    HOST: 0.0.0.0
+    PORT: 3000
     WEB_DB_URL: postgres://postgres@postgres:5432/crm
     ENGINE_CONNECT_MODE: internal
     ENGINE_URL: http://crm-engine:3001

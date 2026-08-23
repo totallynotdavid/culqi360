@@ -1,33 +1,19 @@
-import { createEffect, createSignal, on } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 
-import { createTopicState } from "~/browser/realtime/create-topic-state";
+import { createJob } from "~/browser/jobs/create-job";
+import type { SnackBarPatch } from "~/components/feedback/snack-bar-manager/types";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { actionErrorMessage } from "~/contracts/errors";
-import { REALTIME_CHANNELS } from "~/contracts/realtime/channel";
+import { JOB_KINDS, type JobEvent } from "~/contracts/jobs/job-event";
 import {
-  parseRecordImportProgressMessage,
-  type RecordImportProgressEvent,
+  parseRecordImportDetail,
+  type RecordImportDetail,
   type RecordImportType,
 } from "~/contracts/records/imports";
 import { uploadRecordImportFile } from "~/rpc/records/imports";
 
 const IMPORT_PROGRESS_DURATION_MS = 0;
 const IMPORT_COMPLETED_DURATION_MS = 4_000;
-
-type ImportProgress = {
-  importType: RecordImportType;
-  rowsApplied: number;
-  rowsFailed: number;
-  rowsTotal: number;
-};
-
-function importTypeLabel(type: RecordImportType): string {
-  if (type === "import_status") {
-    return "estados";
-  }
-
-  return "prioridades";
-}
 
 function importTypeUnit(type: RecordImportType, count: number): string {
   if (type === "import_status") {
@@ -37,25 +23,45 @@ function importTypeUnit(type: RecordImportType, count: number): string {
   return count === 1 ? "prioridad" : "prioridades";
 }
 
-function buildProgressMessage(progress: ImportProgress): string {
-  if (progress.rowsTotal <= 0) {
-    return `Procesando ${importTypeLabel(progress.importType)}...`;
+function progressMessage(
+  type: RecordImportType,
+  processed: number,
+  total: number,
+): string {
+  if (total <= 0) {
+    return `Procesando ${importTypeUnit(type, 2)}...`;
   }
 
-  const processed = progress.rowsApplied + progress.rowsFailed;
-  const unit = importTypeUnit(progress.importType, progress.rowsTotal);
-
-  return `Procesando ${unit}: ${processed} de ${progress.rowsTotal}`;
+  return `Procesando ${importTypeUnit(type, total)}: ${processed} de ${total}`;
 }
 
-function buildCompletedMessage(progress: ImportProgress): string {
-  const unit = importTypeUnit(progress.importType, progress.rowsTotal);
+/** How one frame of an import reads in the snackbar it is being narrated to. */
+function describeImport(event: JobEvent<RecordImportDetail>): SnackBarPatch {
+  const { importType } = event.detail;
+  const { completed, failed, total } = event.progress;
 
-  if (progress.rowsFailed > 0) {
-    return `Procesados ${progress.rowsTotal} ${unit} (${progress.rowsFailed} con error)`;
+  if (event.state === "failed") {
+    return {
+      message: event.errorMessage ?? "La importación falló",
+      variant: "error",
+      duration: IMPORT_COMPLETED_DURATION_MS,
+    };
   }
 
-  return `Procesados ${progress.rowsTotal} ${unit}`;
+  if (event.state === "done") {
+    const unit = importTypeUnit(importType, total);
+
+    return {
+      message:
+        failed > 0
+          ? `Procesados ${total} ${unit} (${failed} con error)`
+          : `Procesados ${total} ${unit}`,
+      variant: failed > 0 ? "warning" : "success",
+      duration: IMPORT_COMPLETED_DURATION_MS,
+    };
+  }
+
+  return { message: progressMessage(importType, completed + failed, total) };
 }
 
 function isSupportedFile(file: File): boolean {
@@ -64,87 +70,33 @@ function isSupportedFile(file: File): boolean {
   return name.endsWith(".csv") || name.endsWith(".xlsx");
 }
 
-function isTerminal(progress: RecordImportProgressEvent): boolean {
-  return progress.queueState === "done" || progress.queueState === "failed";
-}
-
 export function useRecordsImport() {
   const { enqueueInfoSnackBar, enqueueErrorSnackBar, updateSnackBar } =
     useSnackBar();
 
   let fileInputRef: HTMLInputElement | undefined;
-  let snackBarId: string | null = null;
 
   const [jobId, setJobId] = createSignal<string | null>(null);
+  // A signal rather than a variable: the effect below reads it, so it has to
+  // re-run once the snackbar the import narrates into exists.
+  const [snackBarId, setSnackBarId] = createSignal<string | null>(null);
 
-  const importProgress = createTopicState({
-    channel: REALTIME_CHANNELS.recordImport,
-    id: jobId,
-    parse: parseRecordImportProgressMessage,
-    isFinal: isTerminal,
+  const job = createJob({
+    kind: JOB_KINDS.recordImport,
+    subjectId: jobId,
+    parseDetail: parseRecordImportDetail,
   });
 
-  function updateImportSnackBar(
-    id: string,
-    event: RecordImportProgressEvent,
-  ): void {
-    if (event.queueState === "done") {
-      updateSnackBar(id, {
-        message: buildCompletedMessage(event),
-        variant: event.rowsFailed > 0 ? "warning" : "success",
-        duration: IMPORT_COMPLETED_DURATION_MS,
-      });
-
-      return;
-    }
-
-    if (event.queueState === "failed") {
-      updateSnackBar(id, {
-        message: event.errorMessage ?? "La importación falló",
-        variant: "error",
-        duration: IMPORT_COMPLETED_DURATION_MS,
-      });
-
-      return;
-    }
-
-    updateSnackBar(id, {
-      message: buildProgressMessage(event),
-    });
-  }
-
+  // Narrating into the snackbar queue is a side effect on an imperative API,
+  // which is why this stayed an effect while the revalidation and connection
+  // ones did not. Losing the feed is reported once by the shell instead.
   createEffect(
-    on(importProgress.value, (event) => {
-      if (!event || snackBarId === null) {
-        return;
+    () => ({ event: job(), id: snackBarId() }),
+    ({ event, id }) => {
+      if (event && id !== null) {
+        updateSnackBar(id, describeImport(event));
       }
-
-      updateImportSnackBar(snackBarId, event);
-    }),
-  );
-
-  createEffect(
-    on(importProgress.connection, (state) => {
-      if (snackBarId === null) {
-        return;
-      }
-
-      if (state === "denied") {
-        updateSnackBar(snackBarId, {
-          message: "Se perdió el seguimiento. Recarga la página.",
-          variant: "warning",
-          duration: IMPORT_COMPLETED_DURATION_MS,
-        });
-
-        return;
-      }
-
-      if (state === "offline") {
-        updateSnackBar(snackBarId, {
-          message: "Sin conexión. La importación continúa...",
-        });
-      }
-    }),
+    },
   );
 
   async function importFile(file: File): Promise<void> {
@@ -159,16 +111,12 @@ export function useRecordsImport() {
     try {
       const result = await uploadRecordImportFile(formData);
 
-      snackBarId = enqueueInfoSnackBar(
-        buildProgressMessage({
-          importType: result.importType,
-          rowsApplied: 0,
-          rowsFailed: 0,
-          rowsTotal: result.rowsTotal,
-        }),
-        { duration: IMPORT_PROGRESS_DURATION_MS },
+      setSnackBarId(
+        enqueueInfoSnackBar(
+          progressMessage(result.importType, 0, result.rowsTotal),
+          { duration: IMPORT_PROGRESS_DURATION_MS },
+        ),
       );
-
       setJobId(result.jobId);
     } catch (error: unknown) {
       enqueueErrorSnackBar(actionErrorMessage(error));

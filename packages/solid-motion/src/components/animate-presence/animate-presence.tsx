@@ -1,6 +1,7 @@
 import { resolveElements } from "@solid-primitives/refs";
 import { createListTransition } from "@solid-primitives/transition-group";
-import { type FlowComponent, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { type FlowComponent } from "solid-js";
 
 import type { MotionState } from "../../state";
 import { mountedStates } from "../../state";
@@ -88,7 +89,7 @@ export const AnimatePresence: FlowComponent<AnimatePresenceProps> = (props) => {
   }
 
   return (
-    <AnimatePresenceContext.Provider value={context}>
+    <AnimatePresenceContext value={context}>
       {(() => {
         const rendered = createListTransition(
           () => resolveElements(() => props.children).toArray() as Element[],
@@ -101,7 +102,7 @@ export const AnimatePresence: FlowComponent<AnimatePresenceProps> = (props) => {
         );
         return <>{rendered() as unknown as JSX.Element}</>;
       })()}
-    </AnimatePresenceContext.Provider>
+    </AnimatePresenceContext>
   );
 };
 

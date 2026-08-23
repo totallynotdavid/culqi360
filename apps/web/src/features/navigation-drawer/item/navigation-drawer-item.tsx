@@ -1,4 +1,5 @@
-import { Show, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { Show } from "solid-js";
 
 import { useIsSettingsPage } from "../hooks/use-is-settings-page";
 import { useNavigationDrawerState } from "../state/navigation-drawer-provider";

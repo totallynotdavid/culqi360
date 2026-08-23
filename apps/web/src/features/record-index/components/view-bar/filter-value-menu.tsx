@@ -37,7 +37,11 @@ export function FilterValueMenu(props: FilterValueMenuProps) {
                       ? "true"
                       : "false"
                   }
-                  aria-pressed={recordIndex.filtering?.value() === option.value}
+                  aria-pressed={
+                    recordIndex.filtering?.value() === option.value
+                      ? "true"
+                      : "false"
+                  }
                   onClick={() => {
                     recordIndex.filtering?.set(option.value);
                     recordIndex.filtering?.setPanel({ kind: "field-list" });

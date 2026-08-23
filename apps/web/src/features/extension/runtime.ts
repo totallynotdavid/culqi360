@@ -1,21 +1,12 @@
-import type {
-  BridgeResponse,
-  ExecutivePresenceStatus,
-  ExecutiveStateSnapshot,
-  SyncHealth,
-} from "@crm/contracts/extension";
+import type { BridgeResponse } from "@crm/contracts/extension";
 import { isBridgeResponse } from "@crm/contracts/extension";
 
 import { isPlainRecord } from "~/shared/type-guards";
-
-export type { ExecutivePresenceStatus, ExecutiveStateSnapshot, SyncHealth };
 
 interface AssignmentHandoffMessage {
   type: "assignment.handoff";
   token: string;
 }
-
-export type ExtensionRuntimeResponse = BridgeResponse;
 
 interface ChromeRuntimeApi {
   lastError?: { message?: string };
@@ -26,9 +17,7 @@ interface ChromeRuntimeApi {
   ) => void;
 }
 
-export function isRuntimeResponse(
-  value: unknown,
-): value is ExtensionRuntimeResponse {
+export function isRuntimeResponse(value: unknown): value is BridgeResponse {
   return isBridgeResponse(value);
 }
 
@@ -58,13 +47,13 @@ export function getExtensionId(): string | null {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
-function bridgeUnavailable(message: string): ExtensionRuntimeResponse {
+function bridgeUnavailable(message: string): BridgeResponse {
   return { ok: false, error: message };
 }
 
 async function sendMessage(
   message: AssignmentHandoffMessage,
-): Promise<ExtensionRuntimeResponse> {
+): Promise<BridgeResponse> {
   const extensionId = getExtensionId();
 
   if (!extensionId) {
@@ -118,7 +107,7 @@ export function focusExtensionWindow(): void {
 
 export async function handoffLeadToExtension(input: {
   token: string;
-}): Promise<ExtensionRuntimeResponse> {
+}): Promise<BridgeResponse> {
   const token = input.token.trim();
 
   if (!token) {

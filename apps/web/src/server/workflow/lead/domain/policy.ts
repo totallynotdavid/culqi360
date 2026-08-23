@@ -37,12 +37,20 @@ export type LeadCapability =
   | "complete-fulfillment"
   | "list-assignable-executives";
 
-export type AssignableExecutivesScope =
-  | { actorRole: "superuser"; actorBranchId: BranchId }
-  | {
-      actorRole: "admin" | "sales_manager" | "supervisor";
-      actorBranchId: BranchId;
-    };
+// Only these roles may list executives to assign. Superuser sees every branch;
+// the rest are confined to their own, which is why the branch travels with the
+// role instead of being looked up again downstream.
+const ASSIGNABLE_EXECUTIVES_SCOPE_ROLES = [
+  "superuser",
+  "admin",
+  "sales_manager",
+  "supervisor",
+] as const;
+
+export type AssignableExecutivesScope = {
+  actorRole: (typeof ASSIGNABLE_EXECUTIVES_SCOPE_ROLES)[number];
+  actorBranchId: BranchId;
+};
 
 const OWNER_REQUIRED = new Set<LeadCapability>([
   "edit-commercial-scope",
@@ -323,18 +331,11 @@ export function resolveAssignableExecutivesScope(input: {
   actorRole: Role;
   actorBranchId: BranchId;
 }): Result<AssignableExecutivesScope, DomainError> {
-  if (input.actorRole === "superuser") {
-    return Ok({ actorRole: "superuser", actorBranchId: input.actorBranchId });
-  }
-  if (
-    input.actorRole === "admin" ||
-    input.actorRole === "sales_manager" ||
-    input.actorRole === "supervisor"
-  ) {
-    return Ok({
-      actorRole: input.actorRole,
-      actorBranchId: input.actorBranchId,
-    });
-  }
-  return Err(forbidden());
+  const actorRole = ASSIGNABLE_EXECUTIVES_SCOPE_ROLES.find(
+    (candidate) => candidate === input.actorRole,
+  );
+
+  return actorRole === undefined
+    ? Err(forbidden())
+    : Ok({ actorRole, actorBranchId: input.actorBranchId });
 }

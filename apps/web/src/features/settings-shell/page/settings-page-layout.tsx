@@ -1,5 +1,6 @@
 import { useLocation } from "@solidjs/router";
-import { createMemo, type JSX, type ParentProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { createMemo, type ParentProps } from "solid-js";
 
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import {

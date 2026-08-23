@@ -1,5 +1,5 @@
+import { Dynamic } from "@solidjs/web";
 import { Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
 
 import { useDataGrid } from "../context/instance-context";
 import type { DataGridActionRowConfig } from "../model/types";

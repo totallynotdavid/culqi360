@@ -1,11 +1,10 @@
-import { createAsync } from "@solidjs/router";
 import {
   createMemo,
   createSignal,
-  ErrorBoundary,
+  Errored,
   For,
   Show,
-  Suspense,
+  Loading,
 } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
@@ -46,11 +45,11 @@ import { AggregateTile } from "../tiles";
 import styles from "../merchant-gpv-dashboard.module.css";
 
 export function CommissionTab() {
-  const view = createAsync(() => commissionManagerDashboardQuery());
+  const view = createMemo(() => commissionManagerDashboardQuery());
 
   return (
-    <ErrorBoundary fallback={<TabError />}>
-      <Suspense fallback={<WidgetSkeleton />}>
+    <Loading fallback={<WidgetSkeleton />}>
+      <Errored fallback={<TabError />}>
         <Show
           when={view()}
           fallback={
@@ -62,8 +61,8 @@ export function CommissionTab() {
         >
           {(readyView) => <CommissionContent view={readyView()} />}
         </Show>
-      </Suspense>
-    </ErrorBoundary>
+      </Errored>
+    </Loading>
   );
 }
 

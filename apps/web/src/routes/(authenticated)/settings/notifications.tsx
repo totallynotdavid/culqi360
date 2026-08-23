@@ -1,6 +1,6 @@
-import { createAsync, type RouteDefinition, useAction } from "@solidjs/router";
-import { createSignal, For, Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { type RouteDefinition, useAction } from "@solidjs/router";
+import { Dynamic } from "@solidjs/web";
+import { For, Show, createMemo, createSignal } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import BrandWhatsapp from "~/components/icons/brand-whatsapp";
@@ -60,7 +60,7 @@ export const route = {
 } satisfies RouteDefinition;
 
 export default function NotificationsSettingsPage() {
-  const preferences = createAsync(() => notificationPreferencesQuery());
+  const preferences = createMemo(() => notificationPreferencesQuery());
   const { enqueueErrorSnackBar } = useSnackBar();
   const savePreference = useAction(setNotificationPreferenceMutation);
   const [activeChannel, setActiveChannel] = createSignal<Channel>("email");

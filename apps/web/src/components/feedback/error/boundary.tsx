@@ -1,5 +1,5 @@
-import type { JSX } from "solid-js";
-import { ErrorBoundary as SolidErrorBoundary } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Errored } from "solid-js";
 
 import { createLogger } from "~/shared/observability/runtime-logger";
 
@@ -15,19 +15,23 @@ const logger = createLogger("app-error-boundary");
 
 export function AppErrorBoundary(props: AppErrorBoundaryProps) {
   return (
-    <SolidErrorBoundary
+    <Errored
       fallback={(error, reset) => {
-        reportBoundaryError(logger, error);
+        // Solid 2 hands the fallback an accessor rather than the value.
+        const thrown = error();
+
+        reportBoundaryError(logger, thrown);
+
         return (
           <ErrorState
             title={props.title}
-            message={getErrorMessage(error)}
+            message={getErrorMessage(thrown)}
             onRetry={reset}
           />
         );
       }}
     >
       {props.children}
-    </SolidErrorBoundary>
+    </Errored>
   );
 }

@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { Show, type JSX } from "solid-js";
+import { Show } from "solid-js";
 
 import { AnchoredPopover } from "~/components/ui/overlay/anchored-popover";
 

@@ -2,7 +2,7 @@ import {
   createMemo,
   createUniqueId,
   onCleanup,
-  onMount,
+  onSettled,
   type Accessor,
   useContext,
 } from "solid-js";
@@ -21,7 +21,7 @@ export function usePresence(subscribe = true): PresenceTuple {
   let unregister: (() => void) | undefined;
   const isPresent = createMemo(() => context.isPresent());
 
-  onMount(() => {
+  onSettled(() => {
     if (!subscribe) {
       return;
     }

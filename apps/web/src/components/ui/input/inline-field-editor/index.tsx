@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onSettled, Show } from "solid-js";
 
 import { Button } from "~/components/ui/input/button";
 import { useDismissibleLayer } from "~/components/ui/utilities/use-dismissible-layer";
@@ -32,7 +32,7 @@ export function InlineFieldEditor(props: InlineFieldEditorProps) {
   let containerRef: HTMLDivElement | undefined;
   let inputRef: HTMLInputElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     inputRef?.focus();
     inputRef?.select();
   });

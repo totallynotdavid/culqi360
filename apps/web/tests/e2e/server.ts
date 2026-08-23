@@ -54,9 +54,6 @@ export async function startServer(options: {
       ...process.env,
       NODE_ENV: "test",
 
-      // Set both Nitro and generic server variables.
-      NITRO_PORT: String(options.port),
-      NITRO_HOST: "127.0.0.1",
       PORT: String(options.port),
       HOST: "127.0.0.1",
 

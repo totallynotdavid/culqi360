@@ -1,7 +1,9 @@
 import { shortName } from "~/domain/identity/display-name";
-import type { BranchId, UserId } from "~/domain/ids";
+import type { UserId } from "~/domain/ids";
 import type { DatabaseExecutor } from "~/server/platform/database/executor";
 import { createUsersRepo } from "~/server/users/repos-users";
+
+import type { AssignableExecutivesScope } from "../domain/policy";
 
 export type LeadUser = {
   id: UserId;
@@ -11,11 +13,6 @@ export type LeadUser = {
 export type LeadUserWithName = {
   id: UserId;
   fullName: string;
-};
-
-export type AssignableExecutivesScope = {
-  actorRole: "superuser" | "admin" | "sales_manager" | "supervisor";
-  actorBranchId: BranchId;
 };
 
 export type WorkflowUserRepository = {

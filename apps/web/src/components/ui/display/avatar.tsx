@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { Show, createEffect, createSignal, on } from "solid-js";
+import { Show, createSignal } from "solid-js";
 
 import { avatarPlaceholderColors } from "./avatar-placeholder-color";
 
@@ -20,16 +20,12 @@ interface AvatarProps {
 }
 
 export function Avatar(props: AvatarProps) {
-  const [hasImageError, setHasImageError] = createSignal(false);
+  // Remembering which URL failed rather than that one did means a new URL is a
+  // fresh attempt without anything having to clear the flag.
+  const [failedUrl, setFailedUrl] = createSignal<string | null>(null);
 
-  createEffect(
-    on(
-      () => props.imageUrl,
-      () => setHasImageError(false),
-    ),
-  );
-
-  const showImage = () => Boolean(props.imageUrl) && !hasImageError();
+  const showImage = () =>
+    Boolean(props.imageUrl) && failedUrl() !== props.imageUrl;
 
   const placeholderStyle = () => {
     if (props.placeholderColorSeed === undefined) {
@@ -67,7 +63,7 @@ export function Avatar(props: AvatarProps) {
           src={props.imageUrl ?? undefined}
           alt=""
           class={clsx(styles.image, props.imageClass)}
-          onError={() => setHasImageError(true)}
+          onError={() => setFailedUrl(props.imageUrl)}
         />
       </Show>
     </span>

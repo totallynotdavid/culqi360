@@ -77,7 +77,7 @@ export function QualifyForm(props: { leadId: string }) {
         priority: currentPriority,
         reason: reason().trim(),
       });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       setErrorMessage(actionErrorMessage(caught));
     } finally {

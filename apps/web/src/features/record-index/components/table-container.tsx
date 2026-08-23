@@ -10,11 +10,8 @@ export function RecordIndexTableContainer<T extends { id: string }>(props: {
   const source = () => props.controller.source();
   const actionRow = () => {
     const createAction = props.controller.definition.createAction;
-    if (
-      !createAction ||
-      source().status !== "ready" ||
-      source().rows.length === 0
-    ) {
+
+    if (!createAction || source().rows.length === 0) {
       return undefined;
     }
 

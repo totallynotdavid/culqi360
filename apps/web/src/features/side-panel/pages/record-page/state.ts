@@ -11,7 +11,10 @@ export function useLeadRecordPageState() {
   const pageId = usePageInstanceId();
   const { updatePageState } = useSidePanel();
   const pageState = useSidePanelPageState("view-record");
-  const [subtitle, setSubtitle] = createSignal(pageState().subtitle);
+  // Writable memo: the page overwrites it with the RUC once the lead detail
+  // lands, and reopening the panel on another record recomputes it. Read once
+  // at creation, it kept the first record's subtitle forever.
+  const [subtitle, setSubtitle] = createSignal(() => pageState().subtitle);
 
   function setActiveTab(activeTab: RecordTabId) {
     updatePageState(pageId(), (state) => {

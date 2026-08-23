@@ -1,15 +1,11 @@
-import { clsx } from "clsx";
-import type { Component } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 
-import type { IconProps } from "~/components/icons/icon-base";
+import type { IconComponent } from "~/components/icons/icon-base";
 
 import styles from "./navigation-bar.module.css";
 
-export type NavigationBarIcon = Component<Omit<IconProps, "name" | "iconNode">>;
-
 export function NavigationBarItem(props: {
-  Icon: NavigationBarIcon;
+  Icon: IconComponent;
   isActive: boolean;
   label: string;
   onClick: () => void;
@@ -17,7 +13,7 @@ export function NavigationBarItem(props: {
   return (
     <button
       type="button"
-      class={clsx(styles.item, props.isActive && styles.itemActive)}
+      class={[styles.item, props.isActive && styles.itemActive]}
       onClick={() => props.onClick()}
       aria-label={props.label}
     >

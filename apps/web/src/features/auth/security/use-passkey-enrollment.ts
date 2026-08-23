@@ -1,4 +1,4 @@
-import { createSignal, onMount } from "solid-js";
+import { createSignal, onSettled } from "solid-js";
 
 import {
   createRegistrationResponse,
@@ -21,7 +21,7 @@ export function usePasskeyEnrollment(options: PasskeyEnrollmentOptions) {
   const [supported, setSupported] = createSignal(false);
   const [loading, setLoading] = createSignal(false);
 
-  onMount(() => {
+  onSettled(() => {
     setSupported(isPasskeyRegistrationSupported());
   });
 

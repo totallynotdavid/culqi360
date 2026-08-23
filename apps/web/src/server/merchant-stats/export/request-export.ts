@@ -6,8 +6,8 @@ import type {
 } from "~/server/files/service/contracts";
 import { issueDownloadToken } from "~/server/files/service/issue-download-token";
 import { storeGeneratedFile } from "~/server/files/service/store-generated-file";
-import type { FileStorage } from "~/server/files/storage";
 import type { DatabaseExecutor } from "~/server/platform/database/executor";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { Result } from "~/shared/result";
 
 import { getCohortRows } from "../read/cohort";
@@ -17,7 +17,7 @@ import { buildMerchantGpvWorkbook } from "./workbook";
 type ExportDeps = {
   db: DatabaseExecutor;
   filesRepo: FileRepos;
-  filesStorage: FileStorage;
+  filesStorage: BlobStore;
 };
 
 export async function requestMerchantGpvExport(

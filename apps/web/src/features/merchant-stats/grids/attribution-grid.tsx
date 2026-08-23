@@ -1,5 +1,5 @@
 import { useAction } from "@solidjs/router";
-import { ErrorBoundary, Suspense } from "solid-js";
+import { Errored, Loading } from "solid-js";
 
 import Building2 from "~/components/icons/building-2";
 import CalendarDays from "~/components/icons/calendar-days";
@@ -11,7 +11,6 @@ import {
 } from "~/components/ui/input/inline-field-editor";
 import type { CohortSaleRow } from "~/contracts/merchant-stats/views";
 import { DataGrid } from "~/features/data-grid/components/grid";
-import type { DataGridSource } from "~/features/data-grid/model/source";
 import type { DataGridColumn } from "~/features/data-grid/model/types";
 
 import {
@@ -140,31 +139,31 @@ export function AttributionGrid(props: { view: GpvView }) {
     },
   ];
 
-  const renderGrid = (source: DataGridSource<CohortSaleRow>) => (
+  const renderGrid = (
+    rows: ReadonlyArray<CohortSaleRow>,
+    emptyState: string,
+  ) => (
     <DataGrid
       ariaLabel="Atribución por RUC y mes"
       columns={columns}
-      emptyState="No hay ventas para los filtros actuales."
+      emptyState={emptyState}
       loadMore={{
         hasMore: grid.hasMore(),
         loading: grid.loading(),
         onLoadMore: grid.onLoadMore,
       }}
       rowId={(row) => row.saleId}
-      source={source}
+      source={{ rows }}
     />
   );
 
   return (
     <div class={styles.surface}>
-      <ErrorBoundary fallback={renderGrid({ status: "error", rows: [] })}>
-        <Suspense fallback={renderGrid({ status: "pending", rows: [] })}>
-          {renderGrid({
-            status: "ready",
-            rows: grid.rows(),
-          })}
-        </Suspense>
-      </ErrorBoundary>
+      <Loading fallback={renderGrid([], "Cargando ventas...")}>
+        <Errored fallback={renderGrid([], "No se pudieron cargar las ventas.")}>
+          {renderGrid(grid.rows(), "No hay ventas para los filtros actuales.")}
+        </Errored>
+      </Loading>
     </div>
   );
 }

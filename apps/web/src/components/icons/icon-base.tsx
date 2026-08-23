@@ -1,4 +1,5 @@
-import { For, splitProps, type JSX } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { For, omit, type Component } from "solid-js";
 
 const defaultAttributes = {
   xmlns: "http://www.w3.org/2000/svg",
@@ -31,6 +32,9 @@ export interface IconProps extends Omit<
   title?: string;
 }
 
+/** What `createIcon` produces: an icon with its node and name already bound. */
+export type IconComponent = Component<Omit<IconProps, "iconNode" | "name">>;
+
 const SVG_NODE_RENDERERS: Record<
   SupportedSvgTag,
   (attrs: Record<string, string>) => JSX.Element
@@ -52,27 +56,9 @@ function hasA11yProp(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return false;
 }
 
-function mergeClasses(...classes: Array<string | undefined>) {
-  const out: string[] = [];
-
-  for (const name of classes) {
-    if (!name) {
-      continue;
-    }
-
-    const trimmed = name.trim();
-    if (!trimmed || out.includes(trimmed)) {
-      continue;
-    }
-
-    out.push(trimmed);
-  }
-
-  return out.join(" ");
-}
-
 export function IconBase(props: IconProps) {
-  const [local, rest] = splitProps(props, [
+  const rest = omit(
+    props,
     "color",
     "size",
     "strokeWidth",
@@ -82,20 +68,20 @@ export function IconBase(props: IconProps) {
     "title",
     "iconNode",
     "absoluteStrokeWidth",
-  ]);
+  );
 
   const strokeWidth = () => {
     const width = Number(
-      local.strokeWidth ?? defaultAttributes["stroke-width"],
+      props.strokeWidth ?? defaultAttributes["stroke-width"],
     );
-    if (!local.absoluteStrokeWidth) {
+    if (!props.absoluteStrokeWidth) {
       return width;
     }
 
-    return (width * 24) / Number(local.size ?? defaultAttributes.width);
+    return (width * 24) / Number(props.size ?? defaultAttributes.width);
   };
   const iconTitle = () => {
-    const title = local.title ?? local.name;
+    const title = props.title ?? props.name;
     return typeof title === "string" && title.trim().length > 0
       ? title
       : "icon";
@@ -104,27 +90,23 @@ export function IconBase(props: IconProps) {
   return (
     <svg
       {...defaultAttributes}
-      width={local.size ?? defaultAttributes.width}
-      height={local.size ?? defaultAttributes.height}
-      stroke={local.color ?? defaultAttributes.stroke}
+      width={props.size ?? defaultAttributes.width}
+      height={props.size ?? defaultAttributes.height}
+      stroke={props.color ?? defaultAttributes.stroke}
       stroke-width={strokeWidth()}
-      class={mergeClasses(
-        "lucide",
-        local.name ? `lucide-${local.name}` : undefined,
-        local.class,
-      )}
+      class={["lucide", props.name && `lucide-${props.name}`, props.class]}
       aria-hidden={
-        !local.children && !hasA11yProp(rest) && iconTitle() === "icon"
+        !props.children && !hasA11yProp(rest) && iconTitle() === "icon"
           ? "true"
           : undefined
       }
       {...rest}
     >
       <title>{iconTitle()}</title>
-      <For each={local.iconNode}>
+      <For each={props.iconNode}>
         {([elementName, attrs]) => SVG_NODE_RENDERERS[elementName](attrs)}
       </For>
-      {local.children}
+      {props.children}
     </svg>
   );
 }

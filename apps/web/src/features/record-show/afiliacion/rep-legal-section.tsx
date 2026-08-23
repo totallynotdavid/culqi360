@@ -67,7 +67,7 @@ export function RepLegalSection(props: {
         telefono: telefono().trim(),
         email: email().trim(),
       });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       setSaveErrorMessage(actionErrorMessage(caught));
     } finally {

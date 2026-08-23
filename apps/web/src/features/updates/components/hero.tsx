@@ -1,4 +1,4 @@
-import { clientOnly } from "@solidjs/start";
+import { clientOnly } from "@solidjs/web";
 
 import { UpdatesHeroVisualFallback } from "./hero-visual-fallback";
 

@@ -1,5 +1,5 @@
 import { Motion } from "@crm/solid-motion";
-import { ErrorBoundary, Show, Suspense } from "solid-js";
+import { Errored, Show, Loading } from "solid-js";
 
 import { HotkeyBoundary } from "../core/hotkeys/hotkey-boundary";
 import { SIDE_PANEL_PAGES_CONFIG } from "../registry/page-registry";
@@ -35,17 +35,17 @@ export function Router(props: { isMobile: boolean }) {
               return (
                 <HotkeyBoundary class={styles.pageContent}>
                   <PageInstanceProvider pageId={entry.pageId}>
-                    <ErrorBoundary
-                      fallback={
-                        <div class={styles.pageState}>
-                          No se pudo cargar el panel.
-                        </div>
-                      }
-                    >
-                      <Suspense fallback={<PageSkeleton />}>
+                    <Loading fallback={<PageSkeleton />}>
+                      <Errored
+                        fallback={
+                          <div class={styles.pageState}>
+                            No se pudo cargar el panel.
+                          </div>
+                        }
+                      >
                         <PageComponent />
-                      </Suspense>
-                    </ErrorBoundary>
+                      </Errored>
+                    </Loading>
                   </PageInstanceProvider>
                 </HotkeyBoundary>
               );

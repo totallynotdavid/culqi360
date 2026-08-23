@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { type JSX, type ParentProps } from "solid-js";
+import { type ParentProps } from "solid-js";
 
 import { springTransform } from "~/components/ui/animation/spring-transform";
 

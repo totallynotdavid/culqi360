@@ -1,5 +1,5 @@
-import { createAsync, useAction, useNavigate } from "@solidjs/router";
-import { createMemo, Show } from "solid-js";
+import { useAction, useNavigate } from "@solidjs/router";
+import { createMemo, isPending, latest, Show } from "solid-js";
 
 import CircleQuestionMark from "~/components/icons/circle-question-mark";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
@@ -38,14 +38,18 @@ export function CreateLeadPage() {
     return /^\d{11}$/.test(value) ? value : null;
   });
 
-  const bootstrapPreview = createAsync(() => {
+  const bootstrapPreview = createMemo(() => {
     const ruc = validRuc();
 
     return ruc ? leadBootstrapPreviewQuery(ruc) : Promise.resolve(null);
   });
 
+  // Reading the memo directly would block on every keystroke that starts a new
+  // lookup. latest() keeps the previously resolved preview visible instead, and
+  // the ?? null covers the first lookup, where there is nothing committed yet
+  // and latest() hands back undefined despite what its return type says.
   const latestBootstrapPreview = createMemo(
-    () => bootstrapPreview.latest ?? null,
+    () => latest(bootstrapPreview) ?? null,
   );
 
   const previewLegalName = createMemo(
@@ -56,7 +60,6 @@ export function CreateLeadPage() {
     draftRuc,
     inquiryId: draftInquiryId,
     validRuc,
-    previewName: previewLegalName,
     scope: draftScope,
     currentUser,
     createLead,
@@ -74,16 +77,17 @@ export function CreateLeadPage() {
   });
 
   const engineStatus = createMemo(() => {
-    const ruc = validRuc();
-    const preview = latestBootstrapPreview();
-
-    if (!ruc) {
+    if (!validRuc()) {
       return "";
     }
 
-    if (bootstrapPreview() === undefined && preview === null) {
+    // isPending probes the lookup without blocking on it, so a refetch reports
+    // itself while the stale preview stays on screen.
+    if (isPending(bootstrapPreview)) {
       return "Buscando...";
     }
+
+    const preview = latestBootstrapPreview();
 
     return preview?.engineStatus === "available"
       ? "Datos encontrados"

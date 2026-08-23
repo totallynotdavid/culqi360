@@ -10,6 +10,7 @@
   "rules": {
     "prefer-tag-over-role": "off",
     "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-return": "off",
     "vitest/expect-expect": [
       "error",
       {
@@ -39,7 +40,7 @@
     "solid/reactivity": 0,
     "solid/event-handlers": 1,
     // these rules are mostly style suggestions
-    "solid/imports": 1,
+    "solid/imports": 0,
     "solid/style-prop": 1,
     "solid/no-react-deps": 1,
     "solid/no-react-specific-props": 1,

@@ -1,7 +1,7 @@
+import { type JSX } from "@solidjs/web";
 import {
   createContext,
   type ParentProps,
-  type JSX,
   useContext,
   type Accessor,
 } from "solid-js";
@@ -24,7 +24,7 @@ export function HotkeyBoundary(props: HotkeyBoundaryProps) {
   };
 
   return (
-    <HotkeyScopeContext.Provider value={scope}>
+    <HotkeyScopeContext value={scope}>
       <div
         ref={(element) => {
           container = element;
@@ -34,7 +34,7 @@ export function HotkeyBoundary(props: HotkeyBoundaryProps) {
       >
         {props.children}
       </div>
-    </HotkeyScopeContext.Provider>
+    </HotkeyScopeContext>
   );
 }
 

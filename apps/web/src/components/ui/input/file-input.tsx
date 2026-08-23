@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { createUniqueId, type JSX, splitProps } from "solid-js";
+import { createUniqueId, omit } from "solid-js";
 
 import { InputErrorHelper } from "./input-error-helper";
 import { InputLabel } from "./input-label";
@@ -12,14 +13,14 @@ export interface FileInputProps extends JSX.InputHTMLAttributes<HTMLInputElement
 }
 
 export function FileInput(props: FileInputProps) {
-  const [local, others] = splitProps(props, ["label", "error", "class", "id"]);
-  const inputId = local.id || createUniqueId();
+  const others = omit(props, "label", "error", "class", "id");
+  const inputId = props.id || createUniqueId();
 
   return (
     <div class={styles.field}>
-      {local.label && (
+      {props.label && (
         <InputLabel for={inputId}>
-          {local.label}
+          {props.label}
           {props.required && <span class={styles.required}>*</span>}
         </InputLabel>
       )}
@@ -28,12 +29,12 @@ export function FileInput(props: FileInputProps) {
         type="file"
         class={clsx(
           styles.fileControl,
-          local.error ? styles.errorControl : undefined,
-          local.class,
+          props.error ? styles.errorControl : undefined,
+          props.class,
         )}
         {...others}
       />
-      {local.error && <InputErrorHelper>{local.error}</InputErrorHelper>}
+      {props.error && <InputErrorHelper>{props.error}</InputErrorHelper>}
     </div>
   );
 }

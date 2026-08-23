@@ -1,7 +1,7 @@
-import { clsx } from "clsx";
-import { type JSX, mergeProps, splitProps } from "solid-js";
+import { type JSX } from "@solidjs/web";
+import { merge, omit } from "solid-js";
 
-import { Loader } from "~/components/feedback/loading/loader";
+import { Loader } from "~/components/feedback/spinner/loader";
 
 import styles from "./button.module.css";
 
@@ -30,7 +30,7 @@ export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 export function Button(props: ButtonProps) {
-  const merged = mergeProps(
+  const merged = merge(
     {
       variant: "primary" as const,
       size: "md" as const,
@@ -38,37 +38,33 @@ export function Button(props: ButtonProps) {
     },
     props,
   );
-  const [local, others] = splitProps(merged, [
+  const others = omit(
+    merged,
     "variant",
     "size",
     "accent",
     "class",
     "children",
     "loading",
-  ]);
+  );
 
   return (
     <button
-      class={clsx(
+      class={[
         styles.button,
-        styles[local.size],
-        styles[local.variant],
-        ACCENT_CLASS[local.accent],
-        local.class,
-      )}
-      disabled={others.disabled || local.loading}
+        styles[merged.size],
+        styles[merged.variant],
+        ACCENT_CLASS[merged.accent],
+        merged.class,
+      ]}
+      data-loading={merged.loading ? "" : undefined}
+      disabled={others.disabled || merged.loading}
       {...others}
     >
-      <span
-        class={clsx(
-          styles.loaderSlot,
-          !local.loading && styles.loaderSlotHidden,
-        )}
-        aria-hidden={local.loading ? undefined : "true"}
-      >
-        {local.loading ? <Loader /> : null}
+      <span class={styles.loaderSlot} aria-hidden="true">
+        <Loader />
       </span>
-      <span class={styles.content}>{local.children}</span>
+      <span class={styles.content}>{merged.children}</span>
     </button>
   );
 }

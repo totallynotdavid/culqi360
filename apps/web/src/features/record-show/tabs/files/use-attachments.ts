@@ -1,10 +1,11 @@
-import { createAsync, revalidate } from "@solidjs/router";
+import { revalidate } from "@solidjs/router";
+import { createMemo } from "solid-js";
 import type { Accessor } from "solid-js";
 
 import { leadSaleProofFilesQuery } from "~/rpc/workflow/lead-sale-proof-files";
 
 export function useAttachments(leadId: Accessor<string | null>) {
-  const attachments = createAsync(async () => {
+  const attachments = createMemo(async () => {
     const id = leadId();
     if (!id) {
       return [];
@@ -15,13 +16,13 @@ export function useAttachments(leadId: Accessor<string | null>) {
 
   return {
     attachments,
-    refetch: async () => {
+    refetch: () => {
       const id = leadId();
       if (!id) {
         return;
       }
 
-      await revalidate(leadSaleProofFilesQuery.keyFor(id));
+      revalidate(leadSaleProofFilesQuery.keyFor(id));
     },
   };
 }

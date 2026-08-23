@@ -1,7 +1,8 @@
-import { createAsync } from "@solidjs/router";
+import { Errored, Loading } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
+import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";
 import List from "~/components/icons/list";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
@@ -10,8 +11,6 @@ import { hasPermission } from "~/domain/auth/access/rbac";
 import { createGridSource } from "~/features/data-grid/model/create-grid-source";
 import { RecordIndexScreen } from "~/features/record-index/components/screen";
 import type { RecordIndexDefinition } from "~/features/record-index/model/definition";
-import { mergeLeadRows } from "~/features/workflow/data/merge-lead-rows";
-import { getOptimisticLeadRows } from "~/features/workflow/data/optimistic-leads";
 import { requestWorkflowLeadsExportDownloadToken } from "~/rpc/workflow/files";
 import { leadListQuery } from "~/rpc/workflow/lead-list";
 import { pendingQuotationCountQuery } from "~/rpc/workflow/pending-quotation-count";
@@ -69,10 +68,6 @@ export function LeadsWorkspace() {
       rows: data.rows,
       totalCount: data.totalCount,
     }),
-    {
-      overlay: (rows) =>
-        mergeLeadRows(rows, getOptimisticLeadRows(route.activeView().id)),
-    },
   );
 
   const totalCount = () => leads.data()?.totalCount ?? 0;
@@ -83,34 +78,17 @@ export function LeadsWorkspace() {
   const openLeadRecord = useOpenLeadRecord();
   const { enqueueWarningSnackBar } = useSnackBar();
 
-  const pendingQuotations = createAsync(
-    () =>
-      canRegister
-        ? pendingQuotationCountQuery()
-        : Promise.resolve({ count: 0, limit: null }),
-    {
-      initialValue: {
-        count: 0,
-        limit: null,
-      },
-    },
-  );
-
-  const isRegistrationBlocked = () => {
-    const { count, limit } = pendingQuotations();
-
-    return limit !== null && count >= limit;
-  };
-
   const createAction = useCreateLeadRecordAction({
-    isBlocked: isRegistrationBlocked,
-    onBlocked: () => {
-      const { count } = pendingQuotations();
+    blockedReason: async () => {
+      const { count, limit } = await pendingQuotationCountQuery();
 
-      enqueueWarningSnackBar(
-        `Tienes ${count} cotizaciones pendientes de decisión. Acéptalas, solicita revisión o ciérralas para registrar nuevos clientes.`,
-      );
+      if (limit === null || count < limit) {
+        return null;
+      }
+
+      return `Tienes ${count} cotizaciones pendientes de decisión. Acéptalas, solicita revisión o ciérralas para registrar nuevos clientes.`;
     },
+    onBlocked: enqueueWarningSnackBar,
   });
 
   const recordImport = useRecordsImport();
@@ -208,7 +186,11 @@ export function LeadsWorkspace() {
         onChange={recordImport.onFileInputChange}
       />
 
-      <RecordIndexScreen definition={recordIndex} />
+      <Loading fallback={<Spinner size="lg" />}>
+        <Errored fallback={<p>No se pudieron cargar los registros.</p>}>
+          <RecordIndexScreen definition={recordIndex} />
+        </Errored>
+      </Loading>
     </ImportDropzone>
   );
 }

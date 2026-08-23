@@ -1,6 +1,6 @@
+import { Dynamic, Portal } from "@solidjs/web";
 import { clsx } from "clsx";
 import { For, Show, createSignal } from "solid-js";
-import { Dynamic, Portal } from "solid-js/web";
 
 import ChevronLeft from "~/components/icons/chevron-left";
 

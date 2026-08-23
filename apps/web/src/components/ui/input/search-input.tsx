@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { splitProps, type JSX } from "solid-js";
+import { omit } from "solid-js";
 
 import Search from "~/components/icons/search";
 
@@ -14,14 +15,10 @@ interface SearchInputProps extends Omit<
 }
 
 export function SearchInput(props: SearchInputProps) {
-  const [local, others] = splitProps(props, [
-    "value",
-    "onValueChange",
-    "class",
-  ]);
+  const others = omit(props, "value", "onValueChange", "class");
 
   return (
-    <div class={clsx(styles.wrapper, local.class)}>
+    <div class={clsx(styles.wrapper, props.class)}>
       <div class={styles.inputContainer}>
         <span class={styles.iconContainer} aria-hidden="true">
           <Search size={16} />
@@ -29,8 +26,8 @@ export function SearchInput(props: SearchInputProps) {
         <input
           type="search"
           class={styles.input}
-          value={local.value}
-          onInput={(event) => local.onValueChange(event.currentTarget.value)}
+          value={props.value}
+          onInput={(event) => props.onValueChange(event.currentTarget.value)}
           {...others}
         />
       </div>

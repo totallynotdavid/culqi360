@@ -70,11 +70,7 @@ export function SidePanelProvider(props: ParentProps) {
     setPanelWidth: store.setPanelWidth,
   };
 
-  return (
-    <SidePanelContext.Provider value={value}>
-      {props.children}
-    </SidePanelContext.Provider>
-  );
+  return <SidePanelContext value={value}>{props.children}</SidePanelContext>;
 }
 
 export function useSidePanel(): SidePanelContextValue {

@@ -1,4 +1,4 @@
-import { onCleanup, onMount } from "solid-js";
+import { onSettled } from "solid-js";
 
 import { useDataGrid } from "../context/instance-context";
 
@@ -23,11 +23,9 @@ export function DataGridFocusClickOutsideEffect() {
     focus.clearActiveRow();
   };
 
-  onMount(() => {
+  onSettled(() => {
     document.addEventListener("pointerdown", handlePointerDown);
-    onCleanup(() =>
-      document.removeEventListener("pointerdown", handlePointerDown),
-    );
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
   });
 
   return null;

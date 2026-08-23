@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createSignal, onSettled } from "solid-js";
 
 import {
   evaluateWebGlPolicy,
@@ -16,7 +16,7 @@ export function useWebGlPolicy() {
     PESSIMISTIC_INITIAL_DECISION,
   );
 
-  onMount(() => {
+  onSettled(() => {
     setDecision(evaluateWebGlPolicy());
 
     if (!("matchMedia" in window)) {
@@ -29,9 +29,9 @@ export function useWebGlPolicy() {
     const handleMotionChange = () => setDecision(evaluateWebGlPolicy());
 
     mediaQueryList.addEventListener("change", handleMotionChange);
-    onCleanup(() => {
+    return () => {
       mediaQueryList.removeEventListener("change", handleMotionChange);
-    });
+    };
   });
 
   return decision;

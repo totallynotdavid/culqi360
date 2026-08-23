@@ -1,13 +1,13 @@
-import { Suspense } from "solid-js";
+import { Loading } from "solid-js";
 
 import { BulkImportSection } from "./bulk-import-section";
 import { TeamInviteManagementSection } from "./team-invite-management-section";
 
 export function InviteTab() {
   return (
-    <Suspense>
+    <Loading>
       <TeamInviteManagementSection />
       <BulkImportSection />
-    </Suspense>
+    </Loading>
   );
 }

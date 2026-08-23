@@ -1,5 +1,7 @@
-import { Navigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 
+// Router 2 removed <Navigate>; a redirect-only route navigates at setup.
 export default function SettingsIndex() {
-  return <Navigate href="/settings/profile" />;
+  useNavigate()("/settings/profile", { replace: true });
+  return null;
 }

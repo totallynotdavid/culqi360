@@ -1,4 +1,4 @@
-import { parseCookie, serializeCookie } from "cookie-es";
+import { parseCookieHeader, serializeCookie } from "@solidjs/web";
 
 import { isProduction } from "~/shared/observability/runtime-env";
 
@@ -10,7 +10,7 @@ export function readGoogleOAuthCookies(header: string | null): {
   state: string | null;
   codeVerifier: string | null;
 } {
-  const cookies = parseCookie(header ?? "");
+  const cookies = parseCookieHeader(header ?? "");
   return {
     state: cookies[STATE_COOKIE_NAME] ?? null,
     codeVerifier: cookies[CODE_VERIFIER_COOKIE_NAME] ?? null,

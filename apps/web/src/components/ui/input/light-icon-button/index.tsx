@@ -1,5 +1,6 @@
+import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
-import { type JSX, splitProps } from "solid-js";
+import { omit } from "solid-js";
 
 import styles from "./styles.module.css";
 
@@ -12,26 +13,20 @@ export interface LightIconButtonProps extends JSX.ButtonHTMLAttributes<HTMLButto
 }
 
 export function LightIconButton(props: LightIconButtonProps) {
-  const [local, others] = splitProps(props, [
-    "Icon",
-    "accent",
-    "size",
-    "class",
-    "children",
-  ]);
+  const others = omit(props, "Icon", "accent", "size", "class", "children");
 
   return (
     <button
       class={clsx(
         styles.button,
-        local.accent === "tertiary" && styles.tertiary,
-        local.size === "medium" && styles.medium,
-        local.class,
+        props.accent === "tertiary" && styles.tertiary,
+        props.size === "medium" && styles.medium,
+        props.class,
       )}
       {...others}
     >
-      {local.Icon && <local.Icon size={local.size === "medium" ? 16 : 14} />}
-      {local.children}
+      {props.Icon && <props.Icon size={props.size === "medium" ? 16 : 14} />}
+      {props.children}
     </button>
   );
 }

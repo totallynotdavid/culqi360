@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import Activity from "~/components/icons/activity";
 import CalendarClock from "~/components/icons/calendar-clock";
