@@ -3,14 +3,17 @@ import { positionalKeys } from "motion-dom";
 import {
   createEffect,
   createMemo,
+  createSignal,
   merge,
   omit,
   onCleanup,
   untrack,
+  type Accessor,
 } from "solid-js";
 
 import { useMotionConfig } from "./config";
 import { createMotionController, type MotionPass } from "./controller";
+import { gestureNames, observeGesture, type GestureName } from "./gestures";
 import { buildInitialStyle } from "./initial";
 import { usePresence } from "./presence";
 import { useReducedMotion } from "./reduced-motion";
@@ -36,6 +39,7 @@ const motionPropKeys = [
   "style",
   "transition",
   "variants",
+  ...gestureNames,
 ] as const;
 
 type MotionHost =
@@ -49,6 +53,11 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     const presence = usePresence();
     const controller = createMotionController();
     onCleanup(controller.dispose);
+
+    // The gestures need the node inside a tracking scope, so it lives in a
+    // signal rather than a plain `let` the effects could never observe.
+    const [element, setElement] = createSignal<HTMLElement | SVGElement>();
+    const gestures = watchGestures(props, element);
 
     const custom = () => props.custom ?? presence?.custom();
 
@@ -96,6 +105,10 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
               ),
               active: true,
             },
+            ...gestureNames.map((name) => ({
+              target: resolveDefinition(props[name], props.variants, custom()),
+              active: gestures[name](),
+            })),
             {
               target: resolveDefinition(props.exit, props.variants, custom()),
               active: !present,
@@ -153,7 +166,11 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
         {...forwarded}
         style={style()}
         ref={[
-          (element: unknown) => controller.mount(element as HTMLElement),
+          (node: unknown) => {
+            const target = node as HTMLElement | SVGElement;
+            controller.mount(target);
+            setElement(target);
+          },
           props.ref,
         ]}
       />
@@ -202,6 +219,33 @@ function toRawValues(
     }
   }
   return values;
+}
+
+/**
+ * One signal per gesture, and listeners attached only while the matching prop
+ * exists. An element with no `whileHover` pays for no pointer listeners.
+ *
+ * Motion needs a `Feature` class per gesture and a priority stack to express
+ * this, because React has no way to say "the target depends on whether the
+ * pointer is down". Here the gesture is a signal and the state is a layer.
+ */
+function watchGestures(
+  props: MotionProps,
+  element: Accessor<HTMLElement | SVGElement | undefined>,
+): Record<GestureName, Accessor<boolean>> {
+  const states = {} as Record<GestureName, Accessor<boolean>>;
+
+  for (const name of gestureNames) {
+    const [active, setActive] = createSignal(false);
+    states[name] = active;
+
+    createEffect(
+      () => (props[name] === undefined ? undefined : element()),
+      (node) => (node ? observeGesture(name, node, setActive) : undefined),
+    );
+  }
+
+  return states;
 }
 
 const componentCache = new Map<string, MotionComponent>();

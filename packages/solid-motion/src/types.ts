@@ -50,6 +50,9 @@ type MotionPropKeys =
   | "style"
   | "transition"
   | "variants"
+  | "whileFocus"
+  | "whileHover"
+  | "whilePress"
   | "ref";
 
 export interface MotionProps<TCustom = unknown> extends Omit<
@@ -60,6 +63,12 @@ export interface MotionProps<TCustom = unknown> extends Omit<
   custom?: TCustom;
   exit?: AnimationDefinition;
   initial?: AnimationDefinition | true;
+  /** Applied while the element has a visible focus ring. */
+  whileFocus?: AnimationDefinition;
+  /** Applied while a non-touch pointer is over the element. */
+  whileHover?: AnimationDefinition;
+  /** Applied while the element is pressed, including by Enter on a keyboard. */
+  whilePress?: AnimationDefinition;
   onAnimationComplete?: (definition: AnimationDefinition) => void;
   onAnimationStart?: (definition: AnimationDefinition) => void;
   onUpdate?: (latest: Record<string, unknown>) => void;

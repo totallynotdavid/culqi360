@@ -288,3 +288,56 @@ function readTranslateX(element: HTMLElement): number {
   const match = /translateX\((-?[\d.]+)px\)/.exec(element.style.transform);
   return match ? Number(match[1]) : 0;
 }
+
+describe("gestures", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  const pointer = (type: string) =>
+    new PointerEvent(type, {
+      pointerType: "mouse",
+      isPrimary: true,
+      button: 0,
+      bubbles: true,
+    });
+
+  it("raises on hover and releases back to base", async () => {
+    const { container } = render(() => (
+      <motion.div whileHover={{ scale: 1.5 }} transition={{ duration: 0.05 }} />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    element.dispatchEvent(pointer("pointerenter"));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(readScale(element)).toBe(1.5);
+
+    // Releasing only works because the layer that contributed `scale` stopping
+    // contributing sends `scale` back to the value it was bound at.
+    element.dispatchEvent(pointer("pointerleave"));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(readScale(element)).toBe(1);
+  });
+
+  it("stacks press above hover", async () => {
+    const { container } = render(() => (
+      <motion.div
+        whileHover={{ scale: 1.2 }}
+        whilePress={{ scale: 0.8 }}
+        transition={{ duration: 0.05 }}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    element.dispatchEvent(pointer("pointerenter"));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(readScale(element)).toBe(1.2);
+
+    element.dispatchEvent(pointer("pointerdown"));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(readScale(element)).toBe(0.8);
+  });
+});
+
+function readScale(element: HTMLElement): number {
+  const match = /scale\(([\d.]+)\)/.exec(element.style.transform);
+  return match ? Number(match[1]) : 1;
+}
