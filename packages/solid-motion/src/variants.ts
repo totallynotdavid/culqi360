@@ -52,9 +52,7 @@ function isVariantLabel(
   );
 }
 
-function readOrchestration(
-  transition: Transition | undefined,
-): Orchestration {
+function readOrchestration(transition: Transition | undefined): Orchestration {
   const options = transition as
     | (Transition & Partial<Orchestration>)
     | undefined;

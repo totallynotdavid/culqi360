@@ -35,6 +35,11 @@ describe("motion", () => {
       opacity: 0,
       x: 10,
       scale: 0.9,
+      // Two-word properties, because the style is handed to a JSX `style` prop
+      // and `setProperty` ignores a camelCase name without complaining. Both of
+      // these were dropped from the markup while the animation applied them.
+      pointerEvents: "none",
+      transformOrigin: "0% 100%",
       "--tint": "red",
       transitionEnd: { rotate: 45 },
     };
@@ -45,14 +50,12 @@ describe("motion", () => {
     // disagreeing is a hydration flash, and they have disagreed before: the
     // raw-value path used to drop the `transitionEnd` the style path kept.
     for (const [key, value] of Object.entries(buildInitialStyle(target))) {
-      const painted = key.startsWith("--")
-        ? element.style.getPropertyValue(key)
-        : element.style[key as "opacity"];
-      expect(String(painted)).toBe(String(value));
+      expect(String(element.style.getPropertyValue(key))).toBe(String(value));
     }
     expect(element.style.transform).toBe(
       "translateX(10px) scale(0.9) rotate(45deg)",
     );
+    expect(element.style.getPropertyValue("pointer-events")).toBe("none");
   });
 
   it("renders a keyframe array at the value the element is born with", () => {
