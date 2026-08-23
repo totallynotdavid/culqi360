@@ -1,6 +1,7 @@
 import {
   createContext,
   merge,
+  omit,
   useContext,
   type Element,
   type ParentProps,
@@ -21,8 +22,10 @@ export function useMotionConfig(): MotionConfigState {
 }
 
 export function MotionConfig(props: ParentProps<MotionConfigState>): Element {
-  const parent = useMotionConfig();
-  const config = merge(defaultMotionConfig, parent, props);
+  // The parent is already the default when there is no provider above, so
+  // re-merging the default here would only restate it. `children` is dropped
+  // because the context value is configuration, not a place to park the tree.
+  const config = merge(useMotionConfig(), omit(props, "children"));
 
   return (
     <MotionConfigContext value={config}>{props.children}</MotionConfigContext>

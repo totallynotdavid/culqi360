@@ -1,8 +1,6 @@
 export { motion } from "./motion";
 export {
   AnimatePresence,
-  PresenceContext,
-  usePresenceContext,
   usePresence,
   type AnimatePresenceProps,
 } from "./presence";
@@ -19,7 +17,6 @@ export type {
   MotionConfigState,
   MotionProps,
   MotionProxy,
-  MotionTarget,
   TargetAndTransition,
   Transition,
   VariantDefinition,

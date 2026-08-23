@@ -12,7 +12,7 @@ import {
 import { useMotionConfig } from "./config";
 import { createMotionController, type MotionPass } from "./controller";
 import { buildInitialStyle } from "./initial";
-import { usePresence, usePresenceContext } from "./presence";
+import { usePresence } from "./presence";
 import { useReducedMotion } from "./reduced-motion";
 import {
   resolveDefinition,
@@ -47,14 +47,13 @@ type MotionHost =
 
 function createMotionComponent<TProps extends object>(host: MotionHost) {
   return (props: TProps & MotionProps): JSX.Element => {
-    const [isPresent, safeToRemove] = usePresence();
     const prefersReducedMotion = useReducedMotion();
     const config = useMotionConfig();
-    const presence = usePresenceContext();
+    const presence = usePresence();
     const controller = createMotionController();
     onCleanup(controller.dispose);
 
-    const custom = () => props.custom ?? presence?.custom?.();
+    const custom = () => props.custom ?? presence?.custom();
 
     // The initial target is resolved exactly once. It describes the element the
     // browser is handed, so re-resolving it later would describe a paint that
@@ -62,7 +61,7 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
     // element's own prop: it means "this subtree was already on screen".
     const initialTarget = untrack(() =>
       resolveInitialDefinition({
-        initial: presence?.initial?.() === false ? false : props.initial,
+        initial: presence?.initial() === false ? false : props.initial,
         animate: props.animate,
         variants: props.variants,
         custom: custom(),
@@ -80,7 +79,7 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
 
     createEffect(
       () => {
-        const present = isPresent();
+        const present = presence ? presence.isPresent() : true;
         const definition = present ? props.animate : props.exit;
         const reducedMotion =
           config.reducedMotion === "always" ||
@@ -111,17 +110,22 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
           onUpdate: next.onUpdate,
         };
 
-        // While present, nothing is waiting on the animation. While exiting,
-        // the presence boundary is: it may only unmount once this pass reached
-        // its target, never when a re-entry superseded it.
-        controller.run(
-          pass,
-          next.present
-            ? undefined
-            : (completed) => {
-                if (completed) safeToRemove?.();
-              },
-        );
+        if (next.present) {
+          // Superseding an exit pass releases the hold that pass was carrying,
+          // so returning to the screen needs no bookkeeping of its own.
+          controller.run(pass);
+          return;
+        }
+
+        // Each pass owns exactly one hold and releases exactly that one. A
+        // shared variable cannot do this: `run` synchronously settles the pass
+        // it replaces, so a callback reading the current hold would release the
+        // one just taken and drop the boundary's count to zero mid-exit.
+        //
+        // Taking the hold before `run` is what keeps the count from touching
+        // zero between two passes of the same exit.
+        const release = presence?.hold();
+        controller.run(pass, () => release?.());
       },
     );
 

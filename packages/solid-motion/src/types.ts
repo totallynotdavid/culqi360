@@ -4,8 +4,6 @@ import type { Element as SolidElement } from "solid-js";
 
 export type { TargetAndTransition, Transition } from "motion-dom";
 
-export type MotionTarget = TargetAndTransition;
-
 export type VariantDefinition<TCustom = unknown> =
   | TargetAndTransition
   | ((custom: TCustom) => TargetAndTransition);
@@ -28,13 +26,17 @@ export interface MotionConfigState {
   skipAnimations?: boolean;
 }
 
-export interface PresenceContextValue {
-  id: string;
+/**
+ * What a presence boundary offers the elements inside it. `hold` is the whole
+ * exit protocol: take one while animating out, call the returned release on
+ * every terminal path, and the boundary unmounts the item when the count
+ * reaches zero.
+ */
+export interface PresenceScope {
   isPresent: () => boolean;
-  initial?: () => boolean | undefined;
-  custom?: () => unknown;
-  onExitComplete?: (childId: string) => void;
-  register: (childId: string) => () => void;
+  initial: () => boolean | undefined;
+  custom: () => unknown;
+  hold: () => () => void;
 }
 
 type MotionPropKeys =

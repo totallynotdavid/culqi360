@@ -65,8 +65,8 @@ describe("motion", () => {
   });
 
   it("preserves callback refs in a nested Solid 2 ref tree", () => {
-    const firstRef = vi.fn();
-    const secondRef = vi.fn();
+    const firstRef = vi.fn<(element: unknown) => void>();
+    const secondRef = vi.fn<(element: unknown) => void>();
 
     const { container } = render(() => (
       <motion.div ref={[[firstRef], secondRef]}>ready</motion.div>
@@ -140,6 +140,96 @@ describe("AnimatePresence", () => {
 
     setItems([]);
     await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(container.querySelector('[data-id="one"]')).toBeNull();
+  });
+});
+
+describe("exit cancellation", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("keeps a re-entering child mounted instead of letting the stale exit remove it", async () => {
+    const [items, setItems] = createSignal([{ id: "one" }]);
+    const { container } = render(() => (
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <motion.div
+            exit={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.1 }}
+            data-id={item().id}
+          />
+        )}
+      </AnimatePresence>
+    ));
+
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(container.querySelector('[data-id="one"]')).toBeTruthy();
+
+    // Re-entry supersedes the exit. Motion never settles a cancelled
+    // animation's `finished`, so the only thing that can release the boundary's
+    // hold is the controller reporting that this pass lost.
+    setItems([{ id: "one" }]);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(container.querySelector('[data-id="one"]')).toBeTruthy();
+
+    // Exiting a second time is what proves the first hold was released rather
+    // than merely ignored: a leaked hold never lets the count reach zero, and
+    // this item would stay on screen forever.
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(container.querySelector('[data-id="one"]')).toBeNull();
+  });
+
+  it("still leaves when a second exit pass supersedes the first", async () => {
+    const [items, setItems] = createSignal([{ id: "one" }]);
+    const [fade, setFade] = createSignal(0);
+    const { container } = render(() => (
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <motion.div
+            exit={{ opacity: fade() }}
+            transition={{ duration: 0.1 }}
+            data-id={item().id}
+          />
+        )}
+      </AnimatePresence>
+    ));
+
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // A second exit pass while the item is still leaving. Each pass carries its
+    // own hold: release the wrong one and the count touches zero mid-exit and
+    // the item is torn out early; release none and it never leaves at all.
+    setFade(0.5);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(container.querySelector('[data-id="one"]')).toBeTruthy();
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(container.querySelector('[data-id="one"]')).toBeNull();
+  });
+
+  it("releases the boundary when an exiting child is disposed mid-animation", async () => {
+    const [items, setItems] = createSignal([{ id: "one" }]);
+    const { container, unmount } = render(() => (
+      <AnimatePresence each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <motion.div
+            exit={{ opacity: 0 }}
+            transition={{ duration: 5 }}
+            data-id={item().id}
+          />
+        )}
+      </AnimatePresence>
+    ));
+
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(container.querySelector('[data-id="one"]')).toBeTruthy();
+
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 30));
     expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 });

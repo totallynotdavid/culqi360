@@ -4,42 +4,21 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  createUniqueId,
-  onCleanup,
-  onSettled,
   untrack,
+  useContext,
   type Accessor,
   type Element,
-  useContext,
 } from "solid-js";
 
-import type { PresenceContextValue } from "./types";
+import type { PresenceScope } from "./types";
 
-const PresenceContext = createContext<PresenceContextValue | null>(null);
+const PresenceContext = createContext<PresenceScope | null>(null);
 
-export function usePresence(
-  subscribe = true,
-): [Accessor<boolean>, (() => void) | null] {
-  const context = useContext(PresenceContext);
-  if (!context) return [() => true, null];
-
-  const isPresent = createMemo(() => context.isPresent());
-
-  const id = createUniqueId();
-
-  onSettled(() => {
-    if (!subscribe) return;
-    return context.register(id);
-  });
-
-  const safeToRemove = () => {
-    if (subscribe) context.onExitComplete?.(id);
-  };
-
-  return [isPresent, subscribe ? safeToRemove : null];
-}
-
-export function usePresenceContext() {
+/**
+ * The presence boundary this element sits in, or `null` when it sits outside
+ * one. Outside a boundary an element is always present and nothing waits on it.
+ */
+export function usePresence(): PresenceScope | null {
   return useContext(PresenceContext);
 }
 
@@ -48,41 +27,56 @@ interface PresenceChildProps {
   isPresent: boolean;
   initial?: boolean;
   custom?: unknown;
-  onExitComplete?: () => void;
+  onExitComplete: () => void;
 }
 
+/**
+ * Owns one item's exit. Elements underneath announce that they are animating
+ * out by taking a hold; the item leaves when the last one is released.
+ *
+ * A hold is not a promise. A cancelled motion animation's `finished` never
+ * resolves and never rejects, so a protocol built on promises hangs the moment
+ * an exit is interrupted. Releasing is something the element does on every
+ * terminal path, including the one where it lost.
+ */
 function PresenceChild(props: PresenceChildProps) {
-  const id = createUniqueId();
-  const childrenState = new Map<string, boolean>();
-  const context: PresenceContextValue = {
-    id,
+  let holds = 0;
+
+  const leaveIfDone = () => {
+    if (holds !== 0) return;
+    // The item can come back inside the same flush that its exit started in.
+    if (props.isPresent) return;
+    props.onExitComplete();
+  };
+
+  const scope: PresenceScope = {
     isPresent: () => props.isPresent,
     initial: () => props.initial,
     custom: () => props.custom,
-    register: (childId) => {
-      childrenState.set(childId, false);
-      return () => childrenState.delete(childId);
-    },
-    onExitComplete: (childId) => {
-      childrenState.set(childId, true);
-      if ([...childrenState.values()].every(Boolean)) props.onExitComplete?.();
+    hold: () => {
+      holds += 1;
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        holds -= 1;
+        leaveIfDone();
+      };
     },
   };
 
   createEffect(
     () => props.isPresent,
     (isPresent) => {
-      if (!isPresent && childrenState.size === 0) props.onExitComplete?.();
-      if (isPresent)
-        childrenState.forEach((_, childId) =>
-          childrenState.set(childId, false),
-        );
+      if (isPresent) return;
+      // Anything with an exit to play takes its hold in this same flush, so by
+      // the next microtask the count is final. Still zero means nothing under
+      // this item had an exit at all, and it can leave now.
+      queueMicrotask(leaveIfDone);
     },
   );
 
-  onCleanup(() => childrenState.clear());
-
-  return <PresenceContext value={context}>{props.children}</PresenceContext>;
+  return <PresenceContext value={scope}>{props.children}</PresenceContext>;
 }
 
 interface TrackedChild<T> {
@@ -185,21 +179,17 @@ export function AnimatePresence<T>(props: AnimatePresenceProps<T>) {
   };
 
   return (
-    <>
-      <For each={renderedChildren()} keyed={(child) => child.key}>
-        {(child) => (
-          <PresenceChild
-            isPresent={presentKeys().has(child().key)}
-            initial={props.initial}
-            custom={props.custom}
-            onExitComplete={() => completeExit(child().key)}
-          >
-            {props.children(child().item)}
-          </PresenceChild>
-        )}
-      </For>
-    </>
+    <For each={renderedChildren()} keyed={(child) => child.key}>
+      {(child) => (
+        <PresenceChild
+          isPresent={presentKeys().has(child().key)}
+          initial={props.initial}
+          custom={props.custom}
+          onExitComplete={() => completeExit(child().key)}
+        >
+          {props.children(child().item)}
+        </PresenceChild>
+      )}
+    </For>
   );
 }
-
-export { PresenceContext };
