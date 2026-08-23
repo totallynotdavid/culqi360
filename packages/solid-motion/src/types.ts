@@ -1,10 +1,21 @@
 import type { ComponentProps, JSX } from "@solidjs/web";
-import type { TargetAndTransition, Transition } from "motion-dom";
+import type { MotionValue, TargetAndTransition, Transition } from "motion-dom";
 import type { Element as SolidElement } from "solid-js";
 
 import type { ViewportOptions } from "./gestures";
 
-export type { TargetAndTransition, Transition } from "motion-dom";
+export type { MotionValue, TargetAndTransition, Transition } from "motion-dom";
+
+/**
+ * A style entry motion writes itself on the animation frame instead of handing
+ * to the DOM: a value the caller holds, or a Solid accessor to carry across.
+ */
+export type MotionStyleValue = MotionValue | (() => string | number);
+
+/** Plain CSS, with any entry optionally replaced by a value motion drives. */
+export type MotionStyle =
+  | JSX.CSSProperties
+  | Record<string, string | number | MotionStyleValue | undefined>;
 export type { ViewportOptions } from "./gestures";
 
 export type VariantDefinition<TCustom = unknown> =
@@ -82,13 +93,18 @@ export interface MotionOptions<TCustom = unknown> {
   onAnimationComplete?: (definition: AnimationDefinition) => void;
   onAnimationStart?: (definition: AnimationDefinition) => void;
   onUpdate?: (latest: Record<string, unknown>) => void;
+  /**
+   * Plain CSS, except that any entry may be a `MotionValue` or a Solid accessor.
+   * Those are bound to the element and written on the frame loop, so they move
+   * without re-rendering, and naming the same key in `animate` animates them.
+   */
+  style?: MotionStyle;
   transition?: Transition;
   variants?: VariantMap<TCustom>;
 }
 
 export interface MotionProps<TCustom = unknown>
   extends MotionOptions<TCustom>, Omit<ComponentProps<"div">, MotionPropKeys> {
-  style?: JSX.CSSProperties | Record<string, unknown>;
   ref?: JSX.Ref<unknown>;
   children?: SolidElement;
 }

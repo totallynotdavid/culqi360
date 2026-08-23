@@ -47,12 +47,32 @@ export function createValueStore(
   element: HTMLElement | SVGElement,
   /** Where a property starts when the element was rendered carrying it. */
   initialValues: Record<string, string | number>,
+  /**
+   * Values the caller owns, from `style`. Bound like any other, but never
+   * created or destroyed here: the scope that made them decides when they end,
+   * and animating one writes to the same value the caller reads.
+   */
+  bound: ReadonlyMap<string, MotionValue>,
 ): ValueStore {
   const values = new Map<string, MotionValue>();
   const bases = new Map<string, string | number>();
   const unbind: VoidFunction[] = [];
   let observer: ((latest: Record<string, string | number>) => void) | undefined;
   const latest: Record<string, string | number> = {};
+
+  const attach = (key: string, value: MotionValue, base: string | number) => {
+    values.set(key, value);
+    bases.set(key, base);
+    unbind.push(styleEffect(element, { [key]: value }));
+    if (observer) subscribe(key, value);
+  };
+
+  // Bound up front rather than on first use. A caller's value is already the
+  // element's appearance, so it has to be attached whether anything animates it
+  // or not.
+  for (const [key, value] of bound) {
+    attach(key, value, value.get() as string | number);
+  }
 
   const ensure = (key: string): MotionValue => {
     const existing = values.get(key);
@@ -63,14 +83,9 @@ export function createValueStore(
     // constructed at its starting number would leave `transform` stale until
     // something else moved. Constructing empty makes the first write a change.
     const value = new MotionValue<string | number | undefined>(undefined);
-    values.set(key, value as MotionValue);
-    unbind.push(styleEffect(element, { [key]: value as MotionValue }));
-
     const base = readStartValue(element, key, initialValues);
-    bases.set(key, base);
+    attach(key, value as MotionValue, base);
     value.jump(base, false);
-
-    if (observer) subscribe(key, value as MotionValue);
 
     return value as MotionValue;
   };
@@ -113,7 +128,9 @@ export function createValueStore(
 
     dispose() {
       for (const cancel of unbind) cancel();
-      for (const value of values.values()) value.destroy();
+      for (const [key, value] of values) {
+        if (!bound.has(key)) value.destroy();
+      }
       values.clear();
       bases.clear();
       unbind.length = 0;

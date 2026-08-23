@@ -3,7 +3,12 @@ import { type JSX } from "@solidjs/web";
 import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AnimatePresence, createMotion, motion } from "../src";
+import {
+  AnimatePresence,
+  createMotion,
+  createMotionValue,
+  motion,
+} from "../src";
 import { buildInitialStyle } from "../src/initial";
 
 describe("motion", () => {
@@ -424,6 +429,74 @@ describe("value-level diffing", () => {
     flush();
     await new Promise((resolve) => setTimeout(resolve, 40));
     expect(Number(element.style.opacity)).toBeGreaterThan(midpoint);
+  });
+});
+
+describe("style values", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("paints a caller-owned value at first render", () => {
+    const x = createMotionValue(25);
+    const { container } = render(() => <motion.div style={{ x }} />);
+
+    // Binding a value that already holds a number records it in motion's shared
+    // style state but schedules no repaint, so the composite would sit at
+    // `none` until something else moved. The inline style is what closes that.
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.transform).toBe("translateX(25px)");
+  });
+
+  it("animates the caller's own value rather than a copy of it", async () => {
+    const x = createMotionValue(0);
+    render(() => (
+      <motion.div
+        style={{ x }}
+        animate={{ x: 200 }}
+        transition={{ duration: 0.1 }}
+      />
+    ));
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    // Reading the animation back out is the whole point of handing a value in.
+    expect(x.get()).toBe(200);
+  });
+
+  it("drives a transform from a signal while plain css stays reactive", async () => {
+    const [x, setX] = createSignal(10);
+    const [background, setBackground] = createSignal("red");
+    const { container } = render(() => (
+      <motion.div style={{ x, background: background() }} />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    expect(element.style.transform).toBe("translateX(10px)");
+    expect(element.style.background).toBe("red");
+
+    setX(80);
+    setBackground("blue");
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(element.style.transform).toBe("translateX(80px)");
+    expect(element.style.background).toBe("blue");
+  });
+
+  it("springs towards a signal instead of jumping to it", async () => {
+    const [target, setTarget] = createSignal(0);
+    const x = createMotionValue(target, { stiffness: 200, damping: 20 });
+    render(() => <motion.div style={{ x }} />);
+
+    setTarget(100);
+    flush();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    // Mid-flight: a value that mirrored its source would already read 100.
+    const midpoint = Number(x.get());
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(60);
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(Number(x.get())).toBeCloseTo(100, 0);
   });
 });
 

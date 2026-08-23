@@ -10,6 +10,7 @@ import { useMotionConfig } from "./config";
 import { createMotionController, type MotionPass } from "./controller";
 import { gestureNames, watchGestures } from "./gestures";
 import { buildInitialStyle, toInitialValues } from "./initial";
+import { readStyleValues } from "./motion-values";
 import { usePresence } from "./presence";
 import { useReducedMotion } from "./reduced-motion";
 import { resolveDefinition, resolveInitialDefinition } from "./resolve";
@@ -107,7 +108,14 @@ export function createMotion<TCustom = unknown>(
     }),
   );
 
-  const controller = createMotionController(toInitialValues(initialTarget));
+  // Read once, like the initial target: which keys motion drives describes the
+  // element, and only their values are expected to change afterwards.
+  const bound = untrack(() => readStyleValues(options().style));
+
+  const controller = createMotionController(
+    toInitialValues(initialTarget),
+    bound.values,
+  );
   onCleanup(controller.dispose);
 
   const fallbackTransition = createMemo(() =>
@@ -197,7 +205,14 @@ export function createMotion<TCustom = unknown>(
   );
 
   return {
-    style: buildInitialStyle(initialTarget),
+    // Bound values are painted here and left out of the controller's baseline:
+    // the caller owns where they sit, so a pass that stops naming one must not
+    // drag it back to whatever it held at mount.
+    style: buildInitialStyle(
+      initialTarget || Object.keys(bound.painted).length > 0
+        ? { ...bound.painted, ...initialTarget }
+        : undefined,
+    ),
     ref: (node) => {
       controller.mount(node);
       setElement(node);

@@ -3,6 +3,7 @@ import {
   type AnimationPlaybackControlsWithThen,
   type ValueKeyframesDefinition,
 } from "motion-dom";
+import type { MotionValue } from "motion-dom";
 
 import type { MergedTarget } from "./target";
 import type { AnimationDefinition, Transition } from "./types";
@@ -46,6 +47,8 @@ export function createMotionController(
    * computed matrix and cannot tell `rotate: 450` from `rotate: 90`.
    */
   initialValues: Record<string, string | number>,
+  /** Values from `style` that the caller owns; bound, never created here. */
+  bound: ReadonlyMap<string, MotionValue>,
 ): MotionController {
   let store: ValueStore | undefined;
   let queued:
@@ -169,7 +172,7 @@ export function createMotionController(
 
   return {
     mount(element) {
-      store = createValueStore(element, initialValues);
+      store = createValueStore(element, initialValues, bound);
       if (!queued) return;
 
       const { pass, onSettled } = queued;
