@@ -1,6 +1,7 @@
+import { createMotion } from "@crm/solid-motion";
 import { clsx } from "clsx";
 
-import { springTransform } from "~/components/ui/animation/spring-transform";
+import { CONTROL_SPRING } from "~/components/ui/animation/springs";
 
 import styles from "./toggle.module.css";
 
@@ -12,8 +13,14 @@ export function Toggle(props: {
   onChange?: (value: boolean) => void;
   color?: string;
 }) {
-  const circleTransform = () => `translateX(${props.value ? 14 : 2}px)`;
-  const initialCircleTransform = circleTransform();
+  const offset = () => (props.value ? 14 : 2);
+  // `initial` is read once, so the knob is born where it belongs and only a
+  // change to `value` animates it.
+  const knob = createMotion(() => ({
+    initial: { x: offset() },
+    animate: { x: offset() },
+    transition: CONTROL_SPRING,
+  }));
 
   return (
     <label
@@ -33,11 +40,7 @@ export function Toggle(props: {
         disabled={props.disabled}
         onChange={(event) => props.onChange?.(event.currentTarget.checked)}
       />
-      <span
-        ref={springTransform(circleTransform)}
-        class={styles.circle}
-        style={{ transform: initialCircleTransform }}
-      />
+      <span ref={knob.ref} class={styles.circle} style={knob.style} />
     </label>
   );
 }

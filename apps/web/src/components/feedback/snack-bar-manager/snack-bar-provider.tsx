@@ -1,8 +1,7 @@
+import { AnimatePresenceList, motion } from "@crm/solid-motion";
 import { Portal, type JSX } from "@solidjs/web";
 import { createContext, createMemo, createStore } from "solid-js";
 
-import { AnimatePresence } from "~/components/ui/animation/animate-presence";
-import { Animated } from "~/components/ui/animation/animated";
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
 
 import { SnackBar } from "./snack-bar";
@@ -16,6 +15,7 @@ import type {
 import styles from "./snack-bar-provider.module.css";
 
 const DEFAULT_DURATION_MS = 5000;
+const SLIDE = { duration: 0.5, ease: [0.22, 1, 0.36, 1] } as const;
 const MAX_QUEUE = 3;
 const SNACK_BAR_Z_INDEX = 10002;
 
@@ -93,20 +93,19 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
           class={styles.container}
           style={{ "z-index": String(SNACK_BAR_Z_INDEX) }}
         >
-          <AnimatePresence each={items} getKey={(item) => item.id}>
+          <AnimatePresenceList each={items} getKey={(item) => item.id}>
             {(item) => (
-              <Animated
-                key={item.id}
+              <motion.div
                 variants={motionVariants()}
                 initial="out"
                 animate="in"
                 exit="out"
-                transition={{ duration: 0.5 }}
+                transition={SLIDE}
               >
-                <SnackBar item={item} onDismiss={() => dismiss(item.id)} />
-              </Animated>
+                <SnackBar item={item()} onDismiss={() => dismiss(item().id)} />
+              </motion.div>
             )}
-          </AnimatePresence>
+          </AnimatePresenceList>
         </div>
       </Portal>
     </SnackBarContext>

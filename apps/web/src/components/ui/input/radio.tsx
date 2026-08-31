@@ -1,8 +1,9 @@
+import { createMotion } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
 import { clsx } from "clsx";
 import { type ParentProps } from "solid-js";
 
-import { springTransform } from "~/components/ui/animation/spring-transform";
+import { CONTROL_SPRING } from "~/components/ui/animation/springs";
 
 import styles from "./radio.module.css";
 
@@ -18,16 +19,20 @@ export function Radio(props: {
   value?: string;
   onChange?: JSX.ChangeEventHandlerUnion<HTMLInputElement, Event>;
 }) {
-  const inputTransform = () => `scale(${props.checked ? 1.05 : 0.95})`;
-  const initialInputTransform = inputTransform();
+  const scale = () => (props.checked ? 1.05 : 0.95);
+  const dot = createMotion(() => ({
+    initial: { scale: scale() },
+    animate: { scale: scale() },
+    transition: CONTROL_SPRING,
+  }));
 
   return (
     <label class={clsx(styles.container, props.disabled && styles.disabled)}>
       <input
-        ref={springTransform(inputTransform)}
+        ref={dot.ref}
         type="radio"
         class={styles.input}
-        style={{ transform: initialInputTransform }}
+        style={dot.style}
         name={props.name}
         value={props.value ?? props.label}
         checked={props.checked}

@@ -88,6 +88,13 @@ export default defineConfig(({ command }) => {
       solid({
         start: {
           middleware: "./src/middleware.ts",
+          // Vite resolves the optional peer dep to a stub rather than to
+          // nothing, so the plugin's probe believes @solidjs/start-devtools is
+          // installed and injects `import { DevToolbar }` into the client
+          // entry. The stub exports no such thing, the entry module fails to
+          // parse, and the app never hydrates: server markup with no client
+          // behind it, and no error anywhere but the browser console.
+          devtools: false,
         },
         ssr: true,
         serverFunctions: {

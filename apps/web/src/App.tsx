@@ -1,3 +1,4 @@
+import { MotionConfig } from "@crm/solid-motion";
 import { Title } from "@solidjs/meta";
 import { Loading } from "solid-js";
 
@@ -16,19 +17,26 @@ import "./app.css";
 // tree in the browser.
 export default function App() {
   return (
-    <ThemeProvider>
-      <SnackBarProvider>
-        <Router>
-          {(props) => (
-            <>
-              <Title>{PLATFORM_NAME}</Title>
-              <Loading>
-                <AppErrorBoundary>{props.children}</AppErrorBoundary>
-              </Loading>
-            </>
-          )}
-        </Router>
-      </SnackBarProvider>
-    </ThemeProvider>
+    // `user` rather than motion's own `never` default, because the animation
+    // helpers this replaced already honoured the preference. Motion's contract
+    // is not "do not animate": positional values like height and x jump, while
+    // opacity and colour still animate, since those carry meaning rather than
+    // movement.
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider>
+        <SnackBarProvider>
+          <Router>
+            {(props) => (
+              <>
+                <Title>{PLATFORM_NAME}</Title>
+                <Loading>
+                  <AppErrorBoundary>{props.children}</AppErrorBoundary>
+                </Loading>
+              </>
+            )}
+          </Router>
+        </SnackBarProvider>
+      </ThemeProvider>
+    </MotionConfig>
   );
 }
