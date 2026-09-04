@@ -8,6 +8,7 @@ export {
   type AnimateSequence,
   type AnimateTarget,
 } from "./create-animate";
+export { createWillChange } from "./create-will-change";
 export {
   createMotionValue,
   createTime,
@@ -55,4 +56,5 @@ export type {
   ViewportOptions,
   VariantDefinition,
   VariantMap,
+  WillChange,
 } from "./types";

@@ -5,7 +5,12 @@ import type { Element as SolidElement } from "solid-js";
 import type { ViewportOptions } from "./gestures";
 import type { LayoutOption } from "./projection";
 
-export type { MotionValue, TargetAndTransition, Transition } from "motion-dom";
+export type {
+  MotionValue,
+  TargetAndTransition,
+  Transition,
+  WillChange,
+} from "motion-dom";
 
 /**
  * A style entry motion writes itself on the animation frame instead of handing

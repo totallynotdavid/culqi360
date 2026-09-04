@@ -10,6 +10,7 @@ import {
   createMotion,
   createInView,
   createMotionValue,
+  createWillChange,
   MotionConfig,
   motion,
   stagger,
@@ -1556,6 +1557,35 @@ describe("createAnimate", () => {
     const midpoint = Number(configuredElement.style.opacity);
     expect(midpoint).toBeGreaterThan(0);
     expect(midpoint).toBeLessThan(1);
+  });
+});
+
+describe("createWillChange", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("adds a property name into the element's will-change declaration", async () => {
+    let willChange!: ReturnType<typeof createWillChange>;
+    const { container } = render(() => {
+      willChange = createWillChange();
+      return <motion.div style={{ willChange }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.getPropertyValue("will-change")).toBe("auto");
+
+    willChange.add("transform");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.getPropertyValue("will-change")).toBe("transform");
+
+    // Duplicate names leave the declaration unchanged.
+    willChange.add("transform");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.getPropertyValue("will-change")).toBe("transform");
+
+    willChange.add("opacity");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.getPropertyValue("will-change")).toBe(
+      "transform, opacity",
+    );
   });
 });
 
