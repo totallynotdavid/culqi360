@@ -342,6 +342,91 @@ describe("createScroll offset resolution", () => {
     // Border correctly subtracted: inset is 0, so progress is 25 / 50.
     expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
   });
+
+  it("does not subtract the container's border width when the container is an offsetParent of the target", async () => {
+    let scroll!: ReturnType<typeof createScroll>;
+    let targetEl!: HTMLElement;
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      scroll = createScroll({
+        container: node,
+        target: () => targetEl,
+        // Non-default range so the resolved inset alone drives progress.
+        offset: [
+          [0, 0],
+          [0.5, 0],
+        ],
+      });
+      return (
+        <div ref={setNode}>
+          <div ref={(el) => (targetEl = el)} />
+        </div>
+      );
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    stubBox(element, { clientHeight: 100 });
+    stubBox(targetEl, { clientHeight: 100 });
+
+    // container is positioned, so it is target's offsetParent directly:
+    // target's offsetTop is already relative to container's padding box.
+    // container has a 10px border, but with target flush against that
+    // padding edge (offsetTop 0), the inset is 0, not -10.
+    stubOffset(element, {
+      offsetTop: 50,
+      offsetParent: document.body,
+      clientTop: 10,
+    });
+    stubOffset(targetEl, { offsetTop: 0, offsetParent: element });
+
+    element.scrollTop = 25;
+    element.dispatchEvent(new Event("scroll"));
+    flush();
+    await tick();
+
+    // No border correction applied: inset is 0, so progress is 25 / 50.
+    expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
+  });
+
+  it("subtracts the container's own border width from the target inset on the x axis", async () => {
+    let scroll!: ReturnType<typeof createScroll>;
+    let targetEl!: HTMLElement;
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      scroll = createScroll({
+        container: node,
+        target: () => targetEl,
+        // Non-default range so the resolved inset alone drives progress.
+        offset: [
+          [0, 0],
+          [0.5, 0],
+        ],
+      });
+      return (
+        <div ref={setNode}>
+          <div ref={(el) => (targetEl = el)} />
+        </div>
+      );
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    stubBox(element, { clientWidth: 100 });
+    stubBox(targetEl, { clientWidth: 100 });
+
+    // Same setup as the y-axis border test, mirrored onto the x axis.
+    stubOffset(element, {
+      offsetLeft: 50,
+      offsetParent: document.body,
+      clientLeft: 10,
+    });
+    stubOffset(targetEl, { offsetLeft: 60, offsetParent: document.body });
+
+    element.scrollLeft = 25;
+    element.dispatchEvent(new Event("scroll"));
+    flush();
+    await tick();
+
+    // Border correctly subtracted: inset is 0, so progress is 25 / 50.
+    expect(scroll.scrollXProgress.get()).toBeCloseTo(0.5);
+  });
 });
 
 describe("createVelocity", () => {

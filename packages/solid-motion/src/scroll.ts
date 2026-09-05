@@ -226,29 +226,52 @@ function measureAxis(
  * Returns the target's offset from the container's padding box (the origin
  * scrollTop/scrollLeft and clientHeight/clientWidth measure from) along one
  * axis.
- * Walking offsetParent until it equals the container breaks for a
- * `position: static` container, since offsetParent skips unpositioned
- * ancestors entirely and the walk never hits it. Summing each element's own
- * offsetParent chain independently and subtracting sidesteps that: both
- * chains bottom out at the same document origin, so the difference is the
- * target-to-container distance regardless of which ancestors are positioned.
- * That difference lands on the container's border-box origin, since each
- * offsetParent hop is a border-box-to-padding-box distance. clientTop/
- * clientLeft equal the container's own border width regardless of its
- * `position`, so subtracting them converts to the padding-box origin.
+ *
+ * Summing each element's own offsetParent chain independently and
+ * subtracting gives the target-to-container distance regardless of which
+ * ancestors are positioned, since both chains bottom out at the same
+ * document origin. Where that difference lands depends on whether
+ * `container` is itself one of `target`'s offsetParents:
+ *
+ * - If it is (container is a positioned scroll container, the common case),
+ *   the walk already passes through container's own offsetTop/offsetLeft
+ *   hop, which the CSSOM View spec defines as measured from container's
+ *   padding box. The raw difference already lands on the padding-box
+ *   origin, so no correction is needed. Subtracting clientTop/clientLeft
+ *   here would over-correct by a full border width in the wrong direction.
+ * - If it isn't (container is `position: static`, so every element's
+ *   offsetParent walk skips over it), the chains only meet at container's
+ *   own offsetParent, and the difference lands on container's border-box
+ *   origin instead: container's own border-box-to-padding-box hop is
+ *   missing from the sum. clientTop/clientLeft equal container's border
+ *   width regardless of its `position`, so subtracting them converts to
+ *   the padding-box origin.
  */
 function axisInset(
   target: HTMLElement,
   container: HTMLElement,
   axis: "x" | "y",
 ): number {
+  const rawInset =
+    offsetFromDocument(target, axis) - offsetFromDocument(container, axis);
+  if (isOffsetAncestor(container, target)) return rawInset;
+
   const containerBorder =
     axis === "y" ? container.clientTop : container.clientLeft;
-  return (
-    offsetFromDocument(target, axis) -
-    offsetFromDocument(container, axis) -
-    containerBorder
-  );
+  return rawInset - containerBorder;
+}
+
+/** Whether `container` is reachable by repeatedly walking `target.offsetParent`. */
+function isOffsetAncestor(
+  container: HTMLElement,
+  target: HTMLElement,
+): boolean {
+  let node = target.offsetParent as HTMLElement | null;
+  while (node) {
+    if (node === container) return true;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return false;
 }
 
 function offsetFromDocument(element: HTMLElement, axis: "x" | "y"): number {
