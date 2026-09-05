@@ -67,6 +67,19 @@ export function isMotionStyleValue(entry: unknown): entry is MotionStyleValue {
   return typeof entry === "function" || isMotionValue(entry);
 }
 
+/** The entries of a style the DOM owns, with everything motion drives removed. */
+export function plainStyle(
+  style: MotionStyle | undefined,
+): Record<string, unknown> {
+  if (!style) return {};
+
+  const plain: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(style)) {
+    if (!isMotionStyleValue(entry)) plain[key] = entry;
+  }
+  return plain;
+}
+
 export interface BoundStyle {
   /** Keyed by style property, for the value store to bind. */
   values: Map<string, MotionValue>;

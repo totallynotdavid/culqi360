@@ -1,12 +1,9 @@
 export { motion } from "./motion";
 export { createMotion, type MotionHandle } from "./create-motion";
 export { createMotionValue, type MotionSource } from "./motion-values";
-// The pure interpolator behind Motion's `useTransform` range form. In Solid a
-// derived value is an accessor over it, not a second value to keep in sync.
+// Motion's `useTransform` range interpolator, exposed as a Solid accessor.
 export { transform } from "motion-dom";
-// Builds the per-child delay function `delayChildren` takes: motion's own
-// replacement for `staggerChildren`/`staggerDirection`, which stay supported
-// as the plain-number convenience they always were.
+// Builds per-child delays for variant orchestration.
 export { stagger } from "motion-dom";
 export {
   AnimatePresence,
@@ -20,6 +17,7 @@ export {
 export { MotionConfig, useMotionConfig } from "./config";
 export { useReducedMotion } from "./reduced-motion";
 export { createInView } from "./gestures";
+export type { LayoutOption } from "./projection";
 export type {
   AnimationDefinition,
   MotionComponent,

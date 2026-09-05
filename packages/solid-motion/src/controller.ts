@@ -5,6 +5,7 @@ import {
   type ValueKeyframesDefinition,
 } from "motion-dom";
 
+import type { LayoutOptions } from "./projection";
 import type { MergedTarget } from "./target";
 import type { AnimationDefinition, Transition } from "./types";
 import { createValueStore, type ValueStore } from "./values";
@@ -20,26 +21,11 @@ export interface MotionPass {
   fallbackTransition: Transition | undefined;
   /** Stagger offset contributed by a variant-controlling ancestor. */
   delay: number;
-  /**
-   * Jump to every target instead of animating there.
-   *
-   * Carried on the pass rather than folded into a transition upstream. It has
-   * to reach the transition of every value this pass touches, and a target that
-   * brings its own transition replaces the element's, so anything merged into
-   * the element-level one is dropped exactly when a variant or an inline
-   * `exit={{ ..., transition }}` is in play.
-   */
+  /** Jump to every target instead of animating there. */
   skipAnimations: boolean;
-  /**
-   * Holds the pass back until its turn, for `when` orchestration. It is handed
-   * the function that starts the pass and calls it whenever it likes, or never.
-   *
-   * Safe because it sits *inside* `run`: the pass is already the current one by
-   * the time it waits, so it supersedes whatever came before, owns the presence
-   * hold, and is itself released the moment a later pass arrives. A pass that
-   * loses while waiting simply never starts, since starting is generation
-   * guarded like everything else here.
-   */
+  /** Suppresses layout movement for reduced motion and skipped animations. */
+  instantLayout: boolean;
+  /** Defers the pass until its turn for `when` orchestration. */
   sequence?: (begin: VoidFunction) => void;
   /** Handed back to lifecycle callbacks unchanged, for reporting only. */
   definition: AnimationDefinition;
@@ -59,17 +45,12 @@ export interface MotionController {
 }
 
 export function createMotionController(
-  /**
-   * The target the element was rendered with, in raw (pre-CSS) units. Passed at
-   * construction rather than on a pass: it describes the element, not the
-   * animation, and the ref fires before the first pass is ever queued. Reaching
-   * it through the first pass meant the value store was built with nothing and
-   * fell back to reading the DOM, which round-trips a transform through the
-   * computed matrix and cannot tell `rotate: 450` from `rotate: 90`.
-   */
+  /** Initial raw values, captured before the element's ref runs. */
   initialValues: Record<string, string | number>,
   /** Values from `style` that the caller owns; bound, never created here. */
   bound: ReadonlyMap<string, MotionValue>,
+  /** Present when the element asked for `layout` or `layoutId`. */
+  layout?: LayoutOptions,
 ): MotionController {
   let store: ValueStore | undefined;
   let queued:
@@ -87,12 +68,7 @@ export function createMotionController(
     Object.entries(initialValues),
   );
 
-  /**
-   * Identifies the pass allowed to settle. A cancelled motion animation's
-   * `finished` promise never resolves *and* never rejects, so "this pass lost"
-   * has to be an event we raise ourselves. Without it, a caller waiting on an
-   * exit animation that got interrupted waits forever.
-   */
+  /** Identifies the pass allowed to settle. Cancelled animations may not settle. */
   let generation = 0;
   let release: ((completed: boolean) => void) | undefined;
 
@@ -117,11 +93,18 @@ export function createMotionController(
     supersede();
     release = onSettled;
 
-    const current = generation;
+    const generationAtStart = generation;
     if (!store) return;
 
-    // Installed once and reading the latest callback, so a component that swaps
-    // its `onUpdate` does not resubscribe every value.
+    // Layout timing follows the winning pass. The target's transition is the one
+    // the active layer brought, so a `transition.layout` written into a variant
+    // or an inline target reaches the projection engine.
+    store.setLayoutTiming({
+      transition: pass.target.transition,
+      instant: pass.instantLayout,
+    });
+
+    // Keep one subscription while allowing the callback to change.
     onUpdate = pass.onUpdate;
     if (onUpdate && !observing) {
       observing = true;
@@ -129,19 +112,15 @@ export function createMotionController(
     }
 
     if (!pass.sequence) {
-      begin(pass, current);
+      begin(pass, generationAtStart);
       return;
     }
-    pass.sequence(() => begin(pass, current));
+    pass.sequence(() => begin(pass, generationAtStart));
   };
 
-  /**
-   * The pass proper, once it is allowed to run. Everything before this point is
-   * bookkeeping that a waiting pass must have done already; everything from here
-   * changes what the element is, which a pass that lost must not.
-   */
-  const begin = (pass: MotionPass, current: number) => {
-    if (current !== generation || !store) return;
+  /** Starts the pass after any sequencing delay. */
+  const begin = (pass: MotionPass, generationAtStart: number) => {
+    if (generationAtStart !== generation || !store) return;
 
     const work = planWork(pass, applied, store, initialValues);
     applied = work.applied;
@@ -149,13 +128,13 @@ export function createMotionController(
     const { transitionEnd } = pass.target;
 
     const finish = () => {
-      if (current !== generation) return;
+      if (generationAtStart !== generation) return;
       for (const [key, value] of Object.entries(transitionEnd)) {
         store?.set(key, value);
         applied.set(key, value);
       }
       pass.onAnimationComplete?.(pass.definition);
-      complete(current);
+      complete(generationAtStart);
     };
 
     if (work.changes.length === 0) {
@@ -166,7 +145,6 @@ export function createMotionController(
     pass.onAnimationStart?.(pass.definition);
 
     // Animations are created on motion's frame, never inline in Solid's flush.
-    //
     // `time.now()` memoises per synchronous block and is only cleared on a
     // microtask, so an animation started from the middle of a long synchronous
     // render is handed the clock reading from the top of that block. It is born
@@ -178,7 +156,7 @@ export function createMotionController(
     // animation's ticks read. It also coalesces every element animating in one
     // Solid flush into a single frame.
     frame.update(() => {
-      if (current !== generation || !store) return;
+      if (generationAtStart !== generation || !store) return;
 
       const animations: AnimationPlaybackControlsWithThen[] = [];
       for (const change of work.changes) {
@@ -190,16 +168,14 @@ export function createMotionController(
         if (animation) animations.push(animation);
       }
 
-      // Motion resolves instant targets without creating an animation at all,
-      // so an empty list means the pass is already where it was going.
+      // Instant targets do not create animations.
       if (animations.length === 0) {
         finish();
         return;
       }
 
-      // Waiting on every `finished` is only safe because `finish` is generation
-      // guarded: a cancelled member never settles, and by then the pass that
-      // replaced it has already released this one with `false`.
+      // Cancelled animations may never settle, so `finish` must remain generation
+      // guarded even after all current animations complete.
       Promise.all(animations.map((animation) => animation.finished))
         .then(finish)
         .catch(() => undefined);
@@ -208,7 +184,7 @@ export function createMotionController(
 
   return {
     mount(element) {
-      store = createValueStore(element, initialValues, bound);
+      store = createValueStore(element, initialValues, bound, layout);
       if (!queued) return;
 
       const { pass, onSettled } = queued;
@@ -218,8 +194,7 @@ export function createMotionController(
     },
 
     run(pass, onSettled) {
-      // The ref has not fired yet. Hold the pass instead of dropping it: the
-      // element it needs is the one about to be handed to `mount`.
+      // The ref has not fired yet. Hold the pass until `mount` provides the store.
       if (!store) {
         queued?.onSettled?.(false);
         queued = { pass, onSettled };
@@ -238,14 +213,7 @@ export function createMotionController(
   };
 }
 
-/**
- * The transition one value actually runs with: whatever the winning layer asked
- * for, plus the two things the pass decides for every value alike.
- *
- * A stagger offset adds to the delay the transition already asked for rather
- * than replacing it, so a variant can stagger its children and still hold each
- * of them back by its own delay.
- */
+/** Adds pass-wide delay and animation settings to a value transition. */
 function passTransition(
   transition: Transition | undefined,
   pass: MotionPass,
@@ -266,19 +234,7 @@ interface ValueChange {
   transition: Transition | undefined;
 }
 
-/**
- * Which values this pass actually has to move, and what the element becomes as a
- * result.
- *
- * Diffing per value rather than per target is what stops an unrelated prop
- * update from restarting animations: re-running a pass whose `opacity` did not
- * change must not stop `opacity` and restart it from wherever it currently sits.
- *
- * A key that disappeared from the target goes back to the value the element was
- * bound at. Motion calls these removed keys, and handling them is what makes a
- * gesture state releasable: when `whileHover` stops contributing `scale`,
- * `scale` has to return somewhere rather than staying where the gesture left it.
- */
+/** Plans changed values and restores keys removed from the target. */
 function planWork(
   pass: MotionPass,
   applied: Map<string, ValueKeyframesDefinition>,
@@ -308,15 +264,7 @@ function planWork(
   return { changes, applied: next };
 }
 
-/**
- * A keyframe array is compared by contents, never by identity.
- *
- * `animate={{ opacity: [0, 1], x: position() }}` rebuilds the whole object every
- * time `position()` changes, so an equal-but-fresh array arrives on each pass.
- * Comparing those by identity restarts the opacity sequence from its first
- * keyframe on every unrelated change, which is the exact defect per-value
- * diffing exists to prevent. One shallow pass, only ever over a keyframe list.
- */
+/** Compares keyframe arrays by contents so fresh equivalent arrays do not restart. */
 function isSameTarget(
   current: ValueKeyframesDefinition | undefined,
   next: ValueKeyframesDefinition,

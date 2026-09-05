@@ -12,8 +12,9 @@ import { useMotionConfig } from "./config";
 import { createMotionController, type MotionPass } from "./controller";
 import { gestureNames, watchGestures } from "./gestures";
 import { buildInitialRender, toInitialValues } from "./initial";
-import { readStyleValues } from "./motion-values";
+import { plainStyle, readStyleValues } from "./motion-values";
 import { usePresence } from "./presence";
+import type { LayoutOptions } from "./projection";
 import { useReducedMotion } from "./reduced-motion";
 import { resolveDefinition, resolveInitialDefinition } from "./resolve";
 import { mergeLayers, withoutMovement } from "./target";
@@ -85,28 +86,21 @@ export function createMotion<TCustom = unknown>(
   const config = useMotionConfig();
   const presence = usePresence();
 
-  // Captured before `ref` fires: a ref callback runs outside any reactive
-  // owner, so `onCleanup` called from inside it is silently never scheduled.
-  // Registering a child's cleanup needs this owner handed back in explicitly.
+  // Refs run outside an owner, so child cleanup needs the captured owner.
   const owner = getOwner();
 
-  // The gestures need the node inside a tracking scope, so it lives in a signal
-  // rather than a plain `let` the effects could never observe.
+  // Gestures read the node in a tracking scope, so keep it in a signal.
   const [element, setElement] = createSignal<HTMLElement | SVGElement>();
   const gestures = watchGestures(options, element);
 
   const inherited = useVariants();
-  // Only this element's own `custom` is typed. An ancestor's variant scope or a
-  // presence boundary knows nothing about this element's variant map, so what
-  // they carry is `unknown` and this is where it gets read as the local type.
+  // This is the boundary where inherited and presence custom values become TCustom.
   const custom = (): TCustom | undefined =>
     (options().custom ?? inherited?.custom() ?? presence?.custom()) as
       | TCustom
       | undefined;
 
-  // A layer falls back to the ancestor's label only when this element says
-  // nothing about it, matching Motion. An inline target is never inherited: it
-  // means nothing to a child resolving against a different variants map.
+  // Inherit labels only when this element does not define the layer itself.
   const definitionFor = (layer: VariantLayer) => {
     const own = options()[layer];
     return own !== undefined ? own : inherited?.label(layer);
@@ -115,10 +109,8 @@ export function createMotion<TCustom = unknown>(
   const resolveLayer = (layer: VariantLayer) =>
     resolveDefinition(definitionFor(layer), options().variants, custom());
 
-  // The initial target is resolved exactly once. It describes the element the
-  // browser is handed, so re-resolving it later would describe a paint that
-  // already happened. A boundary-level `initial={false}` wins over the element's
-  // own option: it means "this subtree was already on screen".
+  // The initial target describes the first paint, so resolve it once. A presence
+  // boundary with `initial={false}` overrides the element's own option.
   const initialTarget = untrack(() =>
     resolveInitialDefinition({
       initial: presence?.initial() === false ? false : definitionFor("initial"),
@@ -128,13 +120,24 @@ export function createMotion<TCustom = unknown>(
     }),
   );
 
-  // Read once, like the initial target: which keys motion drives describes the
-  // element, and only their values are expected to change afterwards.
+  // Read once. The bound keys describe the element; only their values change.
   const bound = untrack(() => readStyleValues(options().style));
+
+  // Layout options describe the node, so capture them with the initial target.
+  const layout = untrack((): LayoutOptions | undefined => {
+    const current = options();
+    if (!current.layout && current.layoutId === undefined) return undefined;
+    return {
+      layout: current.layout,
+      layoutId: current.layoutId,
+      style: plainStyle(current.style),
+    };
+  });
 
   const controller = createMotionController(
     toInitialValues(initialTarget),
     bound.values,
+    layout,
   );
   onCleanup(controller.dispose);
 
@@ -142,9 +145,7 @@ export function createMotion<TCustom = unknown>(
     () => options().transition ?? config.transition,
   );
 
-  // `exit` sits on top of `animate` rather than replacing it, so a key `animate`
-  // owns and `exit` says nothing about keeps its animated value instead of
-  // falling back on the way out.
+  // An exit layer only replaces keys it defines; other animate values remain.
   const merged = createMemo(() =>
     mergeLayers(
       [
@@ -162,8 +163,7 @@ export function createMotion<TCustom = unknown>(
     ),
   );
 
-  // Built before the pass effect, which reads it: an element that orchestrates
-  // its children has to be able to make them wait on its own pass.
+  // Create the scope before the pass effect so children can wait on this element.
   const scope = createVariantScope(options, custom, () => merged().transition);
 
   createEffect(
@@ -177,12 +177,8 @@ export function createMotion<TCustom = unknown>(
       const node = element();
       const current = options();
 
-      // Resolved here, not in the apply step below: `sequencePass` reads
-      // `orchestration()` on both scopes, which reads a `transition()` memo,
-      // and a memo read from outside a tracking scope is exactly what Solid's
-      // `STRICT_READ_UNTRACKED` warns about. `apply` is not a tracking scope;
-      // this compute function is, so the read belongs here regardless of
-      // whether the resulting object turns out to gate anything.
+      // `sequencePass` reads reactive orchestration data, so resolve it in this
+      // tracking scope rather than in the apply callback.
       const sequence = sequencePass(inherited, scope);
 
       return {
@@ -191,8 +187,8 @@ export function createMotion<TCustom = unknown>(
         target: reducedMotion ? withoutMovement(target) : target,
         fallbackTransition: fallbackTransition(),
         skipAnimations: config.skipAnimations ?? false,
-        // Read here so the delay tracks the ancestor's orchestration, and so a
-        // sibling entering or leaving restaggers the row.
+        instantLayout: reducedMotion || (config.skipAnimations ?? false),
+        // Read in the pass so sibling entry and exit changes restagger the row.
         delay: node && inherited ? inherited.delayFor(node) : 0,
         sequence,
         onAnimationStart: current.onAnimationStart,
@@ -205,6 +201,7 @@ export function createMotion<TCustom = unknown>(
         target: next.target,
         delay: next.delay,
         skipAnimations: next.skipAnimations,
+        instantLayout: next.instantLayout,
         fallbackTransition: next.fallbackTransition,
         definition: next.definition,
         sequence: next.sequence?.begin,
@@ -214,19 +211,13 @@ export function createMotion<TCustom = unknown>(
       };
 
       if (next.present) {
-        // Superseding an exit pass releases the hold that pass was carrying, so
-        // returning to the screen needs no bookkeeping of its own.
+        // Superseding an exit pass releases its presence hold.
         controller.run(pass, () => next.sequence?.settled());
         return;
       }
 
-      // Each pass owns exactly one hold and releases exactly that one. A shared
-      // variable cannot do this: `run` synchronously settles the pass it
-      // replaces, so a callback reading the current hold would release the one
-      // just taken and drop the boundary's count to zero mid-exit.
-      //
-      // Taking the hold before `run` is what keeps the count from touching zero
-      // between two passes of the same exit.
+      // Take the new hold before `run`, which synchronously releases a superseded
+      // pass and prevents the presence count from reaching zero between exits.
       const release = presence?.hold();
       controller.run(pass, () => {
         release?.();
@@ -235,9 +226,7 @@ export function createMotion<TCustom = unknown>(
     },
   );
 
-  // Bound values are painted here and left out of the controller's baseline:
-  // the caller owns where they sit, so a pass that stops naming one must not
-  // drag it back to whatever it held at mount.
+  // Bound values stay under the caller's control when a pass stops naming them.
   const painted = buildInitialRender(
     paintTarget(bound.painted, initialTarget),
     tag,
@@ -249,20 +238,18 @@ export function createMotion<TCustom = unknown>(
     ref: (node) => {
       controller.mount(node);
 
-      // Registration happens here, synchronously as the node mounts, and not
-      // from an effect watching `element()`. Solid settles every effect's
-      // compute function to a fixpoint before committing any of their apply
-      // steps, so a sibling registering from an apply callback is always too
-      // late for another sibling's compute function in the same mount: on the
-      // very first pass, every child's delay computed `children.size === 0`
-      // and a stagger never staggered. Registering here runs during the
-      // render walk, strictly before that compute phase starts, so by the
-      // time any sibling asks for its position, every sibling mounted in the
-      // same pass already has one.
+      // Register during the render walk, not from an effect watching the node.
+      // Solid settles every effect's compute function to a fixpoint before
+      // committing any of their apply steps, so a sibling registering from an
+      // apply callback is always too late for another sibling's compute in the
+      // same mount: on the very first pass every child's delay computed
+      // `children.size === 0` and a stagger never staggered. Registering here
+      // runs before that compute phase, so every sibling mounted in the same
+      // pass already has a position by the time one asks for its own.
       //
-      // `runWithOwner` is required, not decorative: `ref` runs outside any
-      // owner, so a bare `onCleanup` here is silently discarded and the child
-      // never leaves the registry.
+      // Refs run outside an owner, so restore the captured owner for cleanup.
+      // A bare `onCleanup` here is silently discarded and the child never
+      // leaves the registry.
       if (inherited) {
         const unregister = inherited.register(node);
         runWithOwner(owner, () => onCleanup(unregister));
@@ -274,13 +261,7 @@ export function createMotion<TCustom = unknown>(
   };
 }
 
-/**
- * What the element is painted with on its first render: the values the caller
- * bound through `style`, with the initial target over the top.
- *
- * `undefined` when there is nothing to paint, so an element with neither keeps
- * an empty style object rather than picking up whatever an empty target builds.
- */
+/** Combines caller-owned values with the initial target for the first render. */
 function paintTarget(
   painted: Record<string, string | number>,
   initialTarget: TargetAndTransition | undefined,
