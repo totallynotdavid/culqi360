@@ -13,7 +13,7 @@ import { createMotionController, type MotionPass } from "./controller";
 import { gestureNames, watchGestures } from "./gestures";
 import { buildInitialRender, toInitialValues } from "./initial";
 import { noteStyleChange } from "./layout-updates";
-import { plainStyle, readStyleValues, resolveStyle } from "./motion-values";
+import { readStyleValues, resolveStyle } from "./motion-values";
 import { usePresence } from "./presence";
 import type { LayoutOptions } from "./projection";
 import { useReducedMotion } from "./reduced-motion";
@@ -156,7 +156,12 @@ export function createMotion<TCustom = unknown>(
   // commit when one is needed.
   createEffect(
     () => {
-      plainStyle(options().style);
+      // `resolveStyle`, not `plainStyle`: it calls every accessor entry, so an
+      // accessor-wrapped style value (`style={{ "pointer-events": () => ... }}`)
+      // is actually invoked in this tracking scope and its signal gets
+      // subscribed. `plainStyle` only checks each entry's type and never calls
+      // it, so it would never re-run this effect for that form.
+      resolveStyle(options().style);
       // Read here, in the tracking compute phase, not in the untracked apply
       // callback below.
       return element();
