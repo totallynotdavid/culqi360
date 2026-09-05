@@ -91,6 +91,36 @@ export function releaseValueStore(element: Element, store: ValueStore): void {
   if (sharedStores.get(element) === store) sharedStores.delete(element);
 }
 
+/**
+ * Whoever is currently animating one element's property, so a later claim
+ * on the same pair can settle whatever the earlier claimant was waiting on
+ * instead of leaving it to wait on a `MotionValue` that just stopped
+ * animating out from under it.
+ *
+ * Shared between `create-animate.ts`'s imperative calls and `controller.ts`'s
+ * reactive pass, the two places that call `ValueStore.animate()`: a property
+ * has exactly one `MotionValue` regardless of which side is driving it, so
+ * motion-dom's own per-value `start()` stealing it from underneath a caller
+ * (verified against motion-dom 13.1.1: it stops the previous animation
+ * without ever settling that animation's own `finished`) needs one registry
+ * both sides feed, not two that only know about their own calls.
+ */
+const claims = new WeakMap<Element, Map<string, VoidFunction>>();
+
+export function claim(
+  element: Element,
+  key: string,
+  onSuperseded: VoidFunction,
+): void {
+  let byKey = claims.get(element);
+  if (!byKey) {
+    byKey = new Map();
+    claims.set(element, byKey);
+  }
+  byKey.get(key)?.();
+  byKey.set(key, onSuperseded);
+}
+
 export function createValueStore(
   element: HTMLElement | SVGElement,
   /** Where a property starts when the element was rendered carrying it. */

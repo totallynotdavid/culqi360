@@ -14,6 +14,7 @@ import {
   MotionConfig,
   motion,
   stagger,
+  usePresence,
   type AnimateFunction,
   type AnimateScope,
 } from "../src";
@@ -1196,6 +1197,275 @@ describe("createAnimate", () => {
     ).resolves.toBe("settled");
 
     await second.finished;
+  });
+
+  it("keeps a multi-key call's finished pending on its other keys after only one is reclaimed", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+
+    const first = animate(scope.current!, {
+      opacity: 0,
+      x: 50,
+      transition: { opacity: { duration: 5 }, x: { duration: 0.3 } },
+      transitionEnd: { display: "none" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // A second, unrelated call reclaims only `opacity`. `x` is still
+    // animating under `first`'s own `active`, which this call never touches.
+    const second = animate(scope.current!, {
+      opacity: 1,
+      transition: { duration: 0.05 },
+    });
+    await second.finished;
+
+    // A regression here settles the whole call's `finished`, and applies
+    // `transitionEnd`, the moment `opacity` alone was reclaimed, well before
+    // `x` has had anywhere near its 0.3s to finish on its own.
+    await expect(
+      Promise.race([
+        first.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("pending"), 100)),
+      ]),
+    ).resolves.toBe("pending");
+    expect(element.style.display).not.toBe("none");
+
+    // `x` finishes naturally; only now is every key this call started
+    // accounted for one way or another.
+    await expect(
+      Promise.race([
+        first.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+    expect(readTranslateX(element)).toBe(50);
+
+    // `transitionEnd` is written through a `MotionValue.jump()`, which paints
+    // on motion's own next render tick rather than synchronously, so give it
+    // one before reading it back.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.display).toBe("none");
+  });
+
+  it("still stops a multi-key call's surviving keys on unmount after one was reclaimed", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container, unmount } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+
+    animate(scope.current!, {
+      opacity: 0,
+      x: 50,
+      transition: { duration: 5, ease: "linear" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    animate(scope.current!, { opacity: 1, transition: { duration: 0.05 } });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    // A regression here settles `first.finished` the instant `opacity` was
+    // reclaimed, dropping it from the scope's `running` list early, so
+    // unmounting never calls `.stop()` on the `x` animation still running
+    // under it and it keeps ticking on a now-detached element.
+    unmount();
+
+    // `x`'s last write before `stop()` took effect may not have painted yet
+    // (motion renders on its own next tick), so give that one write a chance
+    // to land before taking the snapshot this test compares against.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const xAtUnmount = readTranslateX(element);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(readTranslateX(element)).toBe(xAtUnmount);
+  });
+
+  it("resolves an imperative animate() call when createMotion's reactive pass reclaims the same property", async () => {
+    const onComplete = vi.fn<() => void>();
+    const [items, setItems] = createSignal([{ id: "one" }]);
+
+    // A hold of its own, independent of the motion element's, so the row
+    // stays mounted once the motion element's own hold releases. What this
+    // test is after is whether the reclaimed pass's completion handling runs
+    // at all; whether the boundary then also tears the row (and its shared
+    // value store) down is a separate concern.
+    function ExtraHold() {
+      usePresence()?.hold();
+      return null;
+    }
+
+    const { container } = render(() => (
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <>
+            <ExtraHold />
+            <motion.div
+              exit={{ opacity: 0 }}
+              onAnimationComplete={onComplete}
+              transition={{ duration: 5 }}
+              data-id={item().id}
+            />
+          </>
+        )}
+      </AnimatePresenceList>
+    ));
+
+    // The initial pass settles on mount with nothing to animate (there is no
+    // `animate` prop), which calls `onAnimationComplete` once on its own,
+    // unrelated to the exit below.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    onComplete.mockClear();
+
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const element = container.querySelector('[data-id="one"]') as HTMLElement;
+    expect(element).toBeTruthy();
+
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    // Reclaims `opacity` mid-exit. Once motion-dom's `MotionValue.start`
+    // steals the property, the exit pass's own animation on it never settles
+    // its `finished` (verified against motion-dom 13.1.1), so without the
+    // controller claiming its own keys too, this call would hang forever
+    // waiting for the exit pass to notice.
+    const controls = animate(element, {
+      opacity: 1,
+      transition: { duration: 0.05 },
+    });
+
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+
+    // The exit pass's own completion handling has to run exactly as if it
+    // had reached its target normally: `onAnimationComplete` only fires from
+    // inside the same, unconditional completion path that also releases the
+    // presence hold and settles the sequence, so this is proof all of it ran
+    // rather than the pass hanging on a `Promise.all` that could no longer
+    // resolve.
+    expect(onComplete).toHaveBeenCalled();
+  });
+
+  it("keeps a reactive pass's completion pending on its other keys after only one is reclaimed", async () => {
+    const onComplete = vi.fn<() => void>();
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 1, x: 0 }}
+        animate={{ opacity: 0, x: 50, transitionEnd: { display: "none" } }}
+        transition={{ opacity: { duration: 5 }, x: { duration: 0.3 } }}
+        onAnimationComplete={onComplete}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    // A second, unrelated call reclaims only `opacity`. `x` is still
+    // animating under the reactive pass's own animations, which this call
+    // never touches.
+    await animate(element, { opacity: 1, transition: { duration: 0.05 } })
+      .finished;
+
+    // A regression here fires the whole pass's completion
+    // (`onAnimationComplete` and `transitionEnd`) the moment `opacity` alone
+    // was reclaimed, well before `x` has had anywhere near its 0.3s to reach
+    // its own target.
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(element.style.display).not.toBe("none");
+
+    // `x` finishes naturally; only now is every key this pass started
+    // accounted for one way or another.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(element.style.display).toBe("none");
+  });
+
+  it("settles an imperative call's finished when a skipAnimations reactive pass reclaims the same property", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    const [reactiveOpacity, setReactiveOpacity] = createSignal(1);
+    const { container } = render(() => (
+      <MotionConfig skipAnimations>
+        <motion.div
+          initial={{ opacity: 1 }}
+          animate={{ opacity: reactiveOpacity() }}
+        />
+      </MotionConfig>
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    const controls = animate(element, {
+      opacity: 0,
+      transition: { duration: 5 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Resolves instantly under `skipAnimations`, but `value.start()` still
+    // steals `opacity` from the imperative call's own in-flight animation on
+    // it.
+    setReactiveOpacity(0.4);
+    flush();
+
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+  });
+
+  it("fires a reactive pass's onAnimationComplete when a skipAnimations imperative call reclaims its only animating property", async () => {
+    const onComplete = vi.fn<() => void>();
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 5 }}
+        onAnimationComplete={onComplete}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    let animate!: AnimateFunction;
+    render(() => (
+      <MotionConfig skipAnimations>
+        <Scoped onReady={(_scope, readyAnimate) => (animate = readyAnimate)} />
+      </MotionConfig>
+    ));
+
+    // Resolves instantly under `skipAnimations`, but `value.start()` still
+    // steals `opacity` from the reactive pass's own in-flight animation on
+    // it, which was this pass's only key.
+    animate(element, { opacity: 1 });
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it("keeps receiving createMotion's reactive updates after an animate() call on the same property finishes", async () => {
