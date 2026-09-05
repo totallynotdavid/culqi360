@@ -29,12 +29,28 @@ Every non-motion prop (`class`, `onClick`, `children`, …) passes straight
 through. `motion.create(Component)` wraps a custom component similarly.
 
 ```tsx
-const Card = (props: { title: string }) => <div>{props.title}</div>;
+import type { JSX } from "@solidjs/web";
+
+const Card = (props: {
+  title: string;
+  style?: JSX.CSSProperties;
+  ref?: JSX.Ref<HTMLDivElement>;
+}) => (
+  <div ref={props.ref} style={props.style}>
+    {props.title}
+  </div>
+);
 const MotionCard = motion.create(Card);
 ```
 
-Rendering `motion.line`, `motion.path`, or any other SVG tag animates SVG
-geometry correctly. See [SVG animation](#svg-animation) below. The element
+The wrapper hands the wrapped component `style` and `ref` the same way it hands
+an intrinsic tag its own (see [`createMotion`](#createmotion) below): a
+component that drops either one never actually mounts motion on its element,
+so both must be forwarded to the node that should animate.
+
+Rendering `motion.line`, `motion.path`, or another tag on this package's fixed
+SVG list animates SVG geometry correctly. See [SVG animation](#svg-animation)
+below for that list. The element
 receives its initial style, or SVG attributes, inline during server rendering
 and the client's first paint. Nothing is applied after mount, so hydration
 does not flash.
@@ -73,8 +89,13 @@ it describes the first paint.
   omitted.
 - `style`: Plain CSS, except entries may be a `MotionValue` or a Solid
   accessor. Motion-owned keys are written on the animation frame instead of
-  through Solid's DOM diffing. Naming the same key in `animate`, `initial`, or
-  another target updates the caller's value in place, so it can be read back.
+  through Solid's DOM diffing. Naming the same key in `animate` or another
+  target animates an explicit, caller-owned `MotionValue` in place, so it can
+  be read back once a pass has actually changed it. `initial` does not do
+  this: it only seeds the first paint's inline style and never writes the
+  bound value itself. A plain accessor has no caller-owned value to read back
+  at all; it drives a private `MotionValue` this package creates and keeps to
+  itself.
 - `onAnimationStart(definition)` / `onAnimationComplete(definition)` /
   `onUpdate(latest)`: Plain callbacks, not reactive.
 
@@ -130,18 +151,25 @@ other attribute on Solid's compiled setters instead of a runtime spread.
 ## `createMotionValue`
 
 ```tsx
+import { createSignal } from "solid-js";
 import { createMotionValue, motion } from "@crm/solid-motion";
 
-// Follows the source immediately.
-const scale = createMotionValue(1);
+function Ball() {
+  const [targetX, setTargetX] = createSignal(0);
 
-// Springs toward source changes.
-const x = createMotionValue(
-  () => targetX(),
-  { stiffness: 300, damping: 30 },
-);
+  // Follows the source immediately.
+  const scale = createMotionValue(1);
 
-<motion.div style={{ x, scale }} />;
+  // Springs toward source changes.
+  const x = createMotionValue(targetX, { stiffness: 300, damping: 30 });
+
+  return (
+    <>
+      <button onClick={() => setTargetX((value) => value + 100)}>Move</button>
+      <motion.div style={{ x, scale }} />
+    </>
+  );
+}
 ```
 
 `createMotionValue(source, transition?)` creates a `MotionValue` that lives
@@ -206,11 +234,20 @@ infinite-scroll sentinel, a lazily mounted chart, or an impression tracker
 that has nothing to do with motion:
 
 ```tsx
-const [node, setNode] = createSignal<HTMLElement>();
-const inView = createInView(node, { once: true });
+import { createSignal } from "solid-js";
+import { createInView } from "@crm/solid-motion";
 
-<div ref={setNode}>{inView() ? <Chart /> : null}</div>;
+function LazyChart() {
+  const [node, setNode] = createSignal<HTMLElement>();
+  const inView = createInView(node, { once: true });
+
+  return <div ref={setNode}>{inView() ? <Chart /> : null}</div>;
+}
 ```
+
+Like every other primitive here, it needs a reactive owner: called from a
+component body or an effect, not from module scope, or the observer it
+installs has nowhere to register.
 
 ## Presence: `AnimatePresence` / `AnimatePresenceList`
 
@@ -218,6 +255,16 @@ Both keep a subtree mounted while its `exit` animation plays and unmount it
 once every animated element inside has released its hold. A hold is used
 instead of a promise because a cancelled `motion-dom` animation's `finished`
 promise never settles.
+
+This does not reach through a nested presence boundary. A nested
+`AnimatePresence` or `AnimatePresenceList` provides its own presence scope,
+which shadows the outer one for everything inside it, so any exit hold taken
+there registers with the inner boundary instead of the outer one. If the
+outer subtree exits while that nested boundary is still finishing its own
+exit, the outer boundary sees zero holds and unmounts the whole nested
+subtree during its own cleanup, cutting the nested exit short. Keep an
+`AnimatePresence` at the boundary that actually needs to wait, rather than
+nesting one inside a subtree another boundary can also remove.
 
 `AnimatePresence` is the single/keyed form. Control it with a `when` value
 rather than a conditional child. Solid disposes a branch as soon as its
@@ -268,8 +315,12 @@ The child function receives an accessor, not the raw item. Use `item()` inside
 it so a surviving row picks up new data without being recreated. A row removed
 from `each` stays mounted at its old position, rather than collapsing to the
 end of the list, until its exit animation finishes. Both components accept
-`initial={false}` (skip entrance on first render), `custom` (handed down as
-each element's inherited `custom`), and `onExitComplete`.
+`initial={false}`, `custom` (handed down as each element's inherited
+`custom`), and `onExitComplete`. `initial={false}` is a property of the
+boundary, not of one render: it skips the entrance animation for every
+element the boundary ever renders, including a row added long after the
+boundary itself first mounted, not only the ones present at that first
+render.
 
 `usePresence()` returns the enclosing boundary's presence context, or `null`
 outside one. `createMotion` uses it to resolve the `exit` layer and animation
@@ -318,6 +369,8 @@ string label instead of an inline target, optionally as a function of
 `custom`:
 
 ```tsx
+import { motion, type VariantMap } from "@crm/solid-motion";
+
 const variants: VariantMap = {
   hidden: { opacity: 0 },
   visible: (custom) => ({
@@ -386,9 +439,16 @@ it starts.
 
 ## SVG animation
 
-`motion.line`, `motion.path`, `motion.circle`, and other SVG tags render in the
-SVG namespace. Geometry that CSS cannot animate (`x1`, `x2`, `r`, `viewBox`,
-…) is written and animated as attributes, never as style:
+`motion.line`, `motion.path`, `motion.circle`, and the rest of the fixed tag
+list this package recognizes as SVG (`animate`, `circle`, `defs`, `desc`,
+`ellipse`, `filter`, `g`, `image`, `line`, `marker`, `mask`, `metadata`,
+`path`, `pattern`, `polygon`, `polyline`, `rect`, `stop`, `svg`, `switch`,
+`symbol`, `text`, `tspan`, `use`, `view`) render in the SVG namespace.
+Geometry that CSS cannot animate (`x1`, `x2`, `r`, `viewBox`, …) is written and
+animated as attributes on those tags, never as style. A tag missing from that
+list — `foreignObject`, `clipPath`, and `linearGradient` among them — is not
+recognized as SVG by this package, so its initial geometry is emitted as
+`style` instead of attributes, even where the tag itself is genuinely SVG:
 
 ```tsx
 <svg viewBox="0 0 100 100">
@@ -437,19 +497,49 @@ dependency:
   <motion.div style={{ opacity: () => fade(scrollY()) }} />;
   ```
 
-## Not yet in this package
+## Layout, scroll values, and imperative primitives
 
-`layout`/`layoutId` (layout projection), scroll-linked values
-(`createScroll`/`createVelocity`/`createTime`), and
-`createAnimate`/`createWillChange` are not part of this package. They are not
-exported from `src/index.tsx`. Check that export list before relying on any of
-these names.
+`layout` and `layoutId` are `MotionOptions` props: `layout` animates an
+element across a change in its own measured box, and two elements sharing a
+`layoutId` animate as one shared element across a change in which of them is
+mounted. Neither needs `VisualElement`; the projection engine behind them is
+generic over the host element instead. See `todo.txt` item 29 for the design
+record.
 
-Drag (`drag`, `dragControls`) and recovery of arbitrary removed children are
-also out of scope. Presence requires an explicit `when` or `each` boundary.
-Adding drag or arbitrary-child recovery would require the `VisualElement`
-machinery this package does not use. See `todo.txt` item 26 if the scope
-changes.
+`createScroll`, `createVelocity`, and `createTime` are scroll-linked values,
+for a `style` entry driven by scroll position rather than a discrete state
+change: `createScroll(options?)` tracks a container/target pair (or the page,
+by default) and returns four `MotionValue`s (`scrollX`, `scrollY`,
+`scrollXProgress`, `scrollYProgress`) as raw pixel offsets and normalized
+0-1 progress, `createVelocity(source)` derives another `MotionValue`'s rate of
+change, decaying to zero once its source goes stale rather than freezing at
+the last reading, and `createTime()` is the animation frame loop's own clock.
+See `todo.txt` item 30.
+
+`createAnimate` and `createWillChange` are the imperative primitives for an
+element this package does not render itself, such as a chart library's own
+nodes. `createAnimate` returns `[scope, animate]`: `scope` is a callback-plus-
+signal ref, matching this package's own ref convention rather than motion-dom's
+`AnimationScope`, and `animate` targets the scope's own element, a descendant,
+an explicit element or array, or a sequence of `[target, definition]` steps
+played one after another. `createWillChange` builds a shared `will-change`
+value that several independent animations can each add a hint to. See
+`todo.txt` item 31.
+
+## Out of scope
+
+Drag (`drag`, `dragControls`) is not implemented. Layout proved that
+`VisualElement` is not required for projection (`todo.txt` item 29), so that
+is no longer why drag stays out: the actual reason is that nothing in the
+reference UI or `apps/web` uses it, and `apps/web`'s own drag-and-drop (row
+reordering with autoscroll and a selection box) is not something motion's
+free-drag would replace. Revisit if a real consumer appears (`todo.txt` item
+26).
+
+Recovery of arbitrary removed children is also out of scope, for the
+unrelated reason already stated above: presence requires an explicit `when`
+or `each` boundary, so an element that disappears outside one is never
+tracked for an exit.
 
 ## Development
 
