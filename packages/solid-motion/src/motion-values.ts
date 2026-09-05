@@ -100,6 +100,40 @@ export function isMotionStyleValue(entry: unknown): entry is MotionStyleValue {
   return typeof entry === "function" || isMotionValue(entry);
 }
 
+/** The entries of a style the DOM owns, with everything motion drives removed. */
+export function plainStyle(
+  style: MotionStyle | undefined,
+): Record<string, unknown> {
+  if (!style) return {};
+
+  const plain: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(style)) {
+    if (!isMotionStyleValue(entry)) plain[key] = entry;
+  }
+  return plain;
+}
+
+/**
+ * The caller's style with every entry resolved to its current value, including
+ * a Solid accessor or `MotionValue` motion otherwise drives itself.
+ *
+ * Layout projection needs this rather than `plainStyle`: motion-dom reads
+ * `pointerEvents` (and composes a caller-set `transform`) straight off this
+ * value on every paint, never off the animated `latestValues`, so a
+ * motion-driven entry that `plainStyle` would drop has to resolve here instead.
+ */
+export function resolveStyle(
+  style: MotionStyle | undefined,
+): Record<string, unknown> {
+  if (!style) return {};
+
+  const resolved: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(style)) {
+    resolved[key] = read(entry as MotionSource<string | number>);
+  }
+  return resolved;
+}
+
 export interface BoundStyle {
   values: Map<string, MotionValue>;
   /**

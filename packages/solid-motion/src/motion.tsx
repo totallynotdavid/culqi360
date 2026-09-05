@@ -3,13 +3,8 @@ import { createMemo, merge, omit } from "solid-js";
 
 import { createMotion } from "./create-motion";
 import { gestureNames } from "./gestures";
-import { isMotionStyleValue } from "./motion-values";
-import type {
-  MotionComponent,
-  MotionProps,
-  MotionProxy,
-  MotionStyle,
-} from "./types";
+import { plainStyle } from "./motion-values";
+import type { MotionComponent, MotionProps, MotionProxy } from "./types";
 import { VariantContext } from "./variants";
 
 const motionPropKeys = [
@@ -17,6 +12,8 @@ const motionPropKeys = [
   "custom",
   "exit",
   "initial",
+  "layout",
+  "layoutId",
   "onAnimationComplete",
   "onAnimationStart",
   "onUpdate",
@@ -48,23 +45,14 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
   return (props: TProps & MotionProps): JSX.Element => {
     const motion = createMotion(() => props, tag);
     const forwarded = omit(props, ...motionPropKeys);
-    // Motion-driven entries are bound to the element already, so the DOM has no
-    // use for them. Nothing observable goes wrong if they slip through, which
-    // is why no test pins this: `motion.style` covers every bound key, and the
-    // ones it renames (`x` to `transform`) leave behind a property name the CSS
-    // parser drops anyway. It stays because handing `setProperty` a function or
-    // a `MotionValue` is wrong on its face, and relying on the merge order to
-    // hide it is a thinner guarantee than not doing it.
     const style = createMemo(
-      () => merge(plainCss(props.style), motion.style) as JSX.CSSProperties,
+      () => merge(plainStyle(props.style), motion.style) as JSX.CSSProperties,
     );
 
     const DynamicComponent = Dynamic as unknown as (
       props: Record<string, unknown>,
     ) => JSX.Element;
-    // Kept as a function on purpose. Evaluating the element before wrapping it
-    // would create the whole subtree outside the provider, and the descendants
-    // that need the variant scope are exactly the ones inside it.
+    // Render lazily so descendants are created inside the variant provider.
     const renderElement = () => (
       <DynamicComponent
         component={host}
@@ -80,16 +68,6 @@ function createMotionComponent<TProps extends object>(host: MotionHost) {
       <VariantContext value={motion.scope}>{renderElement()}</VariantContext>
     );
   };
-}
-
-function plainCss(style: MotionStyle | undefined): Record<string, unknown> {
-  if (!style) return {};
-
-  const css: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(style)) {
-    if (!isMotionStyleValue(entry)) css[key] = entry;
-  }
-  return css;
 }
 
 const componentCache = new Map<string, MotionComponent>();
