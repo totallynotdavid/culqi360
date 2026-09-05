@@ -6,12 +6,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AnimatePresence,
   AnimatePresenceList,
+  createAnimate,
   createMotion,
   createInView,
   createMotionValue,
+  createWillChange,
   MotionConfig,
   motion,
   stagger,
+  type AnimateFunction,
+  type AnimateScope,
 } from "../src";
 import { buildInitialRender } from "../src/initial";
 
@@ -785,6 +789,353 @@ describe("createMotion", () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(readScale(element)).toBe(1.5);
+  });
+});
+
+describe("createAnimate", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("mutates the scope's own element over time", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+
+    animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 0.3, ease: "linear" },
+    });
+
+    // Mid-flight assertions ensure the call actually animates the DOM.
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const midpoint = Number(element.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(element.style.opacity).toBe("0");
+  });
+
+  it("mutates a descendant resolved through a selector string", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return (
+        <div ref={scope}>
+          <span class="child" style={{ opacity: "1" }} />
+        </div>
+      );
+    });
+    const child = container.querySelector(".child") as HTMLElement;
+
+    animate(".child", {
+      opacity: 0,
+      transition: { duration: 0.3, ease: "linear" },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const midpoint = Number(child.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(child.style.opacity).toBe("0");
+  });
+
+  it("plays a sequence of targets one after another", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return (
+        <div ref={scope}>
+          <span class="a" style={{ opacity: "0" }} />
+          <span class="b" style={{ opacity: "0" }} />
+        </div>
+      );
+    });
+    const a = container.querySelector(".a") as HTMLElement;
+    const b = container.querySelector(".b") as HTMLElement;
+
+    animate([
+      [".a", { opacity: 1, transition: { duration: 0.2 } }],
+      [".b", { opacity: 1, transition: { duration: 0.2 } }],
+    ]);
+
+    // If segments ran together, `b` would have started moving by this point.
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(b.style.opacity).toBe("0");
+
+    // This confirms the first segment finished and the second one started.
+    await new Promise((resolve) => setTimeout(resolve, 240));
+    expect(a.style.opacity).toBe("1");
+    const midpoint = Number(b.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(b.style.opacity).toBe("1");
+  });
+
+  function Scoped(props: {
+    onReady: (scope: AnimateScope, animate: AnimateFunction) => void;
+  }) {
+    const [scope, animate] = createAnimate();
+    props.onReady(scope, animate);
+    return <div ref={scope} style={{ opacity: "1" }} />;
+  }
+
+  it("suppresses easing under MotionConfig skipAnimations, unlike the same call without it", async () => {
+    let plainScope!: AnimateScope;
+    let plainAnimate!: AnimateFunction;
+    const plain = render(() => (
+      <Scoped
+        onReady={(scope, animate) => {
+          plainScope = scope;
+          plainAnimate = animate;
+        }}
+      />
+    ));
+
+    let skippedScope!: AnimateScope;
+    let skippedAnimate!: AnimateFunction;
+    const skipped = render(() => (
+      <MotionConfig skipAnimations>
+        <Scoped
+          onReady={(scope, animate) => {
+            skippedScope = scope;
+            skippedAnimate = animate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    const definition = { opacity: 0, transition: { duration: 0.4 } };
+    plainAnimate(plainScope.current!, definition);
+    skippedAnimate(skippedScope.current!, definition);
+
+    // Mid-flight, the plain animation should be between values while the
+    // skipped animation has already applied its target.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const plainElement = plain.container.querySelector("div") as HTMLElement;
+    const skippedElement = skipped.container.querySelector(
+      "div",
+    ) as HTMLElement;
+
+    expect(Number(plainElement.style.opacity)).toBeGreaterThan(0);
+    expect(Number(plainElement.style.opacity)).toBeLessThan(1);
+    expect(skippedElement.style.opacity).toBe("0");
+  });
+
+  it("jumps a positional key under MotionConfig reducedMotion, unlike the same call without it", async () => {
+    let plainScope!: AnimateScope;
+    let plainAnimate!: AnimateFunction;
+    const plain = render(() => (
+      <Scoped
+        onReady={(scope, animate) => {
+          plainScope = scope;
+          plainAnimate = animate;
+        }}
+      />
+    ));
+
+    let reducedScope!: AnimateScope;
+    let reducedAnimate!: AnimateFunction;
+    const reduced = render(() => (
+      <MotionConfig reducedMotion="always">
+        <Scoped
+          onReady={(scope, animate) => {
+            reducedScope = scope;
+            reducedAnimate = animate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    const definition = { x: 100, transition: { duration: 0.4 } };
+    plainAnimate(plainScope.current!, definition);
+    reducedAnimate(reducedScope.current!, definition);
+
+    // Mid-flight, only the reduced-motion target should already be complete.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const plainElement = plain.container.querySelector("div") as HTMLElement;
+    const reducedElement = reduced.container.querySelector(
+      "div",
+    ) as HTMLElement;
+
+    expect(readTranslateX(plainElement)).toBeGreaterThan(0);
+    expect(readTranslateX(plainElement)).toBeLessThan(100);
+    expect(readTranslateX(reducedElement)).toBe(100);
+  });
+
+  it("does not crash animating a selector target before the scope mounts", async () => {
+    let scope!: AnimateScope;
+    let earlyResult!: ReturnType<AnimateFunction>;
+
+    function EarlyCall() {
+      let animate: AnimateFunction;
+      [scope, animate] = createAnimate();
+      // Called before the JSX below creates the scope's own element, so
+      // `scope.current` is still undefined here: the exact state that used
+      // to throw reading `undefined.querySelectorAll`.
+      earlyResult = animate(".child", { opacity: 0 });
+      return (
+        <div ref={scope}>
+          <span class="child" style={{ opacity: "1" }} />
+        </div>
+      );
+    }
+
+    expect(() => render(() => <EarlyCall />)).not.toThrow();
+    await expect(earlyResult.finished).resolves.toBeUndefined();
+  });
+
+  it("settles `finished` immediately when a running animation is stopped", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+
+    const controls = animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 5 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    controls.stop();
+
+    // motion-dom never settles a stopped animation's own `finished`, so a
+    // regression here hangs this assertion until the suite times out rather
+    // than failing it outright.
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+  });
+
+  it("settles a sequence immediately when stopped mid-segment", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return (
+        <div ref={scope}>
+          <span class="a" style={{ opacity: "0" }} />
+          <span class="b" style={{ opacity: "0" }} />
+        </div>
+      );
+    });
+
+    const controls = animate([
+      [".a", { opacity: 1, transition: { duration: 5 } }],
+      [".b", { opacity: 1, transition: { duration: 5 } }],
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    controls.stop();
+
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+  });
+
+  it("applies transitionEnd after an instant animation settles, and keeps it", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => (
+      <MotionConfig skipAnimations>
+        <Scoped
+          onReady={(readyScope, readyAnimate) => {
+            scope = readyScope;
+            animate = readyAnimate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    const controls = animate(scope.current!, {
+      opacity: 0,
+      transitionEnd: { display: "none" },
+    });
+    await controls.finished;
+
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.opacity).toBe("0");
+    expect(element.style.display).toBe("none");
+
+    // A later frame settling before this promise did would clobber the
+    // write above the instant it lands, so give it a chance to run.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(element.style.display).toBe("none");
+  });
+
+  it("does not throw reading control accessors when no elements match the selector", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    const controls = animate(".missing", { opacity: 0 });
+    // Past the point where the buggy version had already built an empty
+    // `GroupAnimation` and assigned it as the active animation.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(() => controls.state).not.toThrow();
+    expect(() => controls.time).not.toThrow();
+    expect(() => controls.speed).not.toThrow();
+    expect(() => controls.startTime).not.toThrow();
+  });
+
+  it("resolves immediately for an empty sequence instead of crashing", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    const controls = animate([]);
+    await expect(controls.finished).resolves.toBeUndefined();
+  });
+});
+
+describe("createWillChange", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("adds a property name into the element's will-change declaration", async () => {
+    let willChange!: ReturnType<typeof createWillChange>;
+    const { container } = render(() => {
+      willChange = createWillChange();
+      return <motion.div style={{ willChange }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.getPropertyValue("will-change")).toBe("auto");
+
+    willChange.add("transform");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.getPropertyValue("will-change")).toBe("transform");
+
+    // Duplicate names leave the declaration unchanged.
+    willChange.add("transform");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.getPropertyValue("will-change")).toBe("transform");
+
+    willChange.add("opacity");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.getPropertyValue("will-change")).toBe(
+      "transform, opacity",
+    );
   });
 });
 

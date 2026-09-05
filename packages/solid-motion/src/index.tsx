@@ -1,5 +1,14 @@
 export { motion } from "./motion";
 export { createMotion, type MotionHandle } from "./create-motion";
+export {
+  createAnimate,
+  type AnimateFunction,
+  type AnimateScope,
+  type AnimateSegment,
+  type AnimateSequence,
+  type AnimateTarget,
+} from "./create-animate";
+export { createWillChange } from "./create-will-change";
 export { createMotionValue, type MotionSource } from "./motion-values";
 // The pure interpolator behind Motion's `useTransform` range form. In Solid a
 // derived value is an accessor over it, not a second value to keep in sync.
@@ -35,4 +44,5 @@ export type {
   ViewportOptions,
   VariantDefinition,
   VariantMap,
+  WillChange,
 } from "./types";
