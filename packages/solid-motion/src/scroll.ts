@@ -227,59 +227,27 @@ function measureAxis(
  * scrollTop/scrollLeft and clientHeight/clientWidth measure from) along one
  * axis.
  *
- * Summing each element's own offsetParent chain independently and
- * subtracting gives the target-to-container distance regardless of which
- * ancestors are positioned, since both chains bottom out at the same
- * document origin. Where that difference lands depends on whether
- * `container` is itself one of `target`'s offsetParents:
- *
- * - If it is (container is a positioned scroll container, the common case),
- *   the walk already passes through container's own offsetTop/offsetLeft
- *   hop, which the CSSOM View spec defines as measured from container's
- *   padding box. The raw difference already lands on the padding-box
- *   origin, so no correction is needed. Subtracting clientTop/clientLeft
- *   here would over-correct by a full border width in the wrong direction.
- * - If it isn't (container is `position: static`, so every element's
- *   offsetParent walk skips over it), the chains only meet at container's
- *   own offsetParent, and the difference lands on container's border-box
- *   origin instead: container's own border-box-to-padding-box hop is
- *   missing from the sum. clientTop/clientLeft equal container's border
- *   width regardless of its `position`, so subtracting them converts to
- *   the padding-box origin.
+ * `getBoundingClientRect()` gives each element's border-box position
+ * relative to the viewport directly, so the difference between the two
+ * rects is target's border-box position relative to container's border-box
+ * origin, regardless of container's `position`, how many ancestors sit
+ * between them, or any of those ancestors' borders. Any window scroll
+ * offset is present in both rects identically and cancels in the
+ * subtraction. Subtracting container's own border width (clientTop/
+ * clientLeft) then converts that to container's padding-box origin.
  */
 function axisInset(
   target: HTMLElement,
   container: HTMLElement,
   axis: "x" | "y",
 ): number {
-  const rawInset =
-    offsetFromDocument(target, axis) - offsetFromDocument(container, axis);
-  if (isOffsetAncestor(container, target)) return rawInset;
-
+  const targetRect = target.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
   const containerBorder =
     axis === "y" ? container.clientTop : container.clientLeft;
-  return rawInset - containerBorder;
-}
-
-/** Whether `container` is reachable by repeatedly walking `target.offsetParent`. */
-function isOffsetAncestor(
-  container: HTMLElement,
-  target: HTMLElement,
-): boolean {
-  let node = target.offsetParent as HTMLElement | null;
-  while (node) {
-    if (node === container) return true;
-    node = node.offsetParent as HTMLElement | null;
-  }
-  return false;
-}
-
-function offsetFromDocument(element: HTMLElement, axis: "x" | "y"): number {
-  let offset = 0;
-  let node: HTMLElement | null = element;
-  while (node) {
-    offset += axis === "y" ? node.offsetTop : node.offsetLeft;
-    node = node.offsetParent as HTMLElement | null;
-  }
-  return offset;
+  return (
+    (axis === "y"
+      ? targetRect.top - containerRect.top
+      : targetRect.left - containerRect.left) - containerBorder
+  );
 }
