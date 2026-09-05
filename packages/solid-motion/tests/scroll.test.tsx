@@ -32,48 +32,19 @@ function stubBox(
 }
 
 /**
- * jsdom's getBoundingClientRect always returns zeros, so axisInset's
- * border-box math needs a real rect to work from. `top`/`left` only are
- * enough to drive it; the other DOMRect fields are unused by axisInset.
+ * jsdom never lays out elements, so offsetTop/offsetLeft/offsetParent all
+ * read as 0/0/null by default; stub them to drive axisInset's walk.
  */
-function stubRect(
+function stubOffset(
   element: HTMLElement,
-  rect: Partial<{
-    top: number;
-    left: number;
-    clientTop: number;
-    clientLeft: number;
+  offset: Partial<{
+    offsetTop: number;
+    offsetLeft: number;
+    offsetParent: Element | null;
   }>,
 ) {
-  const { clientTop, clientLeft, ...rectFields } = rect;
-  if (Object.keys(rectFields).length > 0) {
-    Object.defineProperty(element, "getBoundingClientRect", {
-      value: () => ({
-        top: 0,
-        left: 0,
-        bottom: 0,
-        right: 0,
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0,
-        toJSON() {},
-        ...rectFields,
-      }),
-      configurable: true,
-    });
-  }
-  if (clientTop !== undefined) {
-    Object.defineProperty(element, "clientTop", {
-      value: clientTop,
-      configurable: true,
-    });
-  }
-  if (clientLeft !== undefined) {
-    Object.defineProperty(element, "clientLeft", {
-      value: clientLeft,
-      configurable: true,
-    });
+  for (const [key, value] of Object.entries(offset)) {
+    Object.defineProperty(element, key, { value, configurable: true });
   }
 }
 
@@ -293,7 +264,7 @@ describe("createScroll trackContentSize", () => {
 describe("createScroll offset resolution", () => {
   afterEach(() => document.body.replaceChildren());
 
-  it("resolves target inset correctly when the container is not a positioned ancestor", async () => {
+  it("resolves target inset through a single offsetParent hop", async () => {
     let scroll!: ReturnType<typeof createScroll>;
     let targetEl!: HTMLElement;
     const { container } = render(() => {
@@ -314,103 +285,32 @@ describe("createScroll offset resolution", () => {
       );
     });
     const element = container.querySelector("div") as HTMLElement;
+    element.style.position = "relative";
     stubBox(element, { clientHeight: 100 });
     stubBox(targetEl, { clientHeight: 100 });
 
-    // A `position: static` container has no border-box relationship to the
-    // target's offsetParent chain, but getBoundingClientRect needs none: it
-    // reports each element's viewport position directly.
-    stubRect(element, { top: 50 });
-    stubRect(targetEl, { top: 350 });
+    // target's offsetParent is container itself: inset is its own offsetTop.
+    stubOffset(targetEl, { offsetTop: 50, offsetParent: element });
 
-    element.scrollTop = 325;
+    // points are [50, 100]; walk scrollTop across that range.
+    element.scrollTop = 50;
     element.dispatchEvent(new Event("scroll"));
     flush();
     await tick();
+    expect(scroll.scrollYProgress.get()).toBe(0);
 
-    expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
-  });
-
-  it("subtracts the container's own border width from the target inset", async () => {
-    let scroll!: ReturnType<typeof createScroll>;
-    let targetEl!: HTMLElement;
-    const { container } = render(() => {
-      const [node, setNode] = createSignal<HTMLElement>();
-      scroll = createScroll({
-        container: node,
-        target: () => targetEl,
-        // Non-default range so the resolved inset alone drives progress.
-        offset: [
-          [0, 0],
-          [0.5, 0],
-        ],
-      });
-      return (
-        <div ref={setNode}>
-          <div ref={(el) => (targetEl = el)} />
-        </div>
-      );
-    });
-    const element = container.querySelector("div") as HTMLElement;
-    stubBox(element, { clientHeight: 100 });
-    stubBox(targetEl, { clientHeight: 100 });
-
-    // container's border-box origin sits at viewport offset 50, with a 10px
-    // top border, so its padding-box origin (where scrollTop/clientHeight
-    // measure from) sits at 60, exactly where target's border-box starts.
-    stubRect(element, { top: 50, clientTop: 10 });
-    stubRect(targetEl, { top: 60 });
-
-    element.scrollTop = 25;
+    element.scrollTop = 75;
     element.dispatchEvent(new Event("scroll"));
-    flush();
     await tick();
-
-    // Border correctly subtracted: inset is 0, so progress is 25 / 50.
     expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
-  });
 
-  it("does not subtract the container's border width when the container is an offsetParent of the target", async () => {
-    let scroll!: ReturnType<typeof createScroll>;
-    let targetEl!: HTMLElement;
-    const { container } = render(() => {
-      const [node, setNode] = createSignal<HTMLElement>();
-      scroll = createScroll({
-        container: node,
-        target: () => targetEl,
-        // Non-default range so the resolved inset alone drives progress.
-        offset: [
-          [0, 0],
-          [0.5, 0],
-        ],
-      });
-      return (
-        <div ref={setNode}>
-          <div ref={(el) => (targetEl = el)} />
-        </div>
-      );
-    });
-    const element = container.querySelector("div") as HTMLElement;
-    stubBox(element, { clientHeight: 100 });
-    stubBox(targetEl, { clientHeight: 100 });
-
-    // container's border-box origin sits at viewport offset 50, with a 10px
-    // top border, so its padding-box origin sits at 60. target is a direct
-    // child of container, flush against that padding edge, so target's own
-    // border-box also starts at 60: the inset is 0, not -10.
-    stubRect(element, { top: 50, clientTop: 10 });
-    stubRect(targetEl, { top: 60 });
-
-    element.scrollTop = 25;
+    element.scrollTop = 100;
     element.dispatchEvent(new Event("scroll"));
-    flush();
     await tick();
-
-    // Border correctly subtracted: inset is 0, so progress is 25 / 50.
-    expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
+    expect(scroll.scrollYProgress.get()).toBe(1);
   });
 
-  it("subtracts an intermediate bordered positioned ancestor's border from the target inset", async () => {
+  it("resolves target inset by summing an intermediate ancestor's offset", async () => {
     let scroll!: ReturnType<typeof createScroll>;
     let wrapperEl!: HTMLElement;
     let targetEl!: HTMLElement;
@@ -434,29 +334,25 @@ describe("createScroll offset resolution", () => {
       );
     });
     const element = container.querySelector("div") as HTMLElement;
+    element.style.position = "relative";
     stubBox(element, { clientHeight: 100 });
     stubBox(targetEl, { clientHeight: 100 });
 
-    // A 5px-bordered, positioned wrapper sits between target and container
-    // (the wrapper/card/sticky-section case). container's padding-box
-    // origin sits at 60 (top 50 + 10px border); wrapper's own 10px border
-    // pushes target's border-box down to 65, so the correct inset is 5, not
-    // 0 - the bug this test guards against had the old offsetParent-chain
-    // approach dropping the wrapper's border and landing on 0 instead.
-    stubRect(element, { top: 50, clientTop: 10 });
-    stubRect(wrapperEl, { top: 60, clientTop: 5 });
-    stubRect(targetEl, { top: 65 });
+    // A positioned wrapper sits between target and container (the
+    // wrapper/card/sticky-section case): both hops' offsetTop are summed.
+    stubOffset(wrapperEl, { offsetTop: 20, offsetParent: element });
+    stubOffset(targetEl, { offsetTop: 30, offsetParent: wrapperEl });
 
-    element.scrollTop = 30;
+    element.scrollTop = 75;
     element.dispatchEvent(new Event("scroll"));
     flush();
     await tick();
 
-    // inset 5: points are [5, 55], so scrollTop 30 lands progress at 0.5.
+    // inset 50 (20 + 30); points are [50, 100], so scrollTop 75 lands progress at 0.5.
     expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
   });
 
-  it("subtracts the container's own border width from the target inset on the x axis", async () => {
+  it("resolves target inset through a single offsetParent hop on the x axis", async () => {
     let scroll!: ReturnType<typeof createScroll>;
     let targetEl!: HTMLElement;
     const { container } = render(() => {
@@ -477,20 +373,73 @@ describe("createScroll offset resolution", () => {
       );
     });
     const element = container.querySelector("div") as HTMLElement;
+    element.style.position = "relative";
     stubBox(element, { clientWidth: 100 });
     stubBox(targetEl, { clientWidth: 100 });
 
-    // Same setup as the y-axis border test, mirrored onto the x axis.
-    stubRect(element, { left: 50, clientLeft: 10 });
-    stubRect(targetEl, { left: 60 });
+    // Same setup as the y-axis hop test, mirrored onto the x axis.
+    stubOffset(targetEl, { offsetLeft: 50, offsetParent: element });
 
-    element.scrollLeft = 25;
+    element.scrollLeft = 75;
     element.dispatchEvent(new Event("scroll"));
     flush();
     await tick();
 
-    // Border correctly subtracted: inset is 0, so progress is 25 / 50.
+    // points are [50, 100]; scrollLeft 75 lands progress at 0.5.
     expect(scroll.scrollXProgress.get()).toBeCloseTo(0.5);
+  });
+});
+
+describe("createScroll static container warning", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("warns once in dev when a static container isn't an offsetParent boundary", async () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let targetEl!: HTMLElement;
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      createScroll({ container: node, target: () => targetEl });
+      return (
+        <div ref={setNode}>
+          <div ref={(el) => (targetEl = el)} />
+        </div>
+      );
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    // jsdom elements default to position: static; left unset deliberately.
+    stubBox(element, { clientHeight: 100, scrollHeight: 200 });
+    flush();
+    await tick();
+
+    element.scrollTop = 50;
+    element.dispatchEvent(new Event("scroll"));
+    await tick();
+    element.scrollTop = 100;
+    element.dispatchEvent(new Event("scroll"));
+    await tick();
+
+    expect(consoleWarn).toHaveBeenCalledTimes(1);
+    expect(consoleWarn.mock.calls[0][0]).toMatch(/non-static position/);
+
+    consoleWarn.mockRestore();
+  });
+
+  it("does not warn when the container is the document's own scrolling element", async () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const targetEl = document.createElement("div");
+    document.body.appendChild(targetEl);
+
+    const dispose = createRoot((disposeRoot) => {
+      createScroll({ target: () => targetEl });
+      return disposeRoot;
+    });
+    await tick();
+
+    expect(consoleWarn).not.toHaveBeenCalled();
+
+    consoleWarn.mockRestore();
+    dispose();
+    targetEl.remove();
   });
 });
 

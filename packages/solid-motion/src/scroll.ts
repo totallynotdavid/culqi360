@@ -121,11 +121,13 @@ function trackScroll(
   trackContentSize: boolean,
   onMeasure: (x: AxisReading, y: AxisReading) => void,
 ): VoidFunction {
-  const measure = () =>
+  const measure = () => {
+    warnIfStaticContainer(container, target);
     onMeasure(
       measureAxis(container, target, "x", offset),
       measureAxis(container, target, "y", offset),
     );
+  };
   const scheduleMeasure = () => frame.read(measure);
 
   // Page scroll events go to window; element scroll events go to the container.
@@ -223,31 +225,56 @@ function measureAxis(
 }
 
 /**
- * Returns the target's offset from the container's padding box (the origin
- * scrollTop/scrollLeft and clientHeight/clientWidth measure from) along one
- * axis.
- *
- * `getBoundingClientRect()` gives each element's border-box position
- * relative to the viewport directly, so the difference between the two
- * rects is target's border-box position relative to container's border-box
- * origin, regardless of container's `position`, how many ancestors sit
- * between them, or any of those ancestors' borders. Any window scroll
- * offset is present in both rects identically and cancels in the
- * subtraction. Subtracting container's own border width (clientTop/
- * clientLeft) then converts that to container's padding-box origin.
+ * Sums each ancestor's offsetTop/offsetLeft from target up to container.
+ * Matches upstream Framer Motion exactly: no border correction, and no
+ * attempt to support a `position: static` container (see
+ * `warnIfStaticContainer`) - offsetParent skips static ancestors, so the
+ * walk only lands on container if container establishes an offsetParent
+ * boundary (positioned, or the document's own scrolling root).
  */
 function axisInset(
   target: HTMLElement,
   container: HTMLElement,
   axis: "x" | "y",
 ): number {
-  const targetRect = target.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-  const containerBorder =
-    axis === "y" ? container.clientTop : container.clientLeft;
+  let inset = 0;
+  let node: HTMLElement | null = target;
+  while (node && node !== container) {
+    inset += axis === "y" ? node.offsetTop : node.offsetLeft;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return inset;
+}
+
+const warnedStaticContainers = new WeakSet<HTMLElement>();
+
+/**
+ * Warns once per container, in dev only, when `container` can't anchor the
+ * offsetParent walk above: a `position: static` container isn't an
+ * offsetParent boundary, so the walk silently resolves relative to whatever
+ * positioned ancestor actually is one instead of `container`. The document's
+ * own scrolling root is exempt - the walk naturally terminates there without
+ * needing container to be a chain member.
+ */
+function warnIfStaticContainer(container: HTMLElement, target: HTMLElement) {
+  if (!import.meta.env.DEV) return;
+  if (target === container) return;
+  if (isDocumentScrollRoot(container)) return;
+  if (warnedStaticContainers.has(container)) return;
+  if (getComputedStyle(container).position !== "static") return;
+
+  warnedStaticContainers.add(container);
+  console.warn(
+    "Please ensure that the container has a non-static position, like " +
+      "'relative', 'fixed', or 'absolute' to ensure scroll offset is " +
+      "calculated correctly.",
+  );
+}
+
+function isDocumentScrollRoot(container: HTMLElement): boolean {
   return (
-    (axis === "y"
-      ? targetRect.top - containerRect.top
-      : targetRect.left - containerRect.left) - containerBorder
+    container === document.documentElement ||
+    container === document.scrollingElement ||
+    container === document.body
   );
 }
