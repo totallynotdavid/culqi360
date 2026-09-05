@@ -1,6 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import { createRoot, createSignal, flush } from "solid-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   createMotionValue,
@@ -19,6 +19,19 @@ function stubBox(
   >,
 ) {
   for (const [key, value] of Object.entries(box)) {
+    Object.defineProperty(element, key, { value, configurable: true });
+  }
+}
+
+function stubOffset(
+  element: HTMLElement,
+  offset: Partial<{
+    offsetTop: number;
+    offsetLeft: number;
+    offsetParent: Element | null;
+  }>,
+) {
+  for (const [key, value] of Object.entries(offset)) {
     Object.defineProperty(element, key, { value, configurable: true });
   }
 }
@@ -98,12 +111,34 @@ describe("createScroll", () => {
   });
 });
 
-describe("createScroll resize", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    document.body.replaceChildren();
-  });
+describe("createScroll SSR safety", () => {
+  afterEach(() => vi.unstubAllGlobals());
 
+  it("returns safe initial values instead of erroring when document is unavailable", async () => {
+    vi.stubGlobal("document", undefined);
+    // A compute-phase error with no error handler isn't thrown synchronously;
+    // Solid's effect runtime retries it on the next flush and logs it via
+    // console.error, so a bare try/catch around createScroll() would not
+    // observe it either way.
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    let scroll!: ReturnType<typeof createScroll>;
+    const dispose = createRoot((disposeRoot) => {
+      scroll = createScroll();
+      return disposeRoot;
+    });
+    await tick();
+
+    expect(scroll.scrollY.get()).toBe(0);
+    expect(scroll.scrollYProgress.get()).toBe(0);
+    expect(consoleError).not.toHaveBeenCalled();
+
+    consoleError.mockRestore();
+    dispose();
+  });
+});
+
+describe("createScroll resize", () => {
   /** jsdom lacks ResizeObserver, so provide the callback used by resize. */
   function stubResizeObserver() {
     let report: ResizeObserverCallback | undefined;
@@ -123,8 +158,19 @@ describe("createScroll resize", () => {
       );
   }
 
+  // motion-dom caches a single ResizeObserver instance the first time resize()
+  // is called and never recreates it, so every test in this block must share
+  // the one stub registered here; a per-test stub's callback would never be
+  // the one motion-dom actually holds.
+  let reportResize: (target: Element) => void;
+  beforeAll(() => {
+    reportResize = stubResizeObserver();
+  });
+  afterAll(() => vi.unstubAllGlobals());
+
+  afterEach(() => document.body.replaceChildren());
+
   it("remeasures when the container's box changes with no scroll event at all", async () => {
-    const reportResize = stubResizeObserver();
     let scroll!: ReturnType<typeof createScroll>;
     const { container } = render(() => {
       const [node, setNode] = createSignal<HTMLElement>();
@@ -145,6 +191,101 @@ describe("createScroll resize", () => {
     reportResize(element);
     await tick();
     expect(scroll.scrollYProgress.get()).toBe(0.5);
+  });
+
+  it("remeasures when the target's box changes independently of the container", async () => {
+    let scroll!: ReturnType<typeof createScroll>;
+    let targetEl!: HTMLElement;
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      scroll = createScroll({ container: node, target: () => targetEl });
+      return (
+        <div ref={setNode}>
+          <div ref={(el) => (targetEl = el)} />
+        </div>
+      );
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    stubBox(element, { clientHeight: 100 });
+    stubBox(targetEl, { clientHeight: 300 });
+    element.scrollTop = 100;
+    element.dispatchEvent(new Event("scroll"));
+    flush();
+    await tick();
+    expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
+
+    // Shrink only the target's own box; no scroll event, no container resize.
+    stubBox(targetEl, { clientHeight: 200 });
+    reportResize(targetEl);
+    await tick();
+    expect(scroll.scrollYProgress.get()).toBe(1);
+  });
+});
+
+describe("createScroll trackContentSize", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("catches content growing the scroll range with no resize or scroll event", async () => {
+    let scroll!: ReturnType<typeof createScroll>;
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      scroll = createScroll({ container: node, trackContentSize: true });
+      return <div ref={setNode} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    stubBox(element, { clientHeight: 100, scrollHeight: 300 });
+    element.scrollTop = 200;
+    element.dispatchEvent(new Event("scroll"));
+    flush();
+    await tick();
+    expect(scroll.scrollYProgress.get()).toBe(1);
+
+    // Content grows the scrollable range; no resize or scroll event fires.
+    stubBox(element, { clientHeight: 100, scrollHeight: 500 });
+    await tick(250);
+    expect(scroll.scrollYProgress.get()).toBe(0.5);
+  });
+});
+
+describe("createScroll offset resolution", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("resolves target inset correctly when the container is not a positioned ancestor", async () => {
+    let scroll!: ReturnType<typeof createScroll>;
+    let targetEl!: HTMLElement;
+    const { container } = render(() => {
+      const [node, setNode] = createSignal<HTMLElement>();
+      scroll = createScroll({
+        container: node,
+        target: () => targetEl,
+        // Non-default range so the resolved inset alone drives progress.
+        offset: [
+          [0, 0],
+          [0.5, 0],
+        ],
+      });
+      return (
+        <div ref={setNode}>
+          <div ref={(el) => (targetEl = el)} />
+        </div>
+      );
+    });
+    const element = container.querySelector("div") as HTMLElement;
+    stubBox(element, { clientHeight: 100 });
+    stubBox(targetEl, { clientHeight: 100 });
+
+    // A `position: static` container is skipped by the offsetParent chain,
+    // so a real browser resolves both the container's and the target's
+    // offsetParent straight to `document.body`, bypassing the container.
+    stubOffset(element, { offsetTop: 50, offsetParent: document.body });
+    stubOffset(targetEl, { offsetTop: 350, offsetParent: document.body });
+
+    element.scrollTop = 325;
+    element.dispatchEvent(new Event("scroll"));
+    flush();
+    await tick();
+
+    expect(scroll.scrollYProgress.get()).toBeCloseTo(0.5);
   });
 });
 

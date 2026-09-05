@@ -30,6 +30,14 @@ export interface ScrollOptions {
   /** The element to track. Defaults to the container. */
   target?: Accessor<HTMLElement | undefined>;
   offset?: ScrollOffset;
+  /**
+   * Frame-polls the container's scrollWidth/scrollHeight to catch content
+   * growing the scrollable range without the container's own box resizing
+   * (rows appending, images finishing load). ResizeObserver only fires on
+   * the container's border box, so it misses this. Off by default: a
+   * per-frame read is not free while tracking is active.
+   */
+  trackContentSize?: boolean;
 }
 
 export interface ScrollValues {
@@ -57,6 +65,7 @@ export function createScroll(options: ScrollOptions = {}): ScrollValues {
   });
 
   const offset = options.offset ?? defaultOffset;
+  const trackContentSize = options.trackContentSize ?? false;
 
   createEffect(
     () => {
@@ -72,19 +81,29 @@ export function createScroll(options: ScrollOptions = {}): ScrollValues {
     },
     (spec) =>
       spec &&
-      trackScroll(spec.container, spec.target, offset, (x, y) => {
-        scrollX.set(x.current);
-        scrollXProgress.set(x.progress);
-        scrollY.set(y.current);
-        scrollYProgress.set(y.progress);
-      }),
+      trackScroll(
+        spec.container,
+        spec.target,
+        offset,
+        trackContentSize,
+        (x, y) => {
+          scrollX.set(x.current);
+          scrollXProgress.set(x.progress);
+          scrollY.set(y.current);
+          scrollYProgress.set(y.progress);
+        },
+      ),
   );
 
   return { scrollX, scrollY, scrollXProgress, scrollYProgress };
 }
 
-/** Use documentElement when jsdom does not expose document.scrollingElement. */
+/**
+ * Use documentElement when jsdom does not expose document.scrollingElement.
+ * Returns undefined outside a browser (SSR) instead of touching `document`.
+ */
 function defaultScrollContainer(): HTMLElement | undefined {
+  if (typeof document === "undefined") return undefined;
   return (document.scrollingElement ?? document.documentElement) as
     | HTMLElement
     | undefined;
@@ -99,6 +118,7 @@ function trackScroll(
   container: HTMLElement,
   target: HTMLElement,
   offset: ScrollOffset,
+  trackContentSize: boolean,
   onMeasure: (x: AxisReading, y: AxisReading) => void,
 ): VoidFunction {
   const measure = () =>
@@ -117,19 +137,58 @@ function trackScroll(
 
   window.addEventListener("resize", scheduleMeasure);
   // Window resize covers the root; other containers can resize during reflow.
-  const stopResize = isRootContainer
+  const stopContainerResize = isRootContainer
     ? undefined
     : resize(container, scheduleMeasure);
+  // The target's own box can change independently of the container's (an
+  // accordion expanding, an image finishing load), so it needs its own
+  // observer whenever it isn't the container itself.
+  const stopTargetResize =
+    target === container ? undefined : resize(target, scheduleMeasure);
+  const stopContentSizePoll = trackContentSize
+    ? pollContentSize(container, scheduleMeasure)
+    : undefined;
 
   measure();
 
   return () => {
     scrollTarget.removeEventListener("scroll", scheduleMeasure);
     window.removeEventListener("resize", scheduleMeasure);
-    stopResize?.();
+    stopContainerResize?.();
+    stopTargetResize?.();
+    stopContentSizePoll?.();
     // A queued measurement must not update the destroyed values.
     cancelFrame(measure);
   };
+}
+
+/**
+ * ResizeObserver only fires on the container's border box, not its scrollable
+ * content size, so a fixed-height container whose rows or images load in
+ * (growing scrollHeight/scrollWidth without resizing the container) never
+ * triggers a remeasure. Frame-polling is the same tradeoff Framer Motion's
+ * `trackContentSize` makes: content growth doesn't fire resize, so a resize
+ * observer can't catch it, and comparing every frame is the exposed opt-in
+ * rather than the default.
+ */
+function pollContentSize(
+  container: HTMLElement,
+  onContentResize: VoidFunction,
+): VoidFunction {
+  let width = container.scrollWidth;
+  let height = container.scrollHeight;
+
+  const checkContentSize = () => {
+    const nextWidth = container.scrollWidth;
+    const nextHeight = container.scrollHeight;
+    if (nextWidth === width && nextHeight === height) return;
+    width = nextWidth;
+    height = nextHeight;
+    onContentResize();
+  };
+
+  frame.read(checkContentSize, true);
+  return () => cancelFrame(checkContentSize);
 }
 
 function measureAxis(
@@ -165,18 +224,29 @@ function measureAxis(
 
 /**
  * Returns the target's offset from the container along one axis.
- * The container must establish an offset-parent boundary for nested targets.
+ * Walking offsetParent until it equals the container breaks for a
+ * `position: static` container, since offsetParent skips unpositioned
+ * ancestors entirely and the walk never hits it. Summing each element's own
+ * offsetParent chain independently and subtracting sidesteps that: both
+ * chains bottom out at the same document origin, so the difference is the
+ * target-to-container distance regardless of which ancestors are positioned.
  */
 function axisInset(
   target: HTMLElement,
   container: HTMLElement,
   axis: "x" | "y",
 ): number {
-  let inset = 0;
-  let node: HTMLElement | null = target;
-  while (node && node !== container) {
-    inset += axis === "y" ? node.offsetTop : node.offsetLeft;
+  return (
+    offsetFromDocument(target, axis) - offsetFromDocument(container, axis)
+  );
+}
+
+function offsetFromDocument(element: HTMLElement, axis: "x" | "y"): number {
+  let offset = 0;
+  let node: HTMLElement | null = element;
+  while (node) {
+    offset += axis === "y" ? node.offsetTop : node.offsetLeft;
     node = node.offsetParent as HTMLElement | null;
   }
-  return inset;
+  return offset;
 }
