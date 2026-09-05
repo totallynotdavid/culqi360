@@ -54,6 +54,43 @@ export interface ValueStore {
   dispose(): void;
 }
 
+/**
+ * The one `ValueStore` an element may have. A `createMotion` binding and an
+ * `animate()` call that targets the same node have to drive the same
+ * `MotionValue` per key instead of each building their own: two independent
+ * stores both calling `styleEffect` for, say, `x` leaves only the
+ * most-recently-created one actually wired to the DOM (motion-dom's per-key
+ * binding replaces whichever value held it before), so the other's writes go
+ * nowhere. Sharing this store is what lets `ensure()` in `createValueStore`
+ * hand back the existing `MotionValue` to whichever side asks second.
+ */
+const sharedStores = new WeakMap<Element, ValueStore>();
+
+/**
+ * Whoever claims the element first decides `initialValues` and `bound`; a
+ * later claim reuses the store as-is. That matches the only ordering this
+ * package produces one for: a `createMotion` ref fires as its element
+ * mounts, before anything else could have a reference to that element to
+ * hand to `animate()`.
+ */
+export function sharedValueStore(
+  element: HTMLElement | SVGElement,
+  initialValues: Record<string, string | number>,
+  bound: ReadonlyMap<string, MotionValue>,
+): ValueStore {
+  const existing = sharedStores.get(element);
+  if (existing) return existing;
+
+  const store = createValueStore(element, initialValues, bound);
+  sharedStores.set(element, store);
+  return store;
+}
+
+/** Releases this element's slot so a later claim builds a fresh store. */
+export function releaseValueStore(element: Element, store: ValueStore): void {
+  if (sharedStores.get(element) === store) sharedStores.delete(element);
+}
+
 export function createValueStore(
   element: HTMLElement | SVGElement,
   /** Where a property starts when the element was rendered carrying it. */

@@ -5,14 +5,19 @@ import {
   resolveElements,
   type AnimationPlaybackControlsWithThen,
   type ElementOrSelector,
+  type TimelineWithFallback,
   type ValueKeyframesDefinition,
 } from "motion-dom";
 import { createSignal, onCleanup } from "solid-js";
 
 import { useMotionConfig } from "./config";
 import { useReducedMotion } from "./reduced-motion";
-import type { TargetAndTransition, Transition } from "./types";
-import { createValueStore, type ValueStore } from "./values";
+import type {
+  MotionConfigState,
+  TargetAndTransition,
+  Transition,
+} from "./types";
+import { sharedValueStore, type ValueStore } from "./values";
 
 /** A Solid ref whose current element is also the root for selector targets. */
 export type AnimateScope<T extends Element = HTMLElement> = ((
@@ -41,20 +46,37 @@ export interface AnimateFunction {
   (sequence: AnimateSequence): AnimationPlaybackControlsWithThen;
 }
 
-/** Store state per element so scopes targeting it share animation state. */
-const stores = new WeakMap<Element, ValueStore>();
-
+/**
+ * The store for an element `animate()` targets. Shared with any
+ * `createMotion` binding on the same node through `sharedValueStore`, rather
+ * than built fresh here, so a value one side is driving keeps receiving the
+ * other's updates instead of losing its DOM binding to a second, independent
+ * `MotionValue` for the same key.
+ */
 function storeFor(element: Element): ValueStore {
-  const existing = stores.get(element);
-  if (existing) return existing;
+  return sharedValueStore(element as HTMLElement | SVGElement, {}, new Map());
+}
 
-  const store = createValueStore(
-    element as HTMLElement | SVGElement,
-    {},
-    new Map(),
-  );
-  stores.set(element, store);
-  return store;
+/**
+ * Whoever is currently animating one element's property, so a later
+ * `animate()` call claiming the same pair can settle the earlier call's
+ * `finished` instead of leaving it to wait on a `MotionValue` that just
+ * stopped animating out from under it.
+ */
+const claims = new WeakMap<Element, Map<string, VoidFunction>>();
+
+function claim(
+  element: Element,
+  key: string,
+  onSuperseded: VoidFunction,
+): void {
+  let byKey = claims.get(element);
+  if (!byKey) {
+    byKey = new Map();
+    claims.set(element, byKey);
+  }
+  byKey.get(key)?.();
+  byKey.set(key, onSuperseded);
 }
 
 /**
@@ -74,44 +96,85 @@ function isSequence(
 
 /**
  * Reduced motion disables positional animation, while `skipAnimations` tells
- * motion-dom to apply the target immediately.
+ * motion-dom to apply the target immediately. Both, and the fallback
+ * transition, are read from `config` here rather than passed down as
+ * precomputed values: a segment that starts after a live config change (a
+ * sequence's later segments, chiefly) has to see that change, not whatever
+ * was current when `animate()` was first called.
  */
 function resolveTransition(
   key: string,
   transition: Transition | undefined,
-  reducedMotion: boolean,
-  skipAnimations: boolean,
+  config: MotionConfigState,
+  prefersReducedMotion: () => boolean,
 ): Transition | undefined {
+  const reducedMotion =
+    config.reducedMotion === "always" ||
+    (config.reducedMotion === "user" && prefersReducedMotion());
+  const own = transition ?? config.transition;
+
   if (reducedMotion && positionalKeys.has(key)) {
     return { type: false } as Transition;
   }
-  if (!skipAnimations) return transition;
-  return { ...transition, skipAnimations: true } as Transition;
+  if (!config.skipAnimations) return own;
+  return { ...own, skipAnimations: true } as Transition;
 }
 
 /**
  * Proxy controls to the current animation. It is created on the update frame,
  * and sequences replace it as each segment finishes.
+ *
+ * A caller can reach for these controls in the same tick as `animate()`,
+ * before that frame has run and `getActive()` has anything to return.
+ * `pause`, `complete`, `time`, `speed` and `attachTimeline` queue themselves
+ * in that case instead of silently doing nothing, and `applyPending` (the
+ * second return value) replays the queue in order once the real animation
+ * exists. `play`, `stop` and `cancel` need no queue: playing is already the
+ * state a fresh animation starts in, and `stop` settles `finished` itself
+ * without waiting on `getActive()` at all.
  */
 function delegatedControls(
   finished: Promise<void>,
   getActive: () => AnimationPlaybackControlsWithThen | undefined,
   stop: VoidFunction,
-): AnimationPlaybackControlsWithThen {
-  return {
+): [controls: AnimationPlaybackControlsWithThen, applyPending: VoidFunction] {
+  let pending: Array<(active: AnimationPlaybackControlsWithThen) => void> = [];
+
+  const runOrQueue = (
+    op: (active: AnimationPlaybackControlsWithThen) => void,
+  ): void => {
+    const active = getActive();
+    if (active) {
+      op(active);
+      return;
+    }
+    pending.push(op);
+  };
+
+  const applyPending = (): void => {
+    const active = getActive();
+    if (!active || pending.length === 0) return;
+    const queued = pending;
+    pending = [];
+    for (const op of queued) op(active);
+  };
+
+  const controls: AnimationPlaybackControlsWithThen = {
     get time() {
       return getActive()?.time ?? 0;
     },
     set time(value: number) {
-      const active = getActive();
-      if (active) active.time = value;
+      runOrQueue((active) => {
+        active.time = value;
+      });
     },
     get speed() {
       return getActive()?.speed ?? 1;
     },
     set speed(value: number) {
-      const active = getActive();
-      if (active) active.speed = value;
+      runOrQueue((active) => {
+        active.speed = value;
+      });
     },
     get startTime() {
       return getActive()?.startTime ?? null;
@@ -131,19 +194,52 @@ function delegatedControls(
       getActive()?.play();
     },
     pause() {
-      getActive()?.pause();
+      runOrQueue((active) => active.pause());
     },
     complete() {
-      getActive()?.complete();
+      runOrQueue((active) => active.complete());
     },
     cancel() {
       stop();
       getActive()?.cancel();
     },
-    attachTimeline: (timeline) =>
-      getActive()?.attachTimeline(timeline) ?? (() => undefined),
+    attachTimeline: (timeline: TimelineWithFallback) => {
+      const active = getActive();
+      if (active) return active.attachTimeline(timeline);
+
+      let cancelled = false;
+      let detach: VoidFunction | undefined;
+      pending.push((realized) => {
+        if (cancelled) return;
+        detach = realized.attachTimeline(timeline);
+      });
+      return () => {
+        cancelled = true;
+        detach?.();
+      };
+    },
     then: (onResolve, onReject) => finished.then(onResolve, onReject),
   };
+
+  return [controls, applyPending];
+}
+
+/**
+ * `current` is the scope element the ref supplies once it mounts. Before
+ * that there is no root to search a selector target from, and `resolveElements`
+ * asked for one without a scope falls back to `document.querySelectorAll`,
+ * which both escapes the intended scope to the whole page and throws where
+ * `document` doesn't exist at all (SSR). So a selector target simply resolves
+ * to no elements until the scope has a root to search from; every other
+ * target shape names its own elements directly and needs no root regardless.
+ */
+function resolveScopedElements(
+  target: AnimateTarget,
+  current: Element | undefined,
+): Element[] {
+  if (current) return resolveElements(target, { current, animations: [] });
+  if (typeof target === "string") return [];
+  return resolveElements(target);
 }
 
 /**
@@ -154,17 +250,10 @@ function runTarget(
   target: AnimateTarget,
   definition: TargetAndTransition,
   current: Element | undefined,
-  reducedMotion: boolean,
-  skipAnimations: boolean,
+  config: MotionConfigState,
+  prefersReducedMotion: () => boolean,
 ): AnimationPlaybackControlsWithThen {
-  // `current` is the scope element the ref supplies once it mounts. Before
-  // that there is no root to search a selector target from, so the scope
-  // argument is left out entirely: the same fallback `resolveElements` uses
-  // for a caller that never passes one, rather than handing it a `current`
-  // of `undefined` and crashing on `querySelectorAll`.
-  const elements = current
-    ? resolveElements(target, { current, animations: [] })
-    : resolveElements(target);
+  const elements = resolveScopedElements(target, current);
   const { transition, transitionEnd, ...values } = definition;
 
   const applyTransitionEnd = (): void => {
@@ -179,6 +268,7 @@ function runTarget(
 
   let active: GroupAnimationWithThen | undefined;
   let settle: VoidFunction | undefined;
+  let applyPending: VoidFunction = () => undefined;
 
   const finished = new Promise<void>((resolve) => {
     settle = resolve;
@@ -191,12 +281,26 @@ function runTarget(
         const store = storeFor(element);
         for (const [key, value] of Object.entries(values)) {
           if (value === undefined || value === null) continue;
+
           const animation = store.animate(
             key,
             value as ValueKeyframesDefinition,
-            resolveTransition(key, transition, reducedMotion, skipAnimations),
+            resolveTransition(key, transition, config, prefersReducedMotion),
           );
-          if (animation) animations.push(animation);
+          if (!animation) continue;
+          animations.push(animation);
+
+          // A later `animate()` call for this same element/property steals
+          // the `MotionValue` this one just started animating (motion-dom's
+          // own `MotionValue.start` stops whatever animation was already
+          // running on it) without ever settling that animation's own
+          // `finished`. Registering the claim here lets the newer call
+          // settle this run's promise the moment that happens, the same way
+          // `stop()` does for an explicit cancel. Only a key that actually
+          // started animating needs one: a key motion resolved instantly
+          // never joins `animations`, so it plays no part in whether this
+          // run's own `finished` is still waiting on anything.
+          claim(element, key, () => settle?.());
         }
       }
 
@@ -218,6 +322,11 @@ function runTarget(
       }
 
       active = new GroupAnimationWithThen(animations);
+      // A `.pause()`, `.complete()`, `.time`/`.speed` write, or
+      // `.attachTimeline()` made before this point queued itself on the
+      // controls below instead of finding nothing to act on; replay it now
+      // that there is something to act on.
+      applyPending();
       active.finished
         .then(applyTransitionEnd)
         .catch(() => undefined)
@@ -236,14 +345,16 @@ function runTarget(
     resolve();
   };
 
-  return delegatedControls(finished, () => active, stop);
+  const [controls, flush] = delegatedControls(finished, () => active, stop);
+  applyPending = flush;
+  return controls;
 }
 
 function runSequence(
   sequence: AnimateSequence,
   current: Element | undefined,
-  reducedMotion: boolean,
-  skipAnimations: boolean,
+  config: MotionConfigState,
+  prefersReducedMotion: () => boolean,
 ): AnimationPlaybackControlsWithThen {
   let active: AnimationPlaybackControlsWithThen | undefined;
   let stopped = false;
@@ -255,8 +366,8 @@ function runSequence(
         target,
         definition,
         current,
-        reducedMotion,
-        skipAnimations,
+        config,
+        prefersReducedMotion,
       );
       // Segments run in order by contract (see `AnimateSequence`): each one
       // has to settle before the next starts, so this cannot become a
@@ -267,7 +378,7 @@ function runSequence(
     }
   })();
 
-  return delegatedControls(
+  const [controls] = delegatedControls(
     finished,
     () => active,
     () => {
@@ -275,6 +386,7 @@ function runSequence(
       active?.stop();
     },
   );
+  return controls;
 }
 
 /** Create a Solid ref and an imperative animation function for its scope. */
@@ -314,20 +426,20 @@ export function createAnimate<T extends Element = HTMLElement>(): [
     targetOrSequence: AnimateTarget | AnimateSequence,
     definition?: TargetAndTransition,
   ): AnimationPlaybackControlsWithThen => {
-    const reducedMotion =
-      config.reducedMotion === "always" ||
-      (config.reducedMotion === "user" && prefersReducedMotion());
-    const skipAnimations = config.skipAnimations ?? false;
     const current = element();
 
+    // `config` and `prefersReducedMotion` are handed down as-is rather than
+    // resolved to booleans here: a sequence's later segments start well
+    // after this call returns, and need whatever `MotionConfig` says at that
+    // later point, not a snapshot from before the sequence even began.
     const result = isSequence(targetOrSequence, definition)
-      ? runSequence(targetOrSequence, current, reducedMotion, skipAnimations)
+      ? runSequence(targetOrSequence, current, config, prefersReducedMotion)
       : runTarget(
           targetOrSequence,
           definition!,
           current,
-          reducedMotion,
-          skipAnimations,
+          config,
+          prefersReducedMotion,
         );
 
     track(result);

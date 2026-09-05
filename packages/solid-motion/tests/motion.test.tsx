@@ -1108,6 +1108,186 @@ describe("createAnimate", () => {
     const controls = animate([]);
     await expect(controls.finished).resolves.toBeUndefined();
   });
+
+  it("does not match a selector target outside the intended scope before the scope mounts", async () => {
+    const outside = render(() => (
+      <div>
+        <span class="child" style={{ opacity: "1" }} />
+      </div>
+    ));
+    const outsideChild = outside.container.querySelector(
+      ".child",
+    ) as HTMLElement;
+
+    let earlyResult!: ReturnType<AnimateFunction>;
+    function EarlyCall() {
+      let scope!: AnimateScope;
+      let animate: AnimateFunction;
+      [scope, animate] = createAnimate();
+      // Called while the scope's own `.child` does not exist yet, but an
+      // unrelated one does. The buggy fallback resolved this against
+      // `document` and animated that one instead of matching nothing.
+      earlyResult = animate(".child", { opacity: 0 });
+      return (
+        <div ref={scope}>
+          <span class="child" style={{ opacity: "1" }} />
+        </div>
+      );
+    }
+    render(() => <EarlyCall />);
+
+    await earlyResult.finished;
+    expect(outsideChild.style.opacity).toBe("1");
+  });
+
+  it("does not read document.querySelectorAll for a selector target before the scope mounts", async () => {
+    const original = document.querySelectorAll.bind(document);
+    document.querySelectorAll = (() => {
+      throw new Error("touched document before the scope mounted");
+    }) as typeof document.querySelectorAll;
+
+    try {
+      let earlyResult!: ReturnType<AnimateFunction>;
+      function EarlyCall() {
+        let scope!: AnimateScope;
+        let animate: AnimateFunction;
+        [scope, animate] = createAnimate();
+        earlyResult = animate(".child", { opacity: 0 });
+        return (
+          <div ref={scope}>
+            <span class="child" style={{ opacity: "1" }} />
+          </div>
+        );
+      }
+      expect(() => render(() => <EarlyCall />)).not.toThrow();
+      await earlyResult.finished;
+    } finally {
+      document.querySelectorAll = original;
+    }
+  });
+
+  it("settles an earlier call's finished when a later call claims the same property", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+
+    const first = animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 5 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const second = animate(scope.current!, {
+      opacity: 1,
+      transition: { duration: 0.05 },
+    });
+
+    // motion-dom's `MotionValue.start()` stops the first animation on this
+    // property without settling its own `finished` (verified against
+    // motion-dom 13.1.1), so a regression here hangs this assertion until
+    // the suite times out rather than failing it outright.
+    await expect(
+      Promise.race([
+        first.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+
+    await second.finished;
+  });
+
+  it("keeps receiving createMotion's reactive updates after an animate() call on the same property finishes", async () => {
+    const [source, setSource] = createSignal(10);
+    const { container } = render(() => <motion.div style={{ x: source }} />);
+    const element = container.querySelector("div") as HTMLElement;
+
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    await animate(element, { x: 20, transition: { duration: 0.05 } }).finished;
+    expect(readTranslateX(element)).toBe(20);
+
+    // If `animate()` had built its own, separate store for this element,
+    // motion-dom's per-key style binding would have switched over to it and
+    // stopped forwarding `createMotion`'s own writes to the DOM.
+    setSource(30);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(readTranslateX(element)).toBe(30);
+  });
+
+  it("actually pauses when .pause() is called before the deferred frame creates the real animation", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+
+    const controls = animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 1, ease: "linear" },
+    });
+    // Before motion-dom's `frame.update` has run, so there is nothing yet
+    // for this call to act on directly.
+    controls.pause();
+
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const held = element.style.opacity;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(controls.state).toBe("paused");
+    expect(element.style.opacity).toBe(held);
+  });
+
+  it("falls back to MotionConfig's transition when the call names none", async () => {
+    let plainScope!: AnimateScope;
+    let plainAnimate!: AnimateFunction;
+    const plain = render(() => (
+      <Scoped
+        onReady={(scope, animate) => {
+          plainScope = scope;
+          plainAnimate = animate;
+        }}
+      />
+    ));
+
+    let configuredScope!: AnimateScope;
+    let configuredAnimate!: AnimateFunction;
+    const configured = render(() => (
+      <MotionConfig transition={{ duration: 5 }}>
+        <Scoped
+          onReady={(scope, animate) => {
+            configuredScope = scope;
+            configuredAnimate = animate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    // Neither call names its own transition, so both fall back to whatever
+    // `MotionConfig` currently says: motion-dom's own default (~0.3s) for the
+    // plain one, the configured 5s duration for the other.
+    plainAnimate(plainScope.current!, { opacity: 0 });
+    configuredAnimate(configuredScope.current!, { opacity: 0 });
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const plainElement = plain.container.querySelector("div") as HTMLElement;
+    const configuredElement = configured.container.querySelector(
+      "div",
+    ) as HTMLElement;
+
+    expect(plainElement.style.opacity).toBe("0");
+    const midpoint = Number(configuredElement.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+  });
 });
 
 describe("createWillChange", () => {

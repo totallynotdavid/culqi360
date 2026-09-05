@@ -7,7 +7,7 @@ import {
 
 import type { MergedTarget } from "./target";
 import type { AnimationDefinition, Transition } from "./types";
-import { createValueStore, type ValueStore } from "./values";
+import { releaseValueStore, sharedValueStore, type ValueStore } from "./values";
 
 /**
  * Everything one animation pass needs, already resolved. The component computes
@@ -72,6 +72,7 @@ export function createMotionController(
   bound: ReadonlyMap<string, MotionValue>,
 ): MotionController {
   let store: ValueStore | undefined;
+  let mountedElement: HTMLElement | SVGElement | undefined;
   let queued:
     | { pass: MotionPass; onSettled?: (completed: boolean) => void }
     | undefined;
@@ -208,7 +209,8 @@ export function createMotionController(
 
   return {
     mount(element) {
-      store = createValueStore(element, initialValues, bound);
+      mountedElement = element;
+      store = sharedValueStore(element, initialValues, bound);
       if (!queued) return;
 
       const { pass, onSettled } = queued;
@@ -233,6 +235,7 @@ export function createMotionController(
       queued?.onSettled?.(false);
       queued = undefined;
       store?.dispose();
+      if (store && mountedElement) releaseValueStore(mountedElement, store);
       store = undefined;
     },
   };
