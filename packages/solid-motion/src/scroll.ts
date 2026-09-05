@@ -223,21 +223,31 @@ function measureAxis(
 }
 
 /**
- * Returns the target's offset from the container along one axis.
+ * Returns the target's offset from the container's padding box (the origin
+ * scrollTop/scrollLeft and clientHeight/clientWidth measure from) along one
+ * axis.
  * Walking offsetParent until it equals the container breaks for a
  * `position: static` container, since offsetParent skips unpositioned
  * ancestors entirely and the walk never hits it. Summing each element's own
  * offsetParent chain independently and subtracting sidesteps that: both
  * chains bottom out at the same document origin, so the difference is the
  * target-to-container distance regardless of which ancestors are positioned.
+ * That difference lands on the container's border-box origin, since each
+ * offsetParent hop is a border-box-to-padding-box distance. clientTop/
+ * clientLeft equal the container's own border width regardless of its
+ * `position`, so subtracting them converts to the padding-box origin.
  */
 function axisInset(
   target: HTMLElement,
   container: HTMLElement,
   axis: "x" | "y",
 ): number {
+  const containerBorder =
+    axis === "y" ? container.clientTop : container.clientLeft;
   return (
-    offsetFromDocument(target, axis) - offsetFromDocument(container, axis)
+    offsetFromDocument(target, axis) -
+    offsetFromDocument(container, axis) -
+    containerBorder
   );
 }
 
