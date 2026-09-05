@@ -6,12 +6,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AnimatePresence,
   AnimatePresenceList,
+  createAnimate,
   createMotion,
   createInView,
   createMotionValue,
   MotionConfig,
   motion,
   stagger,
+  usePresence,
+  type AnimateFunction,
+  type AnimateScope,
 } from "../src";
 import { buildInitialRender } from "../src/initial";
 
@@ -785,6 +789,773 @@ describe("createMotion", () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(readScale(element)).toBe(1.5);
+  });
+});
+
+describe("createAnimate", () => {
+  afterEach(() => document.body.replaceChildren());
+
+  it("mutates the scope's own element over time", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+
+    animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 0.3, ease: "linear" },
+    });
+
+    // Mid-flight assertions ensure the call actually animates the DOM.
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const midpoint = Number(element.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(element.style.opacity).toBe("0");
+  });
+
+  it("mutates a descendant resolved through a selector string", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return (
+        <div ref={scope}>
+          <span class="child" style={{ opacity: "1" }} />
+        </div>
+      );
+    });
+    const child = container.querySelector(".child") as HTMLElement;
+
+    animate(".child", {
+      opacity: 0,
+      transition: { duration: 0.3, ease: "linear" },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const midpoint = Number(child.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(child.style.opacity).toBe("0");
+  });
+
+  it("plays a sequence of targets one after another", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return (
+        <div ref={scope}>
+          <span class="a" style={{ opacity: "0" }} />
+          <span class="b" style={{ opacity: "0" }} />
+        </div>
+      );
+    });
+    const a = container.querySelector(".a") as HTMLElement;
+    const b = container.querySelector(".b") as HTMLElement;
+
+    animate([
+      [".a", { opacity: 1, transition: { duration: 0.2 } }],
+      [".b", { opacity: 1, transition: { duration: 0.2 } }],
+    ]);
+
+    // If segments ran together, `b` would have started moving by this point.
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(b.style.opacity).toBe("0");
+
+    // This confirms the first segment finished and the second one started.
+    await new Promise((resolve) => setTimeout(resolve, 240));
+    expect(a.style.opacity).toBe("1");
+    const midpoint = Number(b.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(b.style.opacity).toBe("1");
+  });
+
+  function Scoped(props: {
+    onReady: (scope: AnimateScope, animate: AnimateFunction) => void;
+  }) {
+    const [scope, animate] = createAnimate();
+    props.onReady(scope, animate);
+    return <div ref={scope} style={{ opacity: "1" }} />;
+  }
+
+  it("suppresses easing under MotionConfig skipAnimations, unlike the same call without it", async () => {
+    let plainScope!: AnimateScope;
+    let plainAnimate!: AnimateFunction;
+    const plain = render(() => (
+      <Scoped
+        onReady={(scope, animate) => {
+          plainScope = scope;
+          plainAnimate = animate;
+        }}
+      />
+    ));
+
+    let skippedScope!: AnimateScope;
+    let skippedAnimate!: AnimateFunction;
+    const skipped = render(() => (
+      <MotionConfig skipAnimations>
+        <Scoped
+          onReady={(scope, animate) => {
+            skippedScope = scope;
+            skippedAnimate = animate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    const definition = { opacity: 0, transition: { duration: 0.4 } };
+    plainAnimate(plainScope.current!, definition);
+    skippedAnimate(skippedScope.current!, definition);
+
+    // Mid-flight, the plain animation should be between values while the
+    // skipped animation has already applied its target.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const plainElement = plain.container.querySelector("div") as HTMLElement;
+    const skippedElement = skipped.container.querySelector(
+      "div",
+    ) as HTMLElement;
+
+    expect(Number(plainElement.style.opacity)).toBeGreaterThan(0);
+    expect(Number(plainElement.style.opacity)).toBeLessThan(1);
+    expect(skippedElement.style.opacity).toBe("0");
+  });
+
+  it("jumps a positional key under MotionConfig reducedMotion, unlike the same call without it", async () => {
+    let plainScope!: AnimateScope;
+    let plainAnimate!: AnimateFunction;
+    const plain = render(() => (
+      <Scoped
+        onReady={(scope, animate) => {
+          plainScope = scope;
+          plainAnimate = animate;
+        }}
+      />
+    ));
+
+    let reducedScope!: AnimateScope;
+    let reducedAnimate!: AnimateFunction;
+    const reduced = render(() => (
+      <MotionConfig reducedMotion="always">
+        <Scoped
+          onReady={(scope, animate) => {
+            reducedScope = scope;
+            reducedAnimate = animate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    const definition = { x: 100, transition: { duration: 0.4 } };
+    plainAnimate(plainScope.current!, definition);
+    reducedAnimate(reducedScope.current!, definition);
+
+    // Mid-flight, only the reduced-motion target should already be complete.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const plainElement = plain.container.querySelector("div") as HTMLElement;
+    const reducedElement = reduced.container.querySelector(
+      "div",
+    ) as HTMLElement;
+
+    expect(readTranslateX(plainElement)).toBeGreaterThan(0);
+    expect(readTranslateX(plainElement)).toBeLessThan(100);
+    expect(readTranslateX(reducedElement)).toBe(100);
+  });
+
+  it("does not crash animating a selector target before the scope mounts", async () => {
+    let scope!: AnimateScope;
+    let earlyResult!: ReturnType<AnimateFunction>;
+
+    function EarlyCall() {
+      let animate: AnimateFunction;
+      [scope, animate] = createAnimate();
+      // Called before the JSX below creates the scope's own element, so
+      // `scope.current` is still undefined here: the exact state that used
+      // to throw reading `undefined.querySelectorAll`.
+      earlyResult = animate(".child", { opacity: 0 });
+      return (
+        <div ref={scope}>
+          <span class="child" style={{ opacity: "1" }} />
+        </div>
+      );
+    }
+
+    expect(() => render(() => <EarlyCall />)).not.toThrow();
+    await expect(earlyResult.finished).resolves.toBeUndefined();
+  });
+
+  it("settles `finished` immediately when a running animation is stopped", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+
+    const controls = animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 5 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    controls.stop();
+
+    // motion-dom never settles a stopped animation's own `finished`, so a
+    // regression here hangs this assertion until the suite times out rather
+    // than failing it outright.
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+  });
+
+  it("settles a sequence immediately when stopped mid-segment", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return (
+        <div ref={scope}>
+          <span class="a" style={{ opacity: "0" }} />
+          <span class="b" style={{ opacity: "0" }} />
+        </div>
+      );
+    });
+
+    const controls = animate([
+      [".a", { opacity: 1, transition: { duration: 5 } }],
+      [".b", { opacity: 1, transition: { duration: 5 } }],
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    controls.stop();
+
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+  });
+
+  it("applies transitionEnd after an instant animation settles, and keeps it", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => (
+      <MotionConfig skipAnimations>
+        <Scoped
+          onReady={(readyScope, readyAnimate) => {
+            scope = readyScope;
+            animate = readyAnimate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    const controls = animate(scope.current!, {
+      opacity: 0,
+      transitionEnd: { display: "none" },
+    });
+    await controls.finished;
+
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.opacity).toBe("0");
+    expect(element.style.display).toBe("none");
+
+    // A later frame settling before this promise did would clobber the
+    // write above the instant it lands, so give it a chance to run.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(element.style.display).toBe("none");
+  });
+
+  it("does not throw reading control accessors when no elements match the selector", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    const controls = animate(".missing", { opacity: 0 });
+    // Past the point where the buggy version had already built an empty
+    // `GroupAnimation` and assigned it as the active animation.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(() => controls.state).not.toThrow();
+    expect(() => controls.time).not.toThrow();
+    expect(() => controls.speed).not.toThrow();
+    expect(() => controls.startTime).not.toThrow();
+  });
+
+  it("resolves immediately for an empty sequence instead of crashing", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    const controls = animate([]);
+    await expect(controls.finished).resolves.toBeUndefined();
+  });
+
+  it("does not match a selector target outside the intended scope before the scope mounts", async () => {
+    const outside = render(() => (
+      <div>
+        <span class="child" style={{ opacity: "1" }} />
+      </div>
+    ));
+    const outsideChild = outside.container.querySelector(
+      ".child",
+    ) as HTMLElement;
+
+    let earlyResult!: ReturnType<AnimateFunction>;
+    function EarlyCall() {
+      let scope!: AnimateScope;
+      let animate: AnimateFunction;
+      [scope, animate] = createAnimate();
+      // Called while the scope's own `.child` does not exist yet, but an
+      // unrelated one does. The buggy fallback resolved this against
+      // `document` and animated that one instead of matching nothing.
+      earlyResult = animate(".child", { opacity: 0 });
+      return (
+        <div ref={scope}>
+          <span class="child" style={{ opacity: "1" }} />
+        </div>
+      );
+    }
+    render(() => <EarlyCall />);
+
+    await earlyResult.finished;
+    expect(outsideChild.style.opacity).toBe("1");
+  });
+
+  it("does not read document.querySelectorAll for a selector target before the scope mounts", async () => {
+    const original = document.querySelectorAll.bind(document);
+    document.querySelectorAll = (() => {
+      throw new Error("touched document before the scope mounted");
+    }) as typeof document.querySelectorAll;
+
+    try {
+      let earlyResult!: ReturnType<AnimateFunction>;
+      function EarlyCall() {
+        let scope!: AnimateScope;
+        let animate: AnimateFunction;
+        [scope, animate] = createAnimate();
+        earlyResult = animate(".child", { opacity: 0 });
+        return (
+          <div ref={scope}>
+            <span class="child" style={{ opacity: "1" }} />
+          </div>
+        );
+      }
+      expect(() => render(() => <EarlyCall />)).not.toThrow();
+      await earlyResult.finished;
+    } finally {
+      document.querySelectorAll = original;
+    }
+  });
+
+  it("settles an earlier call's finished when a later call claims the same property", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+
+    const first = animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 5 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const second = animate(scope.current!, {
+      opacity: 1,
+      transition: { duration: 0.05 },
+    });
+
+    // motion-dom's `MotionValue.start()` stops the first animation on this
+    // property without settling its own `finished` (verified against
+    // motion-dom 13.1.1), so a regression here hangs this assertion until
+    // the suite times out rather than failing it outright.
+    await expect(
+      Promise.race([
+        first.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+
+    await second.finished;
+  });
+
+  it("keeps a multi-key call's finished pending on its other keys after only one is reclaimed", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+
+    const first = animate(scope.current!, {
+      opacity: 0,
+      x: 50,
+      transition: { opacity: { duration: 5 }, x: { duration: 0.3 } },
+      transitionEnd: { display: "none" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // A second, unrelated call reclaims only `opacity`. `x` is still
+    // animating under `first`'s own `active`, which this call never touches.
+    const second = animate(scope.current!, {
+      opacity: 1,
+      transition: { duration: 0.05 },
+    });
+    await second.finished;
+
+    // A regression here settles the whole call's `finished`, and applies
+    // `transitionEnd`, the moment `opacity` alone was reclaimed, well before
+    // `x` has had anywhere near its 0.3s to finish on its own.
+    await expect(
+      Promise.race([
+        first.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("pending"), 100)),
+      ]),
+    ).resolves.toBe("pending");
+    expect(element.style.display).not.toBe("none");
+
+    // `x` finishes naturally; only now is every key this call started
+    // accounted for one way or another.
+    await expect(
+      Promise.race([
+        first.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+    expect(readTranslateX(element)).toBe(50);
+
+    // `transitionEnd` is written through a `MotionValue.jump()`, which paints
+    // on motion's own next render tick rather than synchronously, so give it
+    // one before reading it back.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(element.style.display).toBe("none");
+  });
+
+  it("still stops a multi-key call's surviving keys on unmount after one was reclaimed", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container, unmount } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+    const element = container.querySelector("div") as HTMLElement;
+
+    animate(scope.current!, {
+      opacity: 0,
+      x: 50,
+      transition: { duration: 5, ease: "linear" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    animate(scope.current!, { opacity: 1, transition: { duration: 0.05 } });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    // A regression here settles `first.finished` the instant `opacity` was
+    // reclaimed, dropping it from the scope's `running` list early, so
+    // unmounting never calls `.stop()` on the `x` animation still running
+    // under it and it keeps ticking on a now-detached element.
+    unmount();
+
+    // `x`'s last write before `stop()` took effect may not have painted yet
+    // (motion renders on its own next tick), so give that one write a chance
+    // to land before taking the snapshot this test compares against.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const xAtUnmount = readTranslateX(element);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(readTranslateX(element)).toBe(xAtUnmount);
+  });
+
+  it("resolves an imperative animate() call when createMotion's reactive pass reclaims the same property", async () => {
+    const onComplete = vi.fn<() => void>();
+    const [items, setItems] = createSignal([{ id: "one" }]);
+
+    // A hold of its own, independent of the motion element's, so the row
+    // stays mounted once the motion element's own hold releases. What this
+    // test is after is whether the reclaimed pass's completion handling runs
+    // at all; whether the boundary then also tears the row (and its shared
+    // value store) down is a separate concern.
+    function ExtraHold() {
+      usePresence()?.hold();
+      return null;
+    }
+
+    const { container } = render(() => (
+      <AnimatePresenceList each={items()} getKey={(item) => item.id}>
+        {(item) => (
+          <>
+            <ExtraHold />
+            <motion.div
+              exit={{ opacity: 0 }}
+              onAnimationComplete={onComplete}
+              transition={{ duration: 5 }}
+              data-id={item().id}
+            />
+          </>
+        )}
+      </AnimatePresenceList>
+    ));
+
+    // The initial pass settles on mount with nothing to animate (there is no
+    // `animate` prop), which calls `onAnimationComplete` once on its own,
+    // unrelated to the exit below.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    onComplete.mockClear();
+
+    setItems([]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const element = container.querySelector('[data-id="one"]') as HTMLElement;
+    expect(element).toBeTruthy();
+
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    // Reclaims `opacity` mid-exit. Once motion-dom's `MotionValue.start`
+    // steals the property, the exit pass's own animation on it never settles
+    // its `finished` (verified against motion-dom 13.1.1), so without the
+    // controller claiming its own keys too, this call would hang forever
+    // waiting for the exit pass to notice.
+    const controls = animate(element, {
+      opacity: 1,
+      transition: { duration: 0.05 },
+    });
+
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+
+    // The exit pass's own completion handling has to run exactly as if it
+    // had reached its target normally: `onAnimationComplete` only fires from
+    // inside the same, unconditional completion path that also releases the
+    // presence hold and settles the sequence, so this is proof all of it ran
+    // rather than the pass hanging on a `Promise.all` that could no longer
+    // resolve.
+    expect(onComplete).toHaveBeenCalled();
+  });
+
+  it("keeps a reactive pass's completion pending on its other keys after only one is reclaimed", async () => {
+    const onComplete = vi.fn<() => void>();
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 1, x: 0 }}
+        animate={{ opacity: 0, x: 50, transitionEnd: { display: "none" } }}
+        transition={{ opacity: { duration: 5 }, x: { duration: 0.3 } }}
+        onAnimationComplete={onComplete}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    // A second, unrelated call reclaims only `opacity`. `x` is still
+    // animating under the reactive pass's own animations, which this call
+    // never touches.
+    await animate(element, { opacity: 1, transition: { duration: 0.05 } })
+      .finished;
+
+    // A regression here fires the whole pass's completion
+    // (`onAnimationComplete` and `transitionEnd`) the moment `opacity` alone
+    // was reclaimed, well before `x` has had anywhere near its 0.3s to reach
+    // its own target.
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(element.style.display).not.toBe("none");
+
+    // `x` finishes naturally; only now is every key this pass started
+    // accounted for one way or another.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(element.style.display).toBe("none");
+  });
+
+  it("settles an imperative call's finished when a skipAnimations reactive pass reclaims the same property", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    const [reactiveOpacity, setReactiveOpacity] = createSignal(1);
+    const { container } = render(() => (
+      <MotionConfig skipAnimations>
+        <motion.div
+          initial={{ opacity: 1 }}
+          animate={{ opacity: reactiveOpacity() }}
+        />
+      </MotionConfig>
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+
+    const controls = animate(element, {
+      opacity: 0,
+      transition: { duration: 5 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Resolves instantly under `skipAnimations`, but `value.start()` still
+    // steals `opacity` from the imperative call's own in-flight animation on
+    // it.
+    setReactiveOpacity(0.4);
+    flush();
+
+    await expect(
+      Promise.race([
+        controls.finished.then(() => "settled"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
+      ]),
+    ).resolves.toBe("settled");
+  });
+
+  it("fires a reactive pass's onAnimationComplete when a skipAnimations imperative call reclaims its only animating property", async () => {
+    const onComplete = vi.fn<() => void>();
+    const { container } = render(() => (
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 5 }}
+        onAnimationComplete={onComplete}
+      />
+    ));
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    let animate!: AnimateFunction;
+    render(() => (
+      <MotionConfig skipAnimations>
+        <Scoped onReady={(_scope, readyAnimate) => (animate = readyAnimate)} />
+      </MotionConfig>
+    ));
+
+    // Resolves instantly under `skipAnimations`, but `value.start()` still
+    // steals `opacity` from the reactive pass's own in-flight animation on
+    // it, which was this pass's only key.
+    animate(element, { opacity: 1 });
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps receiving createMotion's reactive updates after an animate() call on the same property finishes", async () => {
+    const [source, setSource] = createSignal(10);
+    const { container } = render(() => <motion.div style={{ x: source }} />);
+    const element = container.querySelector("div") as HTMLElement;
+
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} />;
+    });
+
+    await animate(element, { x: 20, transition: { duration: 0.05 } }).finished;
+    expect(readTranslateX(element)).toBe(20);
+
+    // If `animate()` had built its own, separate store for this element,
+    // motion-dom's per-key style binding would have switched over to it and
+    // stopped forwarding `createMotion`'s own writes to the DOM.
+    setSource(30);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(readTranslateX(element)).toBe(30);
+  });
+
+  it("actually pauses when .pause() is called before the deferred frame creates the real animation", async () => {
+    let scope!: AnimateScope;
+    let animate!: AnimateFunction;
+    const { container } = render(() => {
+      [scope, animate] = createAnimate();
+      return <div ref={scope} style={{ opacity: "1" }} />;
+    });
+
+    const controls = animate(scope.current!, {
+      opacity: 0,
+      transition: { duration: 1, ease: "linear" },
+    });
+    // Before motion-dom's `frame.update` has run, so there is nothing yet
+    // for this call to act on directly.
+    controls.pause();
+
+    const element = container.querySelector("div") as HTMLElement;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const held = element.style.opacity;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(controls.state).toBe("paused");
+    expect(element.style.opacity).toBe(held);
+  });
+
+  it("falls back to MotionConfig's transition when the call names none", async () => {
+    let plainScope!: AnimateScope;
+    let plainAnimate!: AnimateFunction;
+    const plain = render(() => (
+      <Scoped
+        onReady={(scope, animate) => {
+          plainScope = scope;
+          plainAnimate = animate;
+        }}
+      />
+    ));
+
+    let configuredScope!: AnimateScope;
+    let configuredAnimate!: AnimateFunction;
+    const configured = render(() => (
+      <MotionConfig transition={{ duration: 5 }}>
+        <Scoped
+          onReady={(scope, animate) => {
+            configuredScope = scope;
+            configuredAnimate = animate;
+          }}
+        />
+      </MotionConfig>
+    ));
+
+    // Neither call names its own transition, so both fall back to whatever
+    // `MotionConfig` currently says: motion-dom's own default (~0.3s) for the
+    // plain one, the configured 5s duration for the other.
+    plainAnimate(plainScope.current!, { opacity: 0 });
+    configuredAnimate(configuredScope.current!, { opacity: 0 });
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const plainElement = plain.container.querySelector("div") as HTMLElement;
+    const configuredElement = configured.container.querySelector(
+      "div",
+    ) as HTMLElement;
+
+    expect(plainElement.style.opacity).toBe("0");
+    const midpoint = Number(configuredElement.style.opacity);
+    expect(midpoint).toBeGreaterThan(0);
+    expect(midpoint).toBeLessThan(1);
   });
 });
 

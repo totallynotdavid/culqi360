@@ -1,6 +1,5 @@
 import {
   frame,
-  type AnimationPlaybackControlsWithThen,
   type MotionValue,
   type ValueKeyframesDefinition,
 } from "motion-dom";
@@ -8,7 +7,12 @@ import {
 import type { LayoutOptions } from "./projection";
 import type { MergedTarget } from "./target";
 import type { AnimationDefinition, Transition } from "./types";
-import { createValueStore, type ValueStore } from "./values";
+import {
+  claim,
+  releaseValueStore,
+  sharedValueStore,
+  type ValueStore,
+} from "./values";
 
 /**
  * Everything one animation pass needs, already resolved. The component computes
@@ -68,6 +72,7 @@ export function createMotionController(
   layout?: LayoutOptions,
 ): MotionController {
   let store: ValueStore | undefined;
+  let mountedElement: HTMLElement | SVGElement | undefined;
   let queued:
     | { pass: MotionPass; onSettled?: (completed: boolean) => void }
     | undefined;
@@ -135,15 +140,23 @@ export function createMotionController(
 
   /** Starts the pass after any sequencing delay. */
   const begin = (pass: MotionPass, generationAtStart: number) => {
-    if (generationAtStart !== generation || !store) return;
+    if (generationAtStart !== generation || !store || !mountedElement) return;
+    const element = mountedElement;
 
     const work = planWork(pass, applied, store, initialValues);
     applied = work.applied;
 
     const { transitionEnd } = pass.target;
 
+    // Idempotent because a pass can reach completion two ways once it has
+    // started animating: every animation it owns finishing naturally, or
+    // `claim()` reporting that one of them got reclaimed first (see below).
+    // Either can fire after the other has already run this pass to
+    // completion, and only the first one must count.
+    let done = false;
     const finish = () => {
-      if (generationAtStart !== generation) return;
+      if (generationAtStart !== generation || done) return;
+      done = true;
       for (const [key, value] of Object.entries(transitionEnd)) {
         store?.set(key, value);
         applied.set(key, value);
@@ -159,6 +172,16 @@ export function createMotionController(
 
     pass.onAnimationStart?.(pass.definition);
 
+    // How many keys this pass is still waiting on, mirroring
+    // `create-animate.ts`'s `runTarget`: a key only counts once it actually
+    // starts animating, and only ever counts down once, whichever happens
+    // first between its own `finished` resolving naturally and a later call
+    // claiming it away. Waiting for this to reach zero, rather than firing
+    // `finish` off any single key, is what keeps one property being
+    // reclaimed from resolving the whole pass while its other properties are
+    // still animating.
+    let pending = 0;
+
     // Animations are created on motion's frame, never inline in Solid's flush.
     // `time.now()` memoises per synchronous block and is only cleared on a
     // microtask, so an animation started from the middle of a long synchronous
@@ -173,33 +196,58 @@ export function createMotionController(
     frame.update(() => {
       if (generationAtStart !== generation || !store) return;
 
-      const animations: AnimationPlaybackControlsWithThen[] = [];
       for (const change of work.changes) {
         const animation = store.animate(
           change.key,
           change.value,
           passTransition(change.transition, pass),
         );
-        if (animation) animations.push(animation);
+
+        if (!animation) {
+          // `store.animate()` still stole this pair via `value.start()` even
+          // though motion resolved it instantly with nothing to hand back.
+          // Claiming it anyway notifies whoever held it before; this pass
+          // has nothing left to wait on for this key.
+          claim(element, change.key, () => undefined);
+          continue;
+        }
+
+        pending += 1;
+
+        let keyDone = false;
+        const finishKey = () => {
+          if (keyDone) return;
+          keyDone = true;
+          pending -= 1;
+          if (pending > 0) return;
+          finish();
+        };
+
+        // An imperative `animate()` call on this same element/property steals
+        // the `MotionValue` this pass just started animating (motion-dom's own
+        // `MotionValue.start` stops whatever animation was already running on
+        // it) without ever settling that animation's own `finished`. Claiming
+        // it lets whichever call takes it next report that back, so this key
+        // counts as done the same way its own `finished` resolving naturally
+        // would have.
+        animation.finished.catch(() => undefined).finally(finishKey);
+        claim(element, change.key, finishKey);
       }
 
-      // Instant targets do not create animations.
-      if (animations.length === 0) {
+      // Motion resolves instant targets without creating an animation at all,
+      // so nothing pending means every key this pass touched already reached
+      // its target.
+      if (pending === 0) {
         finish();
         return;
       }
-
-      // Cancelled animations may never settle, so `finish` must remain generation
-      // guarded even after all current animations complete.
-      Promise.all(animations.map((animation) => animation.finished))
-        .then(finish)
-        .catch(() => undefined);
     });
   };
 
   return {
     mount(element) {
-      store = createValueStore(element, initialValues, bound, layout);
+      mountedElement = element;
+      store = sharedValueStore(element, initialValues, bound, layout);
       if (!queued) return;
 
       const { pass, onSettled } = queued;
@@ -223,6 +271,7 @@ export function createMotionController(
       queued?.onSettled?.(false);
       queued = undefined;
       store?.dispose();
+      if (store && mountedElement) releaseValueStore(mountedElement, store);
       store = undefined;
     },
   };

@@ -63,6 +63,74 @@ export interface ValueStore {
   dispose(): void;
 }
 
+/**
+ * The one `ValueStore` an element may have. A `createMotion` binding and an
+ * `animate()` call that targets the same node have to drive the same
+ * `MotionValue` per key instead of each building their own: two independent
+ * stores both calling `styleEffect` for, say, `x` leaves only the
+ * most-recently-created one actually wired to the DOM (motion-dom's per-key
+ * binding replaces whichever value held it before), so the other's writes go
+ * nowhere. Sharing this store is what lets `ensure()` in `createValueStore`
+ * hand back the existing `MotionValue` to whichever side asks second.
+ */
+const sharedStores = new WeakMap<Element, ValueStore>();
+
+/**
+ * Whoever claims the element first decides `initialValues`, `bound`, and
+ * `layout`; a later claim reuses the store as-is. That matches the only
+ * ordering this package produces one for: a `createMotion` ref fires as its
+ * element mounts, before anything else could have a reference to that
+ * element to hand to `animate()`.
+ */
+export function sharedValueStore(
+  element: HTMLElement | SVGElement,
+  initialValues: Record<string, string | number>,
+  bound: ReadonlyMap<string, MotionValue>,
+  layout?: LayoutOptions,
+): ValueStore {
+  const existing = sharedStores.get(element);
+  if (existing) return existing;
+
+  const store = createValueStore(element, initialValues, bound, layout);
+  sharedStores.set(element, store);
+  return store;
+}
+
+/** Releases this element's slot so a later claim builds a fresh store. */
+export function releaseValueStore(element: Element, store: ValueStore): void {
+  if (sharedStores.get(element) === store) sharedStores.delete(element);
+}
+
+/**
+ * Whoever is currently animating one element's property, so a later claim
+ * on the same pair can settle whatever the earlier claimant was waiting on
+ * instead of leaving it to wait on a `MotionValue` that just stopped
+ * animating out from under it.
+ *
+ * Shared between `create-animate.ts`'s imperative calls and `controller.ts`'s
+ * reactive pass, the two places that call `ValueStore.animate()`: a property
+ * has exactly one `MotionValue` regardless of which side is driving it, so
+ * motion-dom's own per-value `start()` stealing it from underneath a caller
+ * (verified against motion-dom 13.1.1: it stops the previous animation
+ * without ever settling that animation's own `finished`) needs one registry
+ * both sides feed, not two that only know about their own calls.
+ */
+const claims = new WeakMap<Element, Map<string, VoidFunction>>();
+
+export function claim(
+  element: Element,
+  key: string,
+  onSuperseded: VoidFunction,
+): void {
+  let byKey = claims.get(element);
+  if (!byKey) {
+    byKey = new Map();
+    claims.set(element, byKey);
+  }
+  byKey.get(key)?.();
+  byKey.set(key, onSuperseded);
+}
+
 export function createValueStore(
   element: HTMLElement | SVGElement,
   /** Where a property starts when the element was rendered carrying it. */

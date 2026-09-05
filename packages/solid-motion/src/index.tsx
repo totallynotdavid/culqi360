@@ -1,6 +1,14 @@
 export { motion } from "./motion";
 export { createMotion, type MotionHandle } from "./create-motion";
 export {
+  createAnimate,
+  type AnimateFunction,
+  type AnimateScope,
+  type AnimateSegment,
+  type AnimateSequence,
+  type AnimateTarget,
+} from "./create-animate";
+export {
   createMotionValue,
   createTime,
   createVelocity,
