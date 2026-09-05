@@ -1,6 +1,17 @@
 export { motion } from "./motion";
 export { createMotion, type MotionHandle } from "./create-motion";
-export { createMotionValue, type MotionSource } from "./motion-values";
+export {
+  createMotionValue,
+  createTime,
+  createVelocity,
+  type MotionSource,
+} from "./motion-values";
+export {
+  createScroll,
+  type ScrollOffset,
+  type ScrollOptions,
+  type ScrollValues,
+} from "./scroll";
 // The pure interpolator behind Motion's `useTransform` range form. In Solid a
 // derived value is an accessor over it, not a second value to keep in sync.
 export { transform } from "motion-dom";

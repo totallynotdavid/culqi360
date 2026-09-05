@@ -1,27 +1,29 @@
-import { MotionValue, attachFollow, isMotionValue } from "motion-dom";
+import {
+  MotionValue,
+  attachFollow,
+  cancelFrame,
+  frame,
+  isMotionValue,
+  type FrameData,
+} from "motion-dom";
 import { createEffect, onCleanup, untrack } from "solid-js";
 
 import type { MotionStyle, MotionStyleValue, Transition } from "./types";
 
-/** Whatever drives a motion value: a constant, a Solid accessor, or another value. */
 export type MotionSource<T> = T | (() => T) | MotionValue<T>;
 
 /**
- * A value that lives outside Solid's render path: writes go straight to the
- * element on the animation frame, so nothing re-renders when it moves.
+ * Creates a MotionValue from a literal, Solid accessor, or MotionValue.
  *
- * The source can be a Solid accessor, which is the whole point of having this
- * rather than motion's `motionValue`. Motion needs a `MotionValue` to exist at
- * all because React has no way to observe a plain variable; here the signal
- * already is the source, and this only carries it across to the frame loop.
- *
- * With a `transition` the value does not jump to its source, it animates there,
- * springing by default. That is Motion's `useSpring`: `stiffness` and `damping`
- * describe the physics, and every change to the source retargets the spring
- * from its current position and velocity rather than restarting it.
- *
- * Destroyed with the scope that created it, so a component unmounting takes its
- * subscriptions with it.
+ * Solid accessors bridge into motion through an effect: the signal stays the
+ * source of truth, and every change calls `set`. Those writes bypass Solid's
+ * render path entirely, going straight to the element on the frame loop, so
+ * nothing re-renders when the value moves. With a `transition`, a change does
+ * not jump to the new value, it retargets the spring: `attachFollow`
+ * intercepts `set` and animates from the value's current position and
+ * velocity rather than restarting it. Cleanup follows the owner, so a
+ * component unmounting destroys the value and tears down its subscriptions
+ * with it.
  */
 export function createMotionValue<T extends string | number>(
   source: MotionSource<T>,
@@ -31,8 +33,8 @@ export function createMotionValue<T extends string | number>(
   onCleanup(() => value.destroy());
 
   if (isMotionValue(source)) {
-    // Not part of Solid's graph, so it needs motion's own subscription. With a
-    // transition `attachFollow` installs that subscription itself.
+    // MotionValue sources are outside Solid's graph, so subscribe directly.
+    // attachFollow handles the subscription when a transition is requested.
     onCleanup(
       transition
         ? attachFollow(value, source, transition)
@@ -41,8 +43,7 @@ export function createMotionValue<T extends string | number>(
     return value;
   }
 
-  // `attachFollow` intercepts every later `set`, so an accessor driving the
-  // value through an effect springs rather than jumps without knowing it.
+  // Accessor updates call set, so attach the transition before creating the effect.
   if (transition) attachFollow(value, value.get(), transition);
   if (typeof source === "function") {
     createEffect(source as () => T, (latest) => value.set(latest));
@@ -51,34 +52,64 @@ export function createMotionValue<T extends string | number>(
   return value;
 }
 
+/** Tracks a source's velocity and decays it after the source stops changing. */
+export function createVelocity(
+  source: MotionValue<number>,
+): MotionValue<number> {
+  const velocity = new MotionValue(source.getVelocity());
+  onCleanup(() => velocity.destroy());
+
+  const sample = () => {
+    const latest = source.getVelocity();
+    velocity.set(latest);
+    if (latest) frame.update(sample);
+  };
+
+  onCleanup(source.on("change", () => frame.update(sample, false, true)));
+  // A sample queued before disposal must not update the destroyed value.
+  onCleanup(() => cancelFrame(sample));
+
+  return velocity;
+}
+
+/** Tracks elapsed milliseconds using the frame loop's shared clock. */
+export function createTime(): MotionValue<number> {
+  const value = new MotionValue(0);
+  onCleanup(() => value.destroy());
+
+  let start: number | undefined;
+  const tick = ({ timestamp }: FrameData) => {
+    start ??= timestamp;
+    value.set(timestamp - start);
+  };
+
+  frame.update(tick, true);
+  onCleanup(() => cancelFrame(tick));
+
+  return value;
+}
+
 function read<T extends string | number>(source: MotionSource<T>): T {
   if (typeof source === "function") return source();
-  // `isMotionValue` is not parameterised, so it narrows what the guard returns
-  // but not the union's own `MotionValue<T>` member.
+  // The unparameterized guard needs a cast back to MotionValue<T>.
   if (isMotionValue(source)) return source.get() as T;
   return source as T;
 }
 
-/**
- * A style entry motion writes itself rather than handing to the DOM: either a
- * value the caller holds, or a Solid accessor to carry across for them.
- */
 export function isMotionStyleValue(entry: unknown): entry is MotionStyleValue {
   return typeof entry === "function" || isMotionValue(entry);
 }
 
 export interface BoundStyle {
-  /** Keyed by style property, for the value store to bind. */
   values: Map<string, MotionValue>;
   /**
-   * What those values read at first render.
+   * Initial values to paint before a bound MotionValue changes.
    *
-   * Binding a populated value does not repaint on its own: motion records it in
-   * the shared style state but only schedules the composite render when the
-   * value next *changes*, so a transform bound at `x: 50` leaves
-   * `transform: none` on screen until something moves. Rendering these into the
-   * inline style closes that window, and costs nothing extra since the element
-   * is already born carrying its initial style.
+   * Binding a value does not schedule the initial composite render: motion
+   * records it in the shared style state but only repaints when the value
+   * next *changes*. Skipping or bypassing `painted` can leave a transform
+   * bound at, say, `x: 50` rendering as `transform: none` until something
+   * moves.
    */
   painted: Record<string, string | number>;
 }
@@ -86,10 +117,11 @@ export interface BoundStyle {
 /**
  * Separates the style entries motion owns from the plain CSS the DOM owns.
  *
- * Read once rather than tracked. Which keys motion drives describes the element,
- * like `initial` does, and swapping a key from CSS to a value mid-life would
- * mean unbinding and rebinding the shared transform composite. An accessor
- * covers the case that actually comes up, which is the value changing.
+ * Bindings are read once, not tracked: which keys motion drives describes the
+ * element, like `initial` does. Reading this reactively, or changing which
+ * keys are driven mid-life, would need unbinding and rebinding the shared
+ * transform composite; skipping that can leave stale transform bindings,
+ * duplicate subscriptions, or leaks.
  */
 export function readStyleValues(style: MotionStyle | undefined): BoundStyle {
   const values = new Map<string, MotionValue>();
