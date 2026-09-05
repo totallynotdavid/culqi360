@@ -144,7 +144,28 @@ export function createValueStore(
     return value as MotionValue;
   };
 
-  /** Adapter used by motion's HTML keyframe resolver. */
+  /**
+   * The view of this element that motion's keyframe resolver works against.
+   *
+   * Animating `height` from a computed pixel value to `auto`, or between any
+   * two incompatible units, needs a measurement: set the target, read the box,
+   * put it back, then animate between the two numbers. Motion already does this
+   * on its own frame loop, batching every element's reads before any writes so
+   * a list of collapsing rows costs one layout pass rather than one each.
+   *
+   * `WithRender` is the five-member interface that machinery actually asks for,
+   * so a value store can satisfy it directly. This is the narrow resolver shim
+   * that adopting `VisualElement` was always the alternative to, and
+   * `VisualElement` would bring a props model, a variant tree and an event
+   * system with it, all of which Solid's graph already covers. Layout
+   * projection needs its own narrow stand-in for the same reason (`getProps`
+   * and friends on `projection.ts`'s `host`): the engine only ever reads off
+   * whatever it is animating against, never the object it usually comes bundled
+   * with.
+   *
+   * HTML only. `renderHTML` and `measureViewportBox` both take an HTMLElement,
+   * and without the view SVG keeps exactly the behaviour it has today.
+   */
   const resolverView = isHTMLElement(element)
     ? {
         // `AsyncMotionValueAnimation` takes the resolver class from this view.

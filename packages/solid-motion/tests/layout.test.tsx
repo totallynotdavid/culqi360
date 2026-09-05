@@ -373,6 +373,95 @@ describe("layout", () => {
     expect(element.style.pointerEvents).toBe("none");
   });
 
+  it("keeps a reactive pointer-events value current on a shared element", async () => {
+    const [locked, setLocked] = createSignal(true);
+
+    const { container } = render(() => (
+      <motion.div
+        class="thumb"
+        layoutId="lockable"
+        style={{ "pointer-events": () => (locked() ? "none" : "auto") }}
+      />
+    ));
+
+    const element = container.querySelector(".thumb") as HTMLElement;
+    stubBox(element, () => ({ left: 0, top: 0, width: 100, height: 100 }));
+
+    await settle();
+    expect(element.style.pointerEvents).toBe("none");
+
+    setLocked(false);
+    await settle();
+    // A frozen-at-mount styleProp would still read the value captured before
+    // this change; an accessor-driven entry stripped from styleProp entirely
+    // would fall back to the empty string instead.
+    expect(element.style.pointerEvents).toBe("auto");
+  });
+
+  it("preserves a caller-set transform through a layout transition", async () => {
+    const [wide, setWide] = createSignal(false);
+
+    const { container } = render(() => (
+      <div class={wide() ? "row wide" : "row"}>
+        <motion.div
+          class="box"
+          layout
+          transition={{ duration: 0.4 }}
+          style={{ transform: "rotate(45deg)" }}
+        />
+      </div>
+    ));
+
+    const element = container.querySelector(".box") as HTMLElement;
+    const collapsed = { left: 0, top: 0, width: 100, height: 100 };
+    const expanded = { left: 200, top: 0, width: 300, height: 100 };
+    stubBox(element, () => (wide() ? expanded : collapsed));
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    setWide(true);
+    flush();
+    await settle();
+
+    // Projection composes its own transform on top; the caller's static one
+    // survives only if it is composed in rather than replaced outright.
+    expect(element.style.transform).toContain("rotate(45deg)");
+  });
+
+  it("animates a layout change a motion ancestor drove with its own reactive style", async () => {
+    const [wide, setWide] = createSignal(false);
+
+    const { container } = render(() => (
+      <motion.div
+        class="row"
+        style={{ "padding-left": wide() ? "200px" : "0px" }}
+      >
+        <motion.div class="box" layout transition={{ duration: 0.4 }} />
+      </motion.div>
+    ));
+
+    const element = container.querySelector(".box") as HTMLElement;
+    const collapsed = { left: 0, top: 0, width: 100, height: 100 };
+    const expanded = { left: 200, top: 0, width: 100, height: 100 };
+    stubBox(element, () => (wide() ? expanded : collapsed));
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    setWide(true);
+    flush();
+
+    // The ancestor's own value store claims its inline style; that claim must
+    // not swallow this reactive change the way it swallows its own paint.
+    const boxes = await sample(element, 250);
+    const midpoints = boxes.filter((box) =>
+      between(box.left, collapsed.left, expanded.left),
+    );
+    expect(midpoints.length).toBeGreaterThan(3);
+
+    await settle();
+    expect(projectedBox(element)).toEqual(expanded);
+  });
+
   it("takes layout timing from the transition the target carries", async () => {
     const [wide, setWide] = createSignal(false);
 

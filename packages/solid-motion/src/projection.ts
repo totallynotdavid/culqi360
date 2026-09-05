@@ -15,19 +15,27 @@ import {
 import { adoptLayoutNode, dropLayoutNode } from "./layout-updates";
 
 /** Which parts of a layout change are animated. */
-export type LayoutOption = boolean | "position" | "size" | "x" | "y";
+export type LayoutOption =
+  | boolean
+  | "position"
+  | "size"
+  | "x"
+  | "y"
+  | "preserve-aspect";
 
 export interface LayoutOptions {
   layout: LayoutOption | undefined;
   layoutId: string | undefined;
   /**
-   * The style entries the DOM owns, which projection needs so it can put back
-   * what it takes over. Taking an element over clears its `pointerEvents`, and
-   * the caller's value is the only record of what to restore. Entries motion
-   * drives are not at risk: they are repainted from `latestValues` on every
-   * frame.
+   * Reads the caller's current style, resolving an accessor or `MotionValue`
+   * entry to its live value. Called on every paint rather than read once:
+   * motion-dom takes over `pointerEvents` on a projecting element and reads
+   * this as the only record of what to restore it to, so a stale snapshot
+   * would win back over whatever the caller's value has since become,
+   * including a value motion itself drives (which never lands here otherwise,
+   * since projection never touches `latestValues` for this).
    */
-  style: Record<string, unknown> | undefined;
+  style: () => Record<string, unknown> | undefined;
 }
 
 /** Timing refreshed by the controller for each pass. */
@@ -56,12 +64,23 @@ export function createProjection(
   let node: IProjectionNode | undefined;
   const timing: LayoutTiming = { transition: undefined, instant: false };
 
-  const styleProp = toMotionStyle(options.style);
+  // Motion's own generated transform composes position and scale off animated
+  // axis values; a caller's static `transform` never animates and has no axis
+  // to hook into, so projection would otherwise drop it the moment it starts
+  // writing its own. Appending it here is the only way it survives.
+  const transformTemplate = (
+    _latest: ResolvedValues,
+    generated: string,
+  ): string => {
+    const custom = options.style()?.transform;
+    if (typeof custom !== "string" || custom === "") return generated;
+    return generated ? `${generated} ${custom}` : custom;
+  };
 
   const render = () => {
     buildHTMLStyles(renderState, latestValues);
     // Passing the node lets projection compose its transform over the base style.
-    renderHTML(element, renderState, styleProp, node);
+    renderHTML(element, renderState, toMotionStyle(options.style()), node);
   };
 
   const host = {
@@ -69,7 +88,7 @@ export function createProjection(
     latestValues,
     props: {},
     renderState,
-    getProps: () => ({}),
+    getProps: () => ({ transformTemplate }),
     getDefaultTransition: () => timing.transition,
     get shouldReduceMotion() {
       return timing.instant;

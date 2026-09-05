@@ -56,6 +56,10 @@ export function dropLayoutNode(element: HTMLElement): void {
  * inline style as a layout signal, and every animated element rewrites its own
  * on every frame; without the claim each paint would schedule a commit and end
  * the very animation that painted it.
+ *
+ * The claim can't tell that write apart from the caller's own reactive style
+ * landing on the same element, so it silences those too: see `noteStyleChange`,
+ * which routes them back in through the path a document mutation would take.
  */
 export function claimInlineStyle(element: Element): void {
   painted.add(element);
@@ -196,11 +200,31 @@ function absorb(records: MutationRecord[]): boolean {
     if (!movesLayout(record)) continue;
     moving = true;
     for (const node of mounted) {
-      if (movedBy(node, record)) touched.add(node);
+      if (movedBy(node, record.target)) touched.add(node);
     }
   }
 
   return moving;
+}
+
+/**
+ * Signals that an element's own style changed through the caller's reactive
+ * `style` prop, not through this package's paint loop.
+ *
+ * `claimInlineStyle` marks every element this package writes to so the watcher
+ * reads its own paint as paint, not layout, but that claim cannot tell the
+ * caller's plain CSS apart from motion's writes once both land on the same
+ * inline style: without this, a claimed element's own reactive resize (an
+ * ancestor's padding, say) would be swallowed along with its paint, and a
+ * projecting descendant would jump instead of animating. Solid already sees
+ * the change precisely; feed it into the same touched/commit path a document
+ * mutation would take.
+ */
+export function noteStyleChange(element: Element): void {
+  for (const node of mounted) {
+    if (movedBy(node, element)) touched.add(node);
+  }
+  scheduleCommit();
 }
 
 /** Whether a mutation is one that changes layout rather than paint. */
@@ -216,13 +240,13 @@ function movesLayout(record: MutationRecord): boolean {
   return name === "class" || name === "hidden" || name.startsWith("data-");
 }
 
-/** Whether a mutation inside or above the node could have moved it. */
-function movedBy(node: IProjectionNode, record: MutationRecord): boolean {
+/** Whether a mutation on `target` inside or above the node could have moved it. */
+function movedBy(node: IProjectionNode, target: Node): boolean {
   const element = node.instance as HTMLElement | undefined;
   if (!element) return false;
   // Ancestors count as much as descendants: a container laying its children out
   // differently is what a class or style change on it usually means.
-  return element.contains(record.target) || record.target.contains(element);
+  return element.contains(target) || target.contains(element);
 }
 
 function projectionParent(element: HTMLElement): IProjectionNode | undefined {

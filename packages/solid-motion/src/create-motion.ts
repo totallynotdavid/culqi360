@@ -12,7 +12,8 @@ import { useMotionConfig } from "./config";
 import { createMotionController, type MotionPass } from "./controller";
 import { gestureNames, watchGestures } from "./gestures";
 import { buildInitialRender, toInitialValues } from "./initial";
-import { plainStyle, readStyleValues } from "./motion-values";
+import { noteStyleChange } from "./layout-updates";
+import { plainStyle, readStyleValues, resolveStyle } from "./motion-values";
 import { usePresence } from "./presence";
 import type { LayoutOptions } from "./projection";
 import { useReducedMotion } from "./reduced-motion";
@@ -86,21 +87,28 @@ export function createMotion<TCustom = unknown>(
   const config = useMotionConfig();
   const presence = usePresence();
 
-  // Refs run outside an owner, so child cleanup needs the captured owner.
+  // Captured before `ref` fires: a ref callback runs outside any reactive
+  // owner, so `onCleanup` called from inside it is silently never scheduled.
+  // Registering a child's cleanup needs this owner handed back in explicitly.
   const owner = getOwner();
 
-  // Gestures read the node in a tracking scope, so keep it in a signal.
+  // The gestures need the node inside a tracking scope, so it lives in a signal
+  // rather than a plain `let` the effects could never observe.
   const [element, setElement] = createSignal<HTMLElement | SVGElement>();
   const gestures = watchGestures(options, element);
 
   const inherited = useVariants();
-  // This is the boundary where inherited and presence custom values become TCustom.
+  // Only this element's own `custom` is typed. An ancestor's variant scope or a
+  // presence boundary knows nothing about this element's variant map, so what
+  // they carry is `unknown` and this is where it gets read as the local type.
   const custom = (): TCustom | undefined =>
     (options().custom ?? inherited?.custom() ?? presence?.custom()) as
       | TCustom
       | undefined;
 
-  // Inherit labels only when this element does not define the layer itself.
+  // A layer falls back to the ancestor's label only when this element says
+  // nothing about it, matching Motion. An inline target is never inherited: it
+  // means nothing to a child resolving against a different variants map.
   const definitionFor = (layer: VariantLayer) => {
     const own = options()[layer];
     return own !== undefined ? own : inherited?.label(layer);
@@ -109,8 +117,10 @@ export function createMotion<TCustom = unknown>(
   const resolveLayer = (layer: VariantLayer) =>
     resolveDefinition(definitionFor(layer), options().variants, custom());
 
-  // The initial target describes the first paint, so resolve it once. A presence
-  // boundary with `initial={false}` overrides the element's own option.
+  // The initial target is resolved exactly once. It describes the element the
+  // browser is handed, so re-resolving it later would describe a paint that
+  // already happened. A boundary-level `initial={false}` wins over the
+  // element's own option: it means "this subtree was already on screen".
   const initialTarget = untrack(() =>
     resolveInitialDefinition({
       initial: presence?.initial() === false ? false : definitionFor("initial"),
@@ -120,19 +130,42 @@ export function createMotion<TCustom = unknown>(
     }),
   );
 
-  // Read once. The bound keys describe the element; only their values change.
+  // Read once, like the initial target: which keys motion drives describes the
+  // element, and only their values are expected to change afterwards.
   const bound = untrack(() => readStyleValues(options().style));
 
-  // Layout options describe the node, so capture them with the initial target.
+  // `layout`/`layoutId` describe the node, so capture them with the initial
+  // target; `style` stays a live read, since projection calls it on every
+  // paint rather than once at mount.
   const layout = untrack((): LayoutOptions | undefined => {
     const current = options();
     if (!current.layout && current.layoutId === undefined) return undefined;
     return {
       layout: current.layout,
       layoutId: current.layoutId,
-      style: plainStyle(current.style),
+      style: () => resolveStyle(options().style),
     };
   });
+
+  // The caller's own plain CSS lands on the element through Solid's native
+  // reactivity (`motion.tsx`'s merged `style`), not through this package's own
+  // paint loop, so `claimInlineStyle` (values.ts) cannot tell it apart from
+  // paint and would otherwise read it as one. Solid already tracks it
+  // precisely; feed changes into the same touched/commit path a document
+  // mutation would take. Deferred because mounting already schedules its own
+  // commit when one is needed.
+  createEffect(
+    () => {
+      plainStyle(options().style);
+      // Read here, in the tracking compute phase, not in the untracked apply
+      // callback below.
+      return element();
+    },
+    (node) => {
+      if (node) noteStyleChange(node);
+    },
+    { defer: true },
+  );
 
   const controller = createMotionController(
     toInitialValues(initialTarget),
@@ -177,8 +210,12 @@ export function createMotion<TCustom = unknown>(
       const node = element();
       const current = options();
 
-      // `sequencePass` reads reactive orchestration data, so resolve it in this
-      // tracking scope rather than in the apply callback.
+      // Resolved here, not in the apply step below: `sequencePass` reads
+      // `orchestration()` on both scopes, which reads a `transition()` memo,
+      // and a memo read from outside a tracking scope is exactly what Solid's
+      // `STRICT_READ_UNTRACKED` warns about. `apply` is not a tracking scope;
+      // this compute function is, so the read belongs here regardless of
+      // whether the resulting object turns out to gate anything.
       const sequence = sequencePass(inherited, scope);
 
       return {
@@ -261,7 +298,13 @@ export function createMotion<TCustom = unknown>(
   };
 }
 
-/** Combines caller-owned values with the initial target for the first render. */
+/**
+ * What the element is painted with on its first render: the values the caller
+ * bound through `style`, with the initial target over the top.
+ *
+ * `undefined` when there is nothing to paint, so an element with neither keeps
+ * an empty style object rather than picking up whatever an empty target builds.
+ */
 function paintTarget(
   painted: Record<string, string | number>,
   initialTarget: TargetAndTransition | undefined,
