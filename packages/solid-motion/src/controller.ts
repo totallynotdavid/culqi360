@@ -21,7 +21,15 @@ export interface MotionPass {
   fallbackTransition: Transition | undefined;
   /** Stagger offset contributed by a variant-controlling ancestor. */
   delay: number;
-  /** Jump to every target instead of animating there. */
+  /**
+   * Jump to every target instead of animating there.
+   *
+   * Carried on the pass rather than folded into a transition upstream. It has
+   * to reach the transition of every value this pass touches, and a target that
+   * brings its own transition replaces the element's, so anything merged into
+   * the element-level one is dropped exactly when a variant or an inline
+   * `exit={{ ..., transition }}` is in play.
+   */
   skipAnimations: boolean;
   /** Suppresses layout movement for reduced motion and skipped animations. */
   instantLayout: boolean;
@@ -45,7 +53,14 @@ export interface MotionController {
 }
 
 export function createMotionController(
-  /** Initial raw values, captured before the element's ref runs. */
+  /**
+   * The target the element was rendered with, in raw (pre-CSS) units. Passed at
+   * construction rather than on a pass: it describes the element, not the
+   * animation, and the ref fires before the first pass is ever queued. Reaching
+   * it through the first pass meant the value store was built with nothing and
+   * fell back to reading the DOM, which round-trips a transform through the
+   * computed matrix and cannot tell `rotate: 450` from `rotate: 90`.
+   */
   initialValues: Record<string, string | number>,
   /** Values from `style` that the caller owns; bound, never created here. */
   bound: ReadonlyMap<string, MotionValue>,
@@ -144,8 +159,17 @@ export function createMotionController(
 
     pass.onAnimationStart?.(pass.definition);
 
-    // Start animations on motion's frame. Its clock is current and shared by
-    // elements updated in the same Solid flush.
+    // Animations are created on motion's frame, never inline in Solid's flush.
+    // `time.now()` memoises per synchronous block and is only cleared on a
+    // microtask, so an animation started from the middle of a long synchronous
+    // render is handed the clock reading from the top of that block. It is born
+    // with a start time in the past and completes on its first tick: a 100ms
+    // fade that never fades. Measured at 107ms of drift for a single component
+    // render, and a route transition or a long list is worse.
+    //
+    // Inside `frame.update` the clock is the frame's own, which is the clock the
+    // animation's ticks read. It also coalesces every element animating in one
+    // Solid flush into a single frame.
     frame.update(() => {
       if (generationAtStart !== generation || !store) return;
 

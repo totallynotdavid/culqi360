@@ -100,7 +100,17 @@ export function isMotionStyleValue(entry: unknown): entry is MotionStyleValue {
   return typeof entry === "function" || isMotionValue(entry);
 }
 
-/** The entries of a style the DOM owns, with everything motion drives removed. */
+/**
+ * The entries of a style the DOM owns, with everything motion drives removed.
+ *
+ * Motion-driven entries are bound to the element already, so the DOM has no use
+ * for them. Nothing observable goes wrong if they slip through, which is why no
+ * test pins this: `motion.style` covers every bound key, and the ones it
+ * renames (`x` to `transform`) leave behind a property name the CSS parser
+ * drops anyway. It stays because handing `setProperty` a function or a
+ * `MotionValue` is wrong on its face, and relying on the merge order to hide it
+ * is a thinner guarantee than not doing it.
+ */
 export function plainStyle(
   style: MotionStyle | undefined,
 ): Record<string, unknown> {

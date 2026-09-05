@@ -56,6 +56,10 @@ export function dropLayoutNode(element: HTMLElement): void {
  * inline style as a layout signal, and every animated element rewrites its own
  * on every frame; without the claim each paint would schedule a commit and end
  * the very animation that painted it.
+ *
+ * The claim can't tell that write apart from the caller's own reactive style
+ * landing on the same element, so it silences those too: see `noteStyleChange`,
+ * which routes them back in through the path a document mutation would take.
  */
 export function claimInlineStyle(element: Element): void {
   painted.add(element);

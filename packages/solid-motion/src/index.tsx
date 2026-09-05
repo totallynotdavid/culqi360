@@ -12,9 +12,12 @@ export {
   type ScrollOptions,
   type ScrollValues,
 } from "./scroll";
-// Motion's `useTransform` range interpolator, exposed as a Solid accessor.
+// The pure interpolator behind Motion's `useTransform` range form. In Solid a
+// derived value is an accessor over it, not a second value to keep in sync.
 export { transform } from "motion-dom";
-// Builds per-child delays for variant orchestration.
+// Builds the per-child delay function `delayChildren` takes: motion's own
+// replacement for `staggerChildren`/`staggerDirection`, which stay supported
+// as the plain-number convenience they always were.
 export { stagger } from "motion-dom";
 export {
   AnimatePresence,
