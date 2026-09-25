@@ -1,4 +1,4 @@
-import { type FlowComponent, mergeProps, splitProps } from "solid-js";
+import { type FlowComponent, merge, omit } from "solid-js";
 
 import { MotionConfigContext, defaultConfig, useMotionConfig } from "./context";
 import type { MotionConfigProps } from "./types";
@@ -9,13 +9,10 @@ import type { MotionConfigProps } from "./types";
  */
 export const MotionConfig: FlowComponent<MotionConfigProps> = (props) => {
   const parent = useMotionConfig();
-  const [, config] = splitProps(props, ["children"]);
-  const value = mergeProps(defaultConfig, parent, config);
+  const value = merge(defaultConfig, parent, omit(props, "children"));
 
   return (
-    <MotionConfigContext.Provider value={value}>
-      {props.children}
-    </MotionConfigContext.Provider>
+    <MotionConfigContext value={value}>{props.children}</MotionConfigContext>
   );
 };
 

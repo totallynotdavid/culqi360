@@ -89,7 +89,7 @@ export const AnimatePresence: FlowComponent<AnimatePresenceProps> = (props) => {
   }
 
   return (
-    <AnimatePresenceContext.Provider value={context}>
+    <AnimatePresenceContext value={context}>
       {(() => {
         const rendered = createListTransition(
           () => resolveElements(() => props.children).toArray() as Element[],
@@ -102,7 +102,7 @@ export const AnimatePresence: FlowComponent<AnimatePresenceProps> = (props) => {
         );
         return <>{rendered() as unknown as JSX.Element}</>;
       })()}
-    </AnimatePresenceContext.Provider>
+    </AnimatePresenceContext>
   );
 };
 
