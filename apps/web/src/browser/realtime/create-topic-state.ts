@@ -1,4 +1,4 @@
-import { createEffect, createSignal, type Accessor } from "solid-js";
+import { createSignal, type Accessor } from "solid-js";
 
 import type { RealtimeChannelName } from "~/contracts/realtime/channel";
 
@@ -18,12 +18,18 @@ export function createTopicState<T>(options: TopicStateOptions<T>): {
   value: Accessor<T | undefined>;
   connection: Accessor<ConnectionState>;
 } {
-  const [value, setValue] = createSignal<T | undefined>();
-  const [final, setFinal] = createSignal(false);
+  // Both are writable memos keyed on the topic: switching id recomputes them,
+  // so a new topic never starts on the previous one's last message.
+  const [value, setValue] = createSignal<T | undefined>(() => {
+    options.id();
 
-  createEffect(options.id, () => {
-    setValue(undefined);
-    setFinal(false);
+    return undefined;
+  });
+
+  const [final, setFinal] = createSignal(() => {
+    options.id();
+
+    return false;
   });
 
   const connection = createTopicConnection({

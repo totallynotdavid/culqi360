@@ -47,8 +47,8 @@ export function CulqiView(props: { view: GpvView }) {
   const count = () => filteredRows().length;
 
   return (
-    <Errored fallback={<CulqiError />}>
-      <Loading fallback={<CulqiSkeleton />}>
+    <Loading fallback={<CulqiSkeleton />}>
+      <Errored fallback={<CulqiError />}>
         <Show
           when={readyView()}
           fallback={
@@ -98,8 +98,8 @@ export function CulqiView(props: { view: GpvView }) {
             </WidgetCanvas>
           )}
         </Show>
-      </Loading>
-    </Errored>
+      </Errored>
+    </Loading>
   );
 }
 

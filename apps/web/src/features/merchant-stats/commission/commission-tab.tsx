@@ -48,8 +48,8 @@ export function CommissionTab() {
   const view = createMemo(() => commissionManagerDashboardQuery());
 
   return (
-    <Errored fallback={<TabError />}>
-      <Loading fallback={<WidgetSkeleton />}>
+    <Loading fallback={<WidgetSkeleton />}>
+      <Errored fallback={<TabError />}>
         <Show
           when={view()}
           fallback={
@@ -61,8 +61,8 @@ export function CommissionTab() {
         >
           {(readyView) => <CommissionContent view={readyView()} />}
         </Show>
-      </Loading>
-    </Errored>
+      </Errored>
+    </Loading>
   );
 }
 

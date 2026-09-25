@@ -1,6 +1,10 @@
 import { createEffect, createMemo, type Accessor } from "solid-js";
 
 import { createPollingController } from "~/features/side-panel/core/polling/create-polling-controller";
+import {
+  revalidateWorkflowLeadDetail,
+  revalidateWorkflowLeadList,
+} from "~/features/workflow/data/revalidate-workflow";
 
 const POLLING_STATUSES = new Set(["queued", "running"]);
 
@@ -11,8 +15,6 @@ type RecordPageControllerInput = {
   >;
   pollIntervalMs: number;
   pollTimeoutMs: number;
-  revalidateLeadDetail: (leadId: string) => Promise<void>;
-  revalidateLeadList: () => Promise<void>;
 };
 
 export function createRecordPageController(input: RecordPageControllerInput) {
@@ -27,9 +29,7 @@ export function createRecordPageController(input: RecordPageControllerInput) {
       const status = sunatStatus();
       return status !== undefined && POLLING_STATUSES.has(status);
     },
-    runOnce: async () => {
-      await input.revalidateLeadDetail(input.leadId());
-    },
+    runOnce: () => revalidateWorkflowLeadDetail(input.leadId()),
   });
 
   createEffect(sunatStatus, (status, previousStatus) => {
@@ -46,7 +46,7 @@ export function createRecordPageController(input: RecordPageControllerInput) {
     // The list shows the resolved SUNAT status, so it only needs a refresh on
     // the polling-to-settled edge.
     if (wasPolling && !isPolling) {
-      void input.revalidateLeadList();
+      revalidateWorkflowLeadList();
     }
 
     if (isPolling) {

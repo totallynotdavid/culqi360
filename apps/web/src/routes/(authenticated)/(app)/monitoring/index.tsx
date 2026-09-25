@@ -83,6 +83,10 @@ function parseStatus(value: string): MonitoringStatus {
   return "all";
 }
 
+function reload(): void {
+  revalidate(observabilitySnapshotQuery.key);
+}
+
 export default function MonitoringPage() {
   const [windowMinutes, setWindowMinutes] = createSignal(60);
   const [status, setStatus] = createSignal<MonitoringStatus>("all");
@@ -100,7 +104,6 @@ export default function MonitoringPage() {
   // The boundary owns the first load; this only reports an in-flight
   // replacement for content that is already on screen.
   const refreshing = () => isPending(() => source());
-  const reload = () => void revalidate(observabilitySnapshotQuery.key);
 
   const rowOpen = useSidePanelRowOpen<MonitoringRow>((row) =>
     createDataGridDetailSidePanelPage({
@@ -156,12 +159,12 @@ export default function MonitoringPage() {
         </Show>
       </div>
 
-      <Errored
-        fallback={
-          <p class={styles.refreshing}>No se pudieron cargar las métricas.</p>
-        }
-      >
-        <Loading fallback={<Spinner size="lg" />}>
+      <Loading fallback={<Spinner size="lg" />}>
+        <Errored
+          fallback={
+            <p class={styles.refreshing}>No se pudieron cargar las métricas.</p>
+          }
+        >
           <DataGrid
             ariaLabel="Monitoreo"
             columns={MONITORING_COLUMNS}
@@ -171,8 +174,8 @@ export default function MonitoringPage() {
             rowOpenIndicator="panel"
             source={source()}
           />
-        </Loading>
-      </Errored>
+        </Errored>
+      </Loading>
     </div>
   );
 }

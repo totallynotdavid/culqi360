@@ -16,16 +16,15 @@ interface SessionContextValue {
   updateCurrentUser: (
     update: (current: CurrentUserView) => CurrentUserView,
   ) => void;
-  refreshCurrentUser: () => Promise<CurrentUserView | null>;
+  /** Marks the session query stale. `user` picks up the refetch on its own. */
+  refreshCurrentUser: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue>();
 
 export function SessionProvider(props: ParentProps) {
-  // The optimistic memo owns what used to be an overlay signal plus a deferred
-  // effect that cleared it: a write here is visible for the lifetime of the
-  // surrounding action and reverts to the query's value when it settles, or
-  // rolls back on its own if the action throws.
+  // A write here is visible for the lifetime of the surrounding action and
+  // reverts to the query's value when it settles, or rolls back if it throws.
   const [user, setUser] = createOptimistic(() => meQuery());
 
   const updateCurrentUser = (
@@ -45,10 +44,7 @@ export function SessionProvider(props: ParentProps) {
       value={{
         user,
         updateCurrentUser,
-        refreshCurrentUser: async () => {
-          await revalidate(meQuery.key);
-          return user();
-        },
+        refreshCurrentUser: () => revalidate(meQuery.key),
       }}
     >
       {props.children}

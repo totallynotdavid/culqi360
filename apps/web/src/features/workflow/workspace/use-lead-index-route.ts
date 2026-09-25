@@ -3,8 +3,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  on,
-  onCleanup,
   type Accessor,
 } from "solid-js";
 
@@ -58,21 +56,21 @@ export function useLeadIndexRoute(options: {
   const search = () => searchParams.query ?? "";
   const [debouncedSearch, setDebouncedSearch] = createSignal(search().trim());
 
-  createEffect(
-    on(search, (value) => {
-      const normalized = value.trim();
-      if (!normalized) {
-        setDebouncedSearch("");
-        return;
-      }
+  createEffect(search, (value) => {
+    const normalized = value.trim();
+    if (!normalized) {
+      setDebouncedSearch("");
+      return;
+    }
 
-      const timeout = setTimeout(
-        () => setDebouncedSearch(normalized),
-        SEARCH_DEBOUNCE_MS,
-      );
-      onCleanup(() => clearTimeout(timeout));
-    }),
-  );
+    const timeout = setTimeout(
+      () => setDebouncedSearch(normalized),
+      SEARCH_DEBOUNCE_MS,
+    );
+    // Returning the teardown cancels the pending timer before the next
+    // keystroke schedules its own, which is what makes this a debounce.
+    return () => clearTimeout(timeout);
+  });
 
   return {
     activeView,

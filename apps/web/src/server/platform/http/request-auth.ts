@@ -16,6 +16,14 @@ import { classifyRequest, isApiPath } from "./request-class";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const logger = createLogger("auth-request-guard");
 
+/**
+ * The slice of the request event the guard reads. `@solidjs/router` augments
+ * `RequestEvent` with a mutable `response` head, which this module never
+ * touches; asking only for what it uses keeps callers from having to hand it a
+ * response stub that would go unread.
+ */
+type AuthRequest = Pick<RequestEvent, "request" | "locals">;
+
 export type AuthRequestDecision =
   | { kind: "allow" }
   | { kind: "redirect_login" }
@@ -113,7 +121,7 @@ async function enforceWebhookRequest(
 }
 
 export async function enforceAuthRequest(
-  event: RequestEvent,
+  event: AuthRequest,
 ): Promise<AuthRequestDecision> {
   const url = new URL(event.request.url);
   const requestClass = classifyRequest(url.pathname);
@@ -191,7 +199,7 @@ export async function enforceAuthRequest(
 }
 
 function logCsrfReject(
-  event: RequestEvent,
+  event: AuthRequest,
   reason: string,
   targetOrigin: string,
 ): void {

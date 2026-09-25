@@ -12,16 +12,28 @@ import {
 import {
   BandTableRow,
   ConfigurableSection,
+  createSectionSetter,
   NumberField,
   PercentField,
 } from "./fields";
 
-// The `!` assertions inside the draft callbacks are gated by the surrounding
-// `Show`: a field only renders while its section is enabled.
 export function MasivaTab(props: {
   draft: CommissionSchemeRules;
   setDraft: StoreSetter<CommissionSchemeRules>;
 }) {
+  const setCaja1 = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.massMarket.caja1,
+  );
+  const setCaja2 = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.massMarket.caja2,
+  );
+  const setReversion = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.penalidadReversion.massMarket,
+  );
+
   return (
     <>
       <ConfigurableSection
@@ -45,8 +57,8 @@ export function MasivaTab(props: {
                 description="Más de este monto en soles."
                 value={caja1().activation.minGpv}
                 onChange={(minGpv) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja1!.activation.minGpv = minGpv;
+                  setCaja1((rules) => {
+                    rules.activation.minGpv = minGpv;
                   })
                 }
               />
@@ -58,8 +70,8 @@ export function MasivaTab(props: {
                 min={0}
                 max={20}
                 onChange={(minTrx) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja1!.activation.minTrx = minTrx;
+                  setCaja1((rules) => {
+                    rules.activation.minTrx = minTrx;
                   })
                 }
               />
@@ -70,8 +82,8 @@ export function MasivaTab(props: {
                 min={0}
                 max={200}
                 onChange={(m0Target) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja1!.m0Target = m0Target;
+                  setCaja1((rules) => {
+                    rules.m0Target = m0Target;
                   })
                 }
               />
@@ -80,8 +92,8 @@ export function MasivaTab(props: {
                 label="Rangos de pago (activas en M0+15)"
                 bands={caja1().m0Plus15Bands}
                 onChange={(m0Plus15Bands) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja1!.m0Plus15Bands = m0Plus15Bands;
+                  setCaja1((rules) => {
+                    rules.m0Plus15Bands = m0Plus15Bands;
                   })
                 }
               />
@@ -110,8 +122,8 @@ export function MasivaTab(props: {
                 label="GPV mínimo por POS activo"
                 value={caja2().activePosMinGpv}
                 onChange={(activePosMinGpv) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja2!.activePosMinGpv = activePosMinGpv;
+                  setCaja2((rules) => {
+                    rules.activePosMinGpv = activePosMinGpv;
                   })
                 }
               />
@@ -120,8 +132,8 @@ export function MasivaTab(props: {
                 label="Rangos de pago (M0+M1)"
                 bands={caja2().bandsM0PlusM1}
                 onChange={(bandsM0PlusM1) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja2!.bandsM0PlusM1 = bandsM0PlusM1;
+                  setCaja2((rules) => {
+                    rules.bandsM0PlusM1 = bandsM0PlusM1;
                   })
                 }
               />
@@ -130,8 +142,8 @@ export function MasivaTab(props: {
                 label="Rangos de pago (M2)"
                 bands={caja2().bandsM2}
                 onChange={(bandsM2) =>
-                  props.setDraft((draft) => {
-                    draft.massMarket.caja2!.bandsM2 = bandsM2;
+                  setCaja2((rules) => {
+                    rules.bandsM2 = bandsM2;
                   })
                 }
               />
@@ -160,8 +172,8 @@ export function MasivaTab(props: {
                 label="GPV mínimo en M2"
                 value={reversion().minM2Gpv}
                 onChange={(minM2Gpv) =>
-                  props.setDraft((draft) => {
-                    draft.penalidadReversion.massMarket!.minM2Gpv = minM2Gpv;
+                  setReversion((rules) => {
+                    rules.minM2Gpv = minM2Gpv;
                   })
                 }
               />
@@ -170,9 +182,8 @@ export function MasivaTab(props: {
                 label="Porcentaje de reversión"
                 value={reversion().reversalPct}
                 onChange={(reversalPct) =>
-                  props.setDraft((draft) => {
-                    draft.penalidadReversion.massMarket!.reversalPct =
-                      reversalPct;
+                  setReversion((rules) => {
+                    rules.reversalPct = reversalPct;
                   })
                 }
               />

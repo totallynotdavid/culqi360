@@ -1,9 +1,7 @@
-import { revalidate } from "@solidjs/router";
 import { Show, createMemo } from "solid-js";
 
 import { createRecordPageController } from "~/features/record-show/record-page-controller";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
-import { leadListQuery } from "~/rpc/workflow/lead-list";
 
 import { RecordLeftPanel } from "../panels/record-left-panel";
 import { RecordRightPanel } from "../panels/record-right-panel";
@@ -25,12 +23,6 @@ export function RecordShowPage(props: RecordShowPageProps) {
     detailData: data,
     pollIntervalMs: POLL_INTERVAL_MS,
     pollTimeoutMs: POLL_TIMEOUT_MS,
-    revalidateLeadDetail: async (currentLeadId) => {
-      await revalidate(leadDetailQuery.keyFor(currentLeadId));
-    },
-    revalidateLeadList: async () => {
-      await revalidate(leadListQuery.key);
-    },
   });
 
   return (

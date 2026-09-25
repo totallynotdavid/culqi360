@@ -1,4 +1,4 @@
-import { Errored, Loading, createMemo } from "solid-js";
+import { Errored, Loading } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
@@ -78,34 +78,17 @@ export function LeadsWorkspace() {
   const openLeadRecord = useOpenLeadRecord();
   const { enqueueWarningSnackBar } = useSnackBar();
 
-  const pendingQuotations = createMemo(
-    () =>
-      canRegister
-        ? pendingQuotationCountQuery()
-        : Promise.resolve({ count: 0, limit: null }),
-    {
-      initialValue: {
-        count: 0,
-        limit: null,
-      },
-    },
-  );
-
-  const isRegistrationBlocked = () => {
-    const { count, limit } = pendingQuotations();
-
-    return limit !== null && count >= limit;
-  };
-
   const createAction = useCreateLeadRecordAction({
-    isBlocked: isRegistrationBlocked,
-    onBlocked: () => {
-      const { count } = pendingQuotations();
+    blockedReason: async () => {
+      const { count, limit } = await pendingQuotationCountQuery();
 
-      enqueueWarningSnackBar(
-        `Tienes ${count} cotizaciones pendientes de decisión. Acéptalas, solicita revisión o ciérralas para registrar nuevos clientes.`,
-      );
+      if (limit === null || count < limit) {
+        return null;
+      }
+
+      return `Tienes ${count} cotizaciones pendientes de decisión. Acéptalas, solicita revisión o ciérralas para registrar nuevos clientes.`;
     },
+    onBlocked: enqueueWarningSnackBar,
   });
 
   const recordImport = useRecordsImport();
@@ -203,11 +186,11 @@ export function LeadsWorkspace() {
         onChange={recordImport.onFileInputChange}
       />
 
-      <Errored fallback={<p>No se pudieron cargar los registros.</p>}>
-        <Loading fallback={<Spinner size="lg" />}>
+      <Loading fallback={<Spinner size="lg" />}>
+        <Errored fallback={<p>No se pudieron cargar los registros.</p>}>
           <RecordIndexScreen definition={recordIndex} />
-        </Loading>
-      </Errored>
+        </Errored>
+      </Loading>
     </ImportDropzone>
   );
 }

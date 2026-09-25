@@ -50,7 +50,7 @@ export function useLeadActions() {
 
     try {
       await deleteLeadAction({ leadId });
-      await revalidateWorkflowLeadList();
+      revalidateWorkflowLeadList();
     } finally {
       setDeleteBusy(false);
     }
@@ -71,7 +71,7 @@ export function useLeadActions() {
         ? await removeFavorite({ leadId })
         : await addFavorite({ leadId });
 
-      await revalidateWorkflowLead(leadId);
+      revalidateWorkflowLead(leadId);
 
       return result;
     } finally {

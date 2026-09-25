@@ -1,7 +1,14 @@
-import { createMemo, createSignal, Show, type Accessor } from "solid-js";
+import {
+  createMemo,
+  createSignal,
+  Loading,
+  Show,
+  type Accessor,
+} from "solid-js";
 
 import Pause from "~/components/icons/pause";
 import Play from "~/components/icons/play";
+import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { LightIconButton } from "~/components/ui/input/light-icon-button";
 import { Card } from "~/components/ui/surfaces/card";
 import type {
@@ -67,17 +74,23 @@ export function SettingsLogs(props: {
               Se perdió la conexión. Recarga la página.
             </span>
           </Show>
-          <span class={styles.recordCount}>
-            {query.records().length} de {query.totalCount()}
-          </span>
+          <Loading fallback={<Skeleton width={96} />}>
+            <span class={styles.recordCount}>
+              {query.records().length} de {query.totalCount()}
+            </span>
+          </Loading>
         </div>
-        <EventLogResultsTable
-          columns={source().columns}
-          records={query.records()}
-          loading={query.loading()}
-          hasNextPage={query.hasNextPage()}
-          onLoadMore={query.loadMore}
-        />
+        {/* The first page suspends here; paging past it keeps the committed
+            rows on screen and reports itself through loadingMore instead. */}
+        <Loading fallback={<Skeleton height={320} />}>
+          <EventLogResultsTable
+            columns={source().columns}
+            records={query.records()}
+            loadingMore={query.loadingMore()}
+            hasNextPage={query.hasNextPage()}
+            onLoadMore={query.loadMore}
+          />
+        </Loading>
       </div>
     </div>
   );

@@ -100,7 +100,7 @@ export function ProposeRateSection(props: ProposeRateSectionProps) {
         currency: currency(),
       });
 
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       setErrorMessage(actionErrorMessage(caught));
     } finally {

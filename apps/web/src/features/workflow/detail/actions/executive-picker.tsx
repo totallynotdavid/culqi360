@@ -25,10 +25,8 @@ export function ExecutivePicker(props: ExecutivePickerProps) {
       await reassign({ leadId: props.leadId, newExecutiveId: executiveId });
       // Reassigning changes ownership, which affects "mine" list filters, so the
       // list view must refresh too, not only the open record.
-      await Promise.all([
-        revalidateWorkflowLead(props.leadId),
-        revalidateWorkflowLeadList(),
-      ]);
+      revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLeadList();
       props.onSelect();
     } catch (caught) {
       throw new Error(actionErrorMessage(caught), {

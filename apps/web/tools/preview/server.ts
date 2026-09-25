@@ -61,7 +61,13 @@ function isAlive(pid: number): boolean {
 
 async function isHealthy(): Promise<boolean> {
   try {
-    const response = await fetch(`${BASE_URL}/login`);
+    // Start mode renders a page only for an HTML-accepting GET; anything else
+    // falls through to Vite's own pipeline and 404s, which would read as an
+    // unhealthy server forever.
+    const response = await fetch(`${BASE_URL}/login`, {
+      headers: { accept: "text/html" },
+    });
+
     return response.ok;
   } catch {
     return false;

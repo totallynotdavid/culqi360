@@ -13,8 +13,8 @@ export function SalesManagerCaja1Snapshot() {
   return (
     <AppPageBody>
       <WidgetCanvas>
-        <Errored fallback={<SnapshotError />}>
-          <Loading fallback={<WidgetSkeleton />}>
+        <Loading fallback={<WidgetSkeleton />}>
+          <Errored fallback={<SnapshotError />}>
             <Show when={view()}>
               {(readyView) => (
                 <MassMarketCaja1Section
@@ -23,8 +23,8 @@ export function SalesManagerCaja1Snapshot() {
                 />
               )}
             </Show>
-          </Loading>
-        </Errored>
+          </Errored>
+        </Loading>
       </WidgetCanvas>
     </AppPageBody>
   );

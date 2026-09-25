@@ -11,9 +11,9 @@ import styles from "./event-log-results-table.module.css";
 type ResultsProps = {
   columns: readonly EventLogColumn[];
   records: EventLogRecord[];
-  loading: boolean;
+  loadingMore: boolean;
   hasNextPage: boolean;
-  onLoadMore: () => Promise<void>;
+  onLoadMore: () => void;
 };
 
 export function EventLogResultsTable(props: ResultsProps) {
@@ -31,20 +31,15 @@ export function EventLogResultsTable(props: ResultsProps) {
     })),
   );
 
-  const emptyState = () =>
-    props.loading
-      ? "Cargando eventos..."
-      : "No hay eventos para los filtros actuales.";
-
   return (
     <div class={styles.container}>
       <DataGrid
         ariaLabel="Resultados del registro de eventos"
         columns={columns()}
-        emptyState={emptyState()}
+        emptyState="No hay eventos para los filtros actuales."
         loadMore={{
           hasMore: props.hasNextPage,
-          loading: props.loading,
+          loading: props.loadingMore,
           onLoadMore: props.onLoadMore,
         }}
         rowId={(row) => row.id}

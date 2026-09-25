@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { createStore, reconcile, snapshot } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Spinner } from "~/components/feedback/spinner/spinner";
 import Building2 from "~/components/icons/building-2";

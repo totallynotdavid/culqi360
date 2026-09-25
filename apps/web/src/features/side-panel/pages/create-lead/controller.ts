@@ -1,6 +1,5 @@
 import {
   action,
-  createEffect,
   createOptimistic,
   createSignal,
   type Accessor,
@@ -28,24 +27,26 @@ type CreateLeadControllerInput = {
 };
 
 export function createCreateLeadController(input: CreateLeadControllerInput) {
-  const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+  // Writable memo: editing the RUC recomputes it back to null, so a stale
+  // failure never outlives the input it was about.
+  const [errorMessage, setErrorMessage] = createSignal<string | null>(() => {
+    input.draftRuc();
 
-  createEffect(
-    () => input.draftRuc(),
-    () => {
-      setErrorMessage(null);
-    },
-    { defer: true },
-  );
+    return null;
+  });
 
   // Tentative for the action's lifetime: it reverts to false when the
   // transaction settles, so there is no finally clause to keep in sync.
   const [submitting, setSubmitting] = createOptimistic(false);
 
-  const createLead = action(function* (payload: CreateLeadInput) {
+  // The explicit Generator signature names what the yield hands back, so the
+  // action body reads the created lead without an assertion off `any`.
+  const createLead = action(function* (
+    payload: CreateLeadInput,
+  ): Generator<Promise<{ leadId: string }>, void, { leadId: string }> {
     setSubmitting(true);
 
-    const result = (yield input.createLead(payload)) as { leadId: string };
+    const result = yield input.createLead(payload);
 
     input.onLeadCreated({ leadId: result.leadId, ruc: payload.ruc });
   });

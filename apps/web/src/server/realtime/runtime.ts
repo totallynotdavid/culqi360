@@ -30,9 +30,9 @@ export interface RealtimeService {
   start(): void;
   stop(): Promise<void>;
   /**
-   * The caller supplies the session because middleware already resolved it
-   * onto the request context. Keeping a second resolution path here is what
-   * forced the old H3-event parameter through the whole subsystem.
+   * The caller supplies the session because middleware already resolved it onto
+   * the request context; resolving it again here would drag the request event
+   * through the whole subsystem.
    */
   openStream(
     session: AuthSession | null,

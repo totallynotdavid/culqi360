@@ -22,10 +22,8 @@ export function useExtensionStateObserver(
       error: options.extensionErrorMessage(),
     }),
     (next, previous) => {
-      // The effect phase receives the previous computed value, so the two
-      // mutable prev* variables this used to carry are gone. Seeding a missing
-      // previous with nulls keeps the original first-run behaviour: an opening
-      // snapshot that is already null is not a change and fires nothing.
+      // Seeding the missing first previous with nulls means an opening snapshot
+      // that is already null counts as no change and fires nothing.
       const prev = previous ?? { state: null, error: null };
 
       if (next.state !== prev.state) {

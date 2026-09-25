@@ -17,7 +17,7 @@ interface AuthenticatedSessionContextValue {
   updateCurrentUser: (
     update: (current: CurrentUserView) => CurrentUserView,
   ) => void;
-  refreshCurrentUser: () => Promise<CurrentUserView | null>;
+  refreshCurrentUser: () => void;
 }
 
 const AuthenticatedSessionContext =

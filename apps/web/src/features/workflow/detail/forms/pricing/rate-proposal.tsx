@@ -81,7 +81,7 @@ export function RateProposalSection(props: RateProposalSectionProps) {
         proposalId: props.proposal.id,
       });
 
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (error) {
       setAcceptErrorMessage(actionErrorMessage(error));
     } finally {
@@ -105,7 +105,7 @@ export function RateProposalSection(props: RateProposalSectionProps) {
         ...patch,
       });
 
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (error) {
       throw new Error(actionErrorMessage(error), { cause: error });
     }

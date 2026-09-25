@@ -50,7 +50,7 @@ export function SnackBarProvider(props: { children: JSX.Element }) {
         }
 
         for (let index = draft.length - 1; index >= 0; index -= 1) {
-          const item = draft[index]!;
+          const item = draft[index];
 
           if (item.duration > 0 && item.elapsed >= item.duration) {
             draft.splice(index, 1);

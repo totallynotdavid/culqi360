@@ -10,17 +10,29 @@ import {
 
 import {
   ConfigurableSection,
+  createSectionSetter,
   MesaCumulativeGpvRow,
   NumberField,
   PercentField,
 } from "./fields";
 
-// The `!` assertions inside the draft callbacks are gated by the surrounding
-// `Show`: a field only renders while its section is enabled.
 export function EmpresaTab(props: {
   draft: CommissionSchemeRules;
   setDraft: StoreSetter<CommissionSchemeRules>;
 }) {
+  const setCaja3 = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.company.caja3,
+  );
+  const setActivacion = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.penalidadActivacion,
+  );
+  const setActivationBar = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.executiveActivationBar,
+  );
+
   return (
     <>
       <ConfigurableSection
@@ -39,8 +51,8 @@ export function EmpresaTab(props: {
               label="Meta de GPV"
               value={caja3().targetGpv}
               onChange={(targetGpv) =>
-                props.setDraft((draft) => {
-                  draft.company.caja3!.targetGpv = targetGpv;
+                setCaja3((rules) => {
+                  rules.targetGpv = targetGpv;
                 })
               }
             />
@@ -66,9 +78,8 @@ export function EmpresaTab(props: {
               <MesaCumulativeGpvRow
                 value={activacion().minCumulativeGpvByMesa}
                 onChange={(minCumulativeGpvByMesa) =>
-                  props.setDraft((draft) => {
-                    draft.penalidadActivacion!.minCumulativeGpvByMesa =
-                      minCumulativeGpvByMesa;
+                  setActivacion((rules) => {
+                    rules.minCumulativeGpvByMesa = minCumulativeGpvByMesa;
                   })
                 }
               />
@@ -78,9 +89,8 @@ export function EmpresaTab(props: {
                 description="Estrictamente menor a este porcentaje."
                 value={activacion().maxInactiveRate}
                 onChange={(maxInactiveRate) =>
-                  props.setDraft((draft) => {
-                    draft.penalidadActivacion!.maxInactiveRate =
-                      maxInactiveRate;
+                  setActivacion((rules) => {
+                    rules.maxInactiveRate = maxInactiveRate;
                   })
                 }
               />
@@ -107,8 +117,8 @@ export function EmpresaTab(props: {
               label="GPV mínimo por venta"
               value={bar().minGpvPerSale}
               onChange={(minGpvPerSale) =>
-                props.setDraft((draft) => {
-                  draft.executiveActivationBar!.minGpvPerSale = minGpvPerSale;
+                setActivationBar((rules) => {
+                  rules.minGpvPerSale = minGpvPerSale;
                 })
               }
             />

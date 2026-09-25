@@ -2,7 +2,7 @@ import { type RouteDefinition, useAction } from "@solidjs/router";
 import { Loading, Show, createMemo, type Accessor } from "solid-js";
 import { createStore } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Spinner } from "~/components/feedback/spinner/spinner";
 import {

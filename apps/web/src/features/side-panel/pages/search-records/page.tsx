@@ -2,7 +2,7 @@ import { useAction, useSubmissions } from "@solidjs/router";
 import { For, Match, Show, Switch, createMemo, createSignal } from "solid-js";
 
 import { useHotkey } from "~/browser/hotkey/use-hotkey";
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { Avatar } from "~/components/ui/display/avatar";
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";
 import { MenuItem } from "~/components/ui/navigation/menu-item";

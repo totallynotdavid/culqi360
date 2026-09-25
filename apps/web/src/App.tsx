@@ -13,22 +13,21 @@ import "./app.css";
 
 // The application tree. The document shell is Document.tsx; the plugin's
 // generated entries render <Document><App /></Document> and hydrate the same
-// tree in the browser. Solid 2's head registry is ambient, so there is no
-// MetaProvider to mount.
+// tree in the browser.
 export default function App() {
   return (
     <ThemeProvider>
       <SnackBarProvider>
-        <AppErrorBoundary>
-          <Router>
-            {(props) => (
-              <>
-                <Title>{PLATFORM_NAME}</Title>
-                <Loading>{props.children}</Loading>
-              </>
-            )}
-          </Router>
-        </AppErrorBoundary>
+        <Router>
+          {(props) => (
+            <>
+              <Title>{PLATFORM_NAME}</Title>
+              <Loading>
+                <AppErrorBoundary>{props.children}</AppErrorBoundary>
+              </Loading>
+            </>
+          )}
+        </Router>
       </SnackBarProvider>
     </ThemeProvider>
   );

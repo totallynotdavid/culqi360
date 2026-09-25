@@ -1,8 +1,9 @@
-import { For, Show, createMemo } from "solid-js";
+import { Errored, For, Loading, Show, createMemo } from "solid-js";
 
 import { EmptyState } from "~/components/feedback/empty-state/empty";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";
+import { Skeleton } from "~/components/ui/feedback/skeleton";
 import { Button } from "~/components/ui/input/button";
 import { FileInput } from "~/components/ui/input/file-input";
 import { Input } from "~/components/ui/input/input";
@@ -55,9 +56,7 @@ function isRemovable(phase: UploadRowPhase): boolean {
 }
 
 export function DataSourceUploadSection() {
-  const sources = createMemo(() => listDataSourceKeysQuery(), {
-    initialValue: [],
-  });
+  const sources = createMemo(() => listDataSourceKeysQuery());
   const upload = useDataSourceUpload();
   const { enqueueErrorSnackBar } = useSnackBar();
 
@@ -74,129 +73,145 @@ export function DataSourceUploadSection() {
       title="Fuentes de datos"
       description="Sube archivos CSV de fuentes externas (OSIPTEL, RUC, operadoras) para actualizar el motor de búsqueda."
     >
-      <Show
-        when={sources().length > 0}
-        fallback={
-          <EmptyState
-            title="Sin fuentes disponibles"
-            description="No hay fuentes de datos configuradas en el motor."
-          />
-        }
-      >
-        <div class={styles.rows}>
-          <For
-            each={upload.rows()}
+      <Loading fallback={<Skeleton height={96} />}>
+        <Errored
+          fallback={
+            <EmptyState
+              title="El motor no responde"
+              description="No se pudieron leer las fuentes de datos. Intenta de nuevo en unos minutos."
+            />
+          }
+        >
+          <Show
+            when={sources().length > 0}
             fallback={
-              <p class={styles.hint}>Agrega un archivo para comenzar.</p>
+              <EmptyState
+                title="Sin fuentes disponibles"
+                description="No hay fuentes de datos configuradas en el motor."
+              />
             }
           >
-            {(row) => {
-              const locked = () => row.phase !== "idle";
+            <div class={styles.rows}>
+              <For
+                each={upload.rows()}
+                fallback={
+                  <p class={styles.hint}>Agrega un archivo para comenzar.</p>
+                }
+              >
+                {(row) => {
+                  const locked = () => row.phase !== "idle";
 
-              return (
-                <div class={styles.row}>
-                  <div class={styles.fields}>
-                    <Select
-                      label="Fuente"
-                      value={row.sourceKey}
-                      disabled={locked()}
-                      onInput={(event) =>
-                        upload.setSourceKey(row.id, event.currentTarget.value)
-                      }
-                    >
-                      <For each={sources()}>
-                        {(source) => (
-                          <option value={source.source_key}>
-                            {source.source_name}
-                          </option>
-                        )}
-                      </For>
-                    </Select>
+                  return (
+                    <div class={styles.row}>
+                      <div class={styles.fields}>
+                        <Select
+                          label="Fuente"
+                          value={row.sourceKey}
+                          disabled={locked()}
+                          onInput={(event) =>
+                            upload.setSourceKey(
+                              row.id,
+                              event.currentTarget.value,
+                            )
+                          }
+                        >
+                          <For each={sources()}>
+                            {(source) => (
+                              <option value={source.source_key}>
+                                {source.source_name}
+                              </option>
+                            )}
+                          </For>
+                        </Select>
 
-                    <Input
-                      label="Etiqueta"
-                      value={row.snapshotLabel}
-                      disabled={locked()}
-                      onInput={(event) =>
-                        upload.setSnapshotLabel(
-                          row.id,
-                          event.currentTarget.value,
-                        )
-                      }
-                    />
+                        <Input
+                          label="Etiqueta"
+                          value={row.snapshotLabel}
+                          disabled={locked()}
+                          onInput={(event) =>
+                            upload.setSnapshotLabel(
+                              row.id,
+                              event.currentTarget.value,
+                            )
+                          }
+                        />
 
-                    <Input
-                      type="date"
-                      label="Fecha"
-                      value={row.snapshotDate}
-                      disabled={locked()}
-                      onInput={(event) =>
-                        upload.setSnapshotDate(
-                          row.id,
-                          event.currentTarget.value,
-                        )
-                      }
-                    />
+                        <Input
+                          type="date"
+                          label="Fecha"
+                          value={row.snapshotDate}
+                          disabled={locked()}
+                          onInput={(event) =>
+                            upload.setSnapshotDate(
+                              row.id,
+                              event.currentTarget.value,
+                            )
+                          }
+                        />
 
-                    <FileInput
-                      label="Archivo CSV"
-                      accept=".csv"
-                      disabled={locked()}
-                      onChange={(event) =>
-                        upload.setFile(
-                          row.id,
-                          event.currentTarget.files?.[0] ?? null,
-                        )
-                      }
-                    />
-                  </div>
+                        <FileInput
+                          label="Archivo CSV"
+                          accept=".csv"
+                          disabled={locked()}
+                          onChange={(event) =>
+                            upload.setFile(
+                              row.id,
+                              event.currentTarget.files?.[0] ?? null,
+                            )
+                          }
+                        />
+                      </div>
 
-                  <div class={styles.rowFooter}>
-                    <p
-                      class={styles.status}
-                      data-error={row.phase === "failed" ? "true" : undefined}
-                    >
-                      {describeRow(row)}
-                    </p>
+                      <div class={styles.rowFooter}>
+                        <p
+                          class={styles.status}
+                          data-error={
+                            row.phase === "failed" ? "true" : undefined
+                          }
+                        >
+                          {describeRow(row)}
+                        </p>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={!isRemovable(row.phase)}
-                      onClick={() => upload.removeRow(row.id)}
-                    >
-                      Quitar
-                    </Button>
-                  </div>
-                </div>
-              );
-            }}
-          </For>
-        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!isRemovable(row.phase)}
+                          onClick={() => upload.removeRow(row.id)}
+                        >
+                          Quitar
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
 
-        <div class={styles.actions}>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => upload.addRow(sources()[0]?.source_key ?? "")}
-          >
-            Añadir archivo
-          </Button>
+            <div class={styles.actions}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => upload.addRow(sources()[0]?.source_key ?? "")}
+              >
+                Añadir archivo
+              </Button>
 
-          <Button
-            type="button"
-            disabled={
-              upload.isSubmitting() ||
-              !upload.rows().some((row) => row.file && row.phase === "idle")
-            }
-            loading={upload.isSubmitting()}
-            onClick={() => void handleSubmit()}
-          >
-            Subir todo
-          </Button>
-        </div>
-      </Show>
+              <Button
+                type="button"
+                disabled={
+                  upload.isSubmitting() ||
+                  !upload.rows().some((row) => row.file && row.phase === "idle")
+                }
+                loading={upload.isSubmitting()}
+                onClick={() => void handleSubmit()}
+              >
+                Subir todo
+              </Button>
+            </div>
+          </Show>
+        </Errored>
+      </Loading>
     </SettingsSection>
   );
 }

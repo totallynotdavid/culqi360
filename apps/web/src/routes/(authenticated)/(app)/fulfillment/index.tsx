@@ -73,6 +73,7 @@ export default function FulfillmentQueuePage() {
                       <a
                         href={`/records/${row.leadId}`}
                         class={styles.row}
+                        aria-label={`Abrir ${row.legalName ?? `RUC ${row.ruc}`}`}
                         data-state={
                           queue().evaluatedAt - row.waitingSince >
                           STALE_AFTER_MS

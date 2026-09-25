@@ -162,11 +162,11 @@ export function CohortGrid(props: { view: GpvView }) {
 
   return (
     <div class={styles.surface}>
-      <Errored fallback={renderGrid([], "No se pudieron cargar las ventas.")}>
-        <Loading fallback={renderGrid([], "Cargando ventas...")}>
+      <Loading fallback={renderGrid([], "Cargando ventas...")}>
+        <Errored fallback={renderGrid([], "No se pudieron cargar las ventas.")}>
           {renderGrid(grid.rows(), "No hay ventas para los filtros actuales.")}
-        </Loading>
-      </Errored>
+        </Errored>
+      </Loading>
     </div>
   );
 }

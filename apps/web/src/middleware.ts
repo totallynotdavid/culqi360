@@ -152,14 +152,11 @@ const enforceNavigationPolicy: Middleware = async (_request, next) => {
 };
 
 const recordRequestTiming: Middleware = async (_request, next) => {
+  const { startedTicks } = requestEventOrThrow().locals.requestContext;
   const response = await next();
-  const context = requestEventOrThrow().locals.requestContext;
-  const duration = Math.round(performance.now() - context.startedTicks);
+  const duration = Math.round(performance.now() - startedTicks);
 
-  requestEventOrThrow().response.headers.set(
-    "Server-Timing",
-    `app;dur=${duration}`,
-  );
+  response.headers.set("Server-Timing", `app;dur=${duration}`);
 
   return response;
 };

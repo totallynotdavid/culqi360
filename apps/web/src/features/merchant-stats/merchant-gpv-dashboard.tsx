@@ -2,7 +2,7 @@ import { revalidate, useAction, useNavigate } from "@solidjs/router";
 import { Match, Switch } from "solid-js";
 
 import { downloadWithToken } from "~/browser/files/client";
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { AppPageBody } from "~/components/layout/page";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
@@ -33,6 +33,12 @@ const BASE_GPV_TABS: ReadonlyArray<TabItem<GpvTabId>> = [
   { id: "culqi", label: "Vista Culqi" },
 ];
 
+// revalidate only marks the queries stale; a failed refetch surfaces at the
+// read site through the boundary, not here.
+function refreshData(): void {
+  revalidate(PUBLISHED_GPV_QUERY_KEYS);
+}
+
 export function MerchantGpvDashboard() {
   const view = useGpvView();
   const navigate = useNavigate();
@@ -55,14 +61,6 @@ export function MerchantGpvDashboard() {
       const { token } = await requestExport(view.filter());
 
       downloadWithToken(token);
-    } catch (error) {
-      enqueueErrorSnackBar(actionErrorMessage(error));
-    }
-  }
-
-  async function refreshData() {
-    try {
-      await revalidate(PUBLISHED_GPV_QUERY_KEYS);
     } catch (error) {
       enqueueErrorSnackBar(actionErrorMessage(error));
     }
@@ -93,7 +91,7 @@ export function MerchantGpvDashboard() {
               Importar reporte
             </Button>
 
-            <Button variant="secondary" onClick={() => void refreshData()}>
+            <Button variant="secondary" onClick={refreshData}>
               Recargar
             </Button>
           </div>

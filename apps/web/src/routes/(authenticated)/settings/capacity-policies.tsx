@@ -2,7 +2,7 @@ import { useAction } from "@solidjs/router";
 import { For, Loading, createMemo, type Accessor } from "solid-js";
 import { createStore } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionTarget } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Spinner } from "~/components/feedback/spinner/spinner";
 import {
@@ -31,11 +31,11 @@ function TeamPolicyRow(props: {
   const savePolicy = useAction(updateScopePolicyMutation);
 
   // Only this team's row shows the pending state.
-  const saving = createActionPending(
-    updateScopePolicyMutation,
-    (input) =>
-      input.scopeType === "team" && input.scopeId === props.team().teamId,
-  );
+  const savingScope = createActionTarget(updateScopePolicyMutation);
+  const saving = () => {
+    const scope = savingScope();
+    return scope?.scopeType === "team" && scope.scopeId === props.team().teamId;
+  };
 
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
   const [draft, setDraft] = createStore<CapacityLimitsDraft>({
@@ -101,10 +101,8 @@ function CapacityPoliciesEditor(props: {
 }) {
   const initialSnapshot = props.snapshot();
   const savePolicy = useAction(updateScopePolicyMutation);
-  const saving = createActionPending(
-    updateScopePolicyMutation,
-    (input) => input.scopeType === "branch",
-  );
+  const savingScope = createActionTarget(updateScopePolicyMutation);
+  const saving = () => savingScope()?.scopeType === "branch";
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
   const [branchDraft, setBranchDraft] = createStore<CapacityLimitsDraft>({

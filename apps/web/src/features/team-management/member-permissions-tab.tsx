@@ -1,7 +1,7 @@
 import { useAction } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { SettingsSection } from "~/components/settings/SettingsSection";
 import { ConfirmDialog } from "~/components/ui/confirm-dialog";

@@ -37,17 +37,17 @@ export function ImportStatus(props: { snapshotId: string }) {
   const snapshot = createMemo(() => gpvSnapshotQuery(props.snapshotId));
 
   return (
-    <Errored
-      fallback={
-        <WidgetCardShell title="Importación GPV" status="error">
-          <span />
-        </WidgetCardShell>
-      }
-    >
-      <Loading fallback={<WidgetSkeleton />}>
+    <Loading fallback={<WidgetSkeleton />}>
+      <Errored
+        fallback={
+          <WidgetCardShell title="Importación GPV" status="error">
+            <span />
+          </WidgetCardShell>
+        }
+      >
         <ImportSnapshotCard view={snapshot()} />
-      </Loading>
-    </Errored>
+      </Errored>
+    </Loading>
   );
 }
 
@@ -82,7 +82,7 @@ function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
       return;
     }
 
-    void revalidate(gpvSnapshotQuery.key);
+    revalidate(gpvSnapshotQuery.key);
   });
 
   // A memo, not the effect's compute: effects re-run on every dependency
@@ -94,7 +94,7 @@ function ImportSnapshotCard(props: { view: GpvSnapshotView }) {
 
   createEffect(publishedSnapshotId, (snapshotId) => {
     if (snapshotId) {
-      void revalidate(PUBLISHED_GPV_QUERY_KEYS);
+      revalidate(PUBLISHED_GPV_QUERY_KEYS);
     }
   });
 

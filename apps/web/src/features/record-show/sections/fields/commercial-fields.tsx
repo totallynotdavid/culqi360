@@ -52,7 +52,7 @@ export function CommercialFields(props: { data: LeadDetailView }) {
         posCount: current.posCount,
         ...patch,
       });
-      await revalidateWorkflowLead(props.data.lead.id);
+      revalidateWorkflowLead(props.data.lead.id);
     } catch (caught) {
       throw new Error(actionErrorMessage(caught), { cause: caught });
     }

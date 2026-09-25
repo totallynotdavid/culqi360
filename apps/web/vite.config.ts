@@ -54,6 +54,15 @@ export default defineConfig(({ command }) => {
     },
 
     server: {
+      // The preview CLI pins the dev server to a fixed origin so the links the
+      // app generates match where it is served. Plain Vite does not read
+      // PORT/HOST the way the removed Nitro dev server did, and silently
+      // walking to the next free port is what makes a mismatch hard to see, so
+      // a requested port is strict.
+      port: process.env.PORT ? Number(process.env.PORT) : undefined,
+      strictPort: Boolean(process.env.PORT),
+      host: process.env.HOST,
+
       // Initialize the CSS-module cache for cold SSR renders.
       // See vitejs/vite#19606.
       perEnvironmentStartEndDuringDev: true,

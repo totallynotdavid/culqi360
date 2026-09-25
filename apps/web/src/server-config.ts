@@ -30,7 +30,13 @@ function toClientFault(thrown: unknown): unknown {
   logger.error("server_function_fault", faultMeta(thrown));
   captureException(thrown);
 
-  return new Error(SAFE_ERROR_MESSAGE);
+  // Redacted, but still an ActionError: `wire` is an own property and survives
+  // serialization, where a bare Error would arrive with only its message.
+  return new ActionError({
+    kind: "internal",
+    code: null,
+    message: SAFE_ERROR_MESSAGE,
+  });
 }
 
 configureServerFunctionsServer({

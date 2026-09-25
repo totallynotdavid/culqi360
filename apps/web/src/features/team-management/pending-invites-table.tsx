@@ -1,6 +1,7 @@
-import { useAction, useSubmissions } from "@solidjs/router";
+import { useAction } from "@solidjs/router";
 import { For, Show, createSignal } from "solid-js";
 
+import { createActionTarget } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import Link from "~/components/icons/link";
 import Mail from "~/components/icons/mail";
@@ -36,23 +37,16 @@ export function PendingInvitesTable(props: {
 }) {
   const resendInvite = useAction(resendTeamInviteMutation);
   const revokeInvite = useAction(revokeTeamInviteMutation);
-  const resendSubmissions = useSubmissions(resendTeamInviteMutation);
-  const revokeSubmissions = useSubmissions(revokeTeamInviteMutation);
   const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
 
   const [pendingRevokeId, setPendingRevokeId] = createSignal<string | null>(
     null,
   );
 
-  const isResendPending = (inviteId: string) =>
-    resendSubmissions.some(
-      (submission) => submission.pending && submission.input[0] === inviteId,
-    );
-
-  const isRevokePending = (inviteId: string) =>
-    revokeSubmissions.some(
-      (submission) => submission.pending && submission.input[0] === inviteId,
-    );
+  // Both actions act on one invite at a time, so the id being acted on is the
+  // whole of the busy state: the dialog and every row read the same accessor.
+  const resendingId = createActionTarget(resendTeamInviteMutation);
+  const revokingId = createActionTarget(revokeTeamInviteMutation);
 
   async function handleCopyLink(inviteUrl: string): Promise<void> {
     try {
@@ -96,7 +90,7 @@ export function PendingInvitesTable(props: {
         title="Revocar invitación"
         description="La persona no podrá usar este enlace para unirse al equipo."
         confirmLabel="Revocar"
-        loading={isRevokePending(pendingRevokeId() ?? "")}
+        loading={revokingId() === pendingRevokeId()}
         onConfirm={() => void confirmRevoke()}
         onClose={() => setPendingRevokeId(null)}
       />
@@ -157,7 +151,7 @@ export function PendingInvitesTable(props: {
                         size="icon"
                         variant="ghost"
                         aria-label="Reenviar invitación"
-                        disabled={isResendPending(invite.inviteId)}
+                        disabled={resendingId() === invite.inviteId}
                         title="Reenviar invitación"
                         onClick={() => void handleResend(invite.inviteId)}
                       >
@@ -168,7 +162,7 @@ export function PendingInvitesTable(props: {
                         size="icon"
                         variant="ghost"
                         aria-label="Revocar invitación"
-                        disabled={isRevokePending(invite.inviteId)}
+                        disabled={revokingId() === invite.inviteId}
                         title="Revocar invitación"
                         onClick={() => setPendingRevokeId(invite.inviteId)}
                       >

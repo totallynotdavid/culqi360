@@ -216,7 +216,7 @@ function DigitalPolicyPanel(props: {
             : null,
       });
 
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
     } catch (caught) {
       setDigitalPolicyErrorMessage(actionErrorMessage(caught));
     } finally {
@@ -401,7 +401,7 @@ function VenueCreatePanel(props: {
 
     try {
       await createVenue({ leadId: props.leadId, ...parsed.value });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
       form.reset();
       setShowForm(false);
     } catch (caught) {
@@ -484,7 +484,7 @@ function VenueEditPanel(props: {
         venueId: props.venue.id,
         ...parsed.value,
       });
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
       props.onClose();
     } catch (caught) {
       setVenueEditErrorMessage(actionErrorMessage(caught));
@@ -564,7 +564,7 @@ function AccountsFormPanel(props: {
         ...parsed.value,
       });
 
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
       form.reset();
     } catch (caught) {
       setAccountsErrorMessage(actionErrorMessage(caught));

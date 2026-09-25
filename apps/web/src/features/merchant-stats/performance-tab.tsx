@@ -51,8 +51,8 @@ export function PerformanceTab(props: { view: GpvView }) {
   };
 
   return (
-    <Errored fallback={<TabError />}>
-      <Loading fallback={<TabSkeleton />}>
+    <Loading fallback={<TabSkeleton />}>
+      <Errored fallback={<TabError />}>
         <Show
           when={readyPerformance()}
           fallback={
@@ -64,8 +64,8 @@ export function PerformanceTab(props: { view: GpvView }) {
         >
           {(view) => <PerformanceContent view={view()} />}
         </Show>
-      </Loading>
-    </Errored>
+      </Errored>
+    </Loading>
   );
 }
 

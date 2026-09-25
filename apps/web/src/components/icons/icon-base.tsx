@@ -1,5 +1,5 @@
 import { type JSX } from "@solidjs/web";
-import { For, omit } from "solid-js";
+import { For, omit, type Component } from "solid-js";
 
 const defaultAttributes = {
   xmlns: "http://www.w3.org/2000/svg",
@@ -32,6 +32,9 @@ export interface IconProps extends Omit<
   title?: string;
 }
 
+/** What `createIcon` produces: an icon with its node and name already bound. */
+export type IconComponent = Component<Omit<IconProps, "iconNode" | "name">>;
+
 const SVG_NODE_RENDERERS: Record<
   SupportedSvgTag,
   (attrs: Record<string, string>) => JSX.Element
@@ -51,25 +54,6 @@ function hasA11yProp(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   }
 
   return false;
-}
-
-function mergeClasses(...classes: Array<string | undefined>) {
-  const out: string[] = [];
-
-  for (const name of classes) {
-    if (!name) {
-      continue;
-    }
-
-    const trimmed = name.trim();
-    if (!trimmed || out.includes(trimmed)) {
-      continue;
-    }
-
-    out.push(trimmed);
-  }
-
-  return out.join(" ");
 }
 
 export function IconBase(props: IconProps) {
@@ -110,11 +94,7 @@ export function IconBase(props: IconProps) {
       height={props.size ?? defaultAttributes.height}
       stroke={props.color ?? defaultAttributes.stroke}
       stroke-width={strokeWidth()}
-      class={mergeClasses(
-        "lucide",
-        props.name ? `lucide-${props.name}` : undefined,
-        props.class,
-      )}
+      class={["lucide", props.name && `lucide-${props.name}`, props.class]}
       aria-hidden={
         !props.children && !hasA11yProp(rest) && iconTitle() === "icon"
           ? "true"

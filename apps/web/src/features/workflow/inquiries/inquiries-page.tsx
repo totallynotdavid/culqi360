@@ -57,7 +57,7 @@ export function InquiriesPage() {
     setErrorMessage(null);
     try {
       await createInquiry({ ruc: value });
-      await revalidate(inquiryListQuery.key);
+      revalidate(inquiryListQuery.key);
       setRuc("");
       setSearchParams({ ruc: undefined });
     } catch (submitError) {
@@ -190,12 +190,12 @@ export function InquiriesPage() {
         </Show>
       </div>
 
-      <Errored
-        fallback={
-          <p class={styles.error}>No se pudieron cargar las consultas.</p>
-        }
-      >
-        <Loading fallback={<Spinner size="lg" />}>
+      <Loading fallback={<Spinner size="lg" />}>
+        <Errored
+          fallback={
+            <p class={styles.error}>No se pudieron cargar las consultas.</p>
+          }
+        >
           <DataGrid
             ariaLabel="Consultas de disponibilidad"
             columns={columns}
@@ -203,8 +203,8 @@ export function InquiriesPage() {
             rowId={(row) => row.id}
             source={source()}
           />
-        </Loading>
-      </Errored>
+        </Errored>
+      </Loading>
     </div>
   );
 }

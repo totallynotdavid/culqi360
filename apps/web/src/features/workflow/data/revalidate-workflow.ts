@@ -3,13 +3,19 @@ import { revalidate } from "@solidjs/router";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
 import { leadListQuery } from "~/rpc/workflow/lead-list";
 
-export async function revalidateWorkflowLead(leadId: string): Promise<void> {
-  await Promise.all([
-    revalidate(leadDetailQuery.keyFor(leadId)),
-    revalidate(leadListQuery.key),
-  ]);
+// Router 2's revalidate marks the query stale and returns; the refetch lands
+// through the reactive graph, so callers no longer wait on it.
+
+export function revalidateWorkflowLeadDetail(leadId: string): void {
+  revalidate(leadDetailQuery.keyFor(leadId));
 }
 
-export async function revalidateWorkflowLeadList(): Promise<void> {
-  await revalidate(leadListQuery.key);
+export function revalidateWorkflowLeadList(): void {
+  revalidate(leadListQuery.key);
+}
+
+/** Most lead mutations change a field the list column shows, so both refresh. */
+export function revalidateWorkflowLead(leadId: string): void {
+  revalidateWorkflowLeadDetail(leadId);
+  revalidateWorkflowLeadList();
 }

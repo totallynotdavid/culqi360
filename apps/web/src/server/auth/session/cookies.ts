@@ -7,7 +7,8 @@ import {
 } from "~/server/platform/http/cookies";
 import { isProduction } from "~/shared/observability/runtime-env";
 
-const COOKIE_NAME = "session";
+/** Exported so tooling that hands out a preview session names the same cookie. */
+export const SESSION_COOKIE_NAME = "session";
 // Parks the administrator's own session token while they impersonate another
 // user, so exiting impersonation can restore it.
 const IMPERSONATOR_COOKIE_NAME = "impersonator_session";
@@ -24,18 +25,18 @@ function cookieOptions() {
 }
 
 export function getSessionCookie(): string | undefined {
-  return readCookie(COOKIE_NAME);
+  return readCookie(SESSION_COOKIE_NAME);
 }
 
 export function setSessionCookie(token: string): void {
-  writeCookie(COOKIE_NAME, token, {
+  writeCookie(SESSION_COOKIE_NAME, token, {
     ...cookieOptions(),
     maxAge: COOKIE_MAX_AGE,
   });
 }
 
 export function deleteSessionCookie(): void {
-  expireCookie(COOKIE_NAME, cookieOptions());
+  expireCookie(SESSION_COOKIE_NAME, cookieOptions());
 }
 
 /**
@@ -46,7 +47,7 @@ export function deleteSessionCookie(): void {
 export function appendSessionCookie(headers: Headers, token: string): void {
   headers.append(
     "Set-Cookie",
-    serializeCookie(COOKIE_NAME, token, {
+    serializeCookie(SESSION_COOKIE_NAME, token, {
       ...cookieOptions(),
       maxAge: COOKIE_MAX_AGE,
     }),

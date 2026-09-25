@@ -134,7 +134,7 @@ export function RateRevisionRequestForm(props: {
         fileIds: files.map((file) => file.fileId),
       });
 
-      await revalidateWorkflowLead(props.leadId);
+      revalidateWorkflowLead(props.leadId);
       props.onSubmitted();
     } catch (error) {
       setErrorMessage(actionErrorMessage(error));

@@ -2,7 +2,7 @@ import { useAction } from "@solidjs/router";
 import { For, Show, createMemo, createSignal, type Accessor } from "solid-js";
 import { createStore } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionTarget } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import {
   CapacityLimitFields,
@@ -66,18 +66,17 @@ function MemberCapacityEditor(props: {
 
   const executiveId = () => props.detail().executive.id;
 
-  const grantingSearches = createActionPending(
-    grantMoreSearchesMutation,
-    (userId) => userId === executiveId(),
-  );
-  const grantingRefill = createActionPending(
-    grantMoreLeadRefillMutation,
-    (userId) => userId === executiveId(),
-  );
-  const savingOverride = createActionPending(
+  // Every member tab is mounted against one executive, so comparing the id the
+  // action is acting on is what keeps another tab's grant from lighting up here.
+  const searchGrantTarget = createActionTarget(grantMoreSearchesMutation);
+  const refillGrantTarget = createActionTarget(grantMoreLeadRefillMutation);
+  const overrideTarget = createActionTarget(
     updateExecutivePolicyOverrideMutation,
-    (input) => input.userId === executiveId(),
   );
+
+  const grantingSearches = () => searchGrantTarget() === executiveId();
+  const grantingRefill = () => refillGrantTarget() === executiveId();
+  const savingOverride = () => overrideTarget()?.userId === executiveId();
 
   const [searchGrant, setSearchGrant] = createSignal("25");
   const [leadGrant, setLeadGrant] = createSignal("10");

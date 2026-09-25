@@ -1,7 +1,7 @@
 import { useAction } from "@solidjs/router";
 import { createSignal, onCleanup } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { SettingsSection } from "~/components/settings/SettingsSection";

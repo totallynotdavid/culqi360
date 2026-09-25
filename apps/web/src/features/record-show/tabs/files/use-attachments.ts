@@ -16,13 +16,13 @@ export function useAttachments(leadId: Accessor<string | null>) {
 
   return {
     attachments,
-    refetch: async () => {
+    refetch: () => {
       const id = leadId();
       if (!id) {
         return;
       }
 
-      await revalidate(leadSaleProofFilesQuery.keyFor(id));
+      revalidate(leadSaleProofFilesQuery.keyFor(id));
     },
   };
 }

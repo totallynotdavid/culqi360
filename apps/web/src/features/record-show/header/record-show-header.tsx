@@ -63,7 +63,11 @@ export function RecordShowHeader(
       <PageCardHeader
         breadcrumb={
           <span class={styles.breadcrumb}>
-            <a href="/records" class={styles.breadcrumbLink}>
+            <a
+              href="/records"
+              class={styles.breadcrumbLink}
+              aria-label="Volver a Registros"
+            >
               <span class={styles.breadcrumbPrefix}>
                 <span class={styles.objectIconBadge}>
                   <Building2 size={14} />

@@ -7,14 +7,22 @@ import {
   type CommissionSchemeRules,
 } from "~/domain/merchant-stats/commission";
 
-import { ConfigurableSection, NumberField, PendingSection } from "./fields";
+import {
+  ConfigurableSection,
+  createSectionSetter,
+  NumberField,
+  PendingSection,
+} from "./fields";
 
-// The `!` assertions inside the draft callbacks are gated by the surrounding
-// `Show`: a field only renders while its section is enabled.
 export function CorporativaTab(props: {
   draft: CommissionSchemeRules;
   setDraft: StoreSetter<CommissionSchemeRules>;
 }) {
+  const setCaja2 = createSectionSetter(
+    () => props.setDraft,
+    (draft) => draft.corporate.caja2,
+  );
+
   return (
     <>
       <PendingSection
@@ -42,8 +50,8 @@ export function CorporativaTab(props: {
                 label="GPV mínimo por RUC activo"
                 value={caja2().activeRucMinGpv}
                 onChange={(activeRucMinGpv) =>
-                  props.setDraft((draft) => {
-                    draft.corporate.caja2!.activeRucMinGpv = activeRucMinGpv;
+                  setCaja2((rules) => {
+                    rules.activeRucMinGpv = activeRucMinGpv;
                   })
                 }
               />
@@ -52,8 +60,8 @@ export function CorporativaTab(props: {
                 label="Suma mínima de RUCs calificados"
                 value={caja2().minAggregateGpv}
                 onChange={(minAggregateGpv) =>
-                  props.setDraft((draft) => {
-                    draft.corporate.caja2!.minAggregateGpv = minAggregateGpv;
+                  setCaja2((rules) => {
+                    rules.minAggregateGpv = minAggregateGpv;
                   })
                 }
               />
@@ -64,9 +72,8 @@ export function CorporativaTab(props: {
                 min={0}
                 max={10}
                 onChange={(minQualifyingRucs) =>
-                  props.setDraft((draft) => {
-                    draft.corporate.caja2!.minQualifyingRucs =
-                      minQualifyingRucs;
+                  setCaja2((rules) => {
+                    rules.minQualifyingRucs = minQualifyingRucs;
                   })
                 }
               />

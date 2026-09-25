@@ -13,7 +13,7 @@ export function DataGridCell(props: DataGridCellProps) {
   return (
     <div
       {...elementProps}
-      class={`${styles.bodyCell}${props.class ? ` ${props.class}` : ""}${props.sticky ? ` ${styles.stickyCell}` : ""}`}
+      class={[styles.bodyCell, props.class, props.sticky && styles.stickyCell]}
     >
       {props.children}
     </div>

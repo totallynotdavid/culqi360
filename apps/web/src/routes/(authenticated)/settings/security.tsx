@@ -6,7 +6,7 @@ import {
 } from "@solidjs/router";
 import { Show, Loading, createMemo, createSignal } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { useAuthenticatedSession } from "~/components/providers/authenticated-session-provider";
 import { SettingsSection } from "~/components/settings/SettingsSection";
@@ -158,7 +158,7 @@ export default function SecurityPage() {
 
   function showFreshRecoveryCodes(codes: string[]) {
     setFreshRecoveryCodes(codes);
-    void revalidate(recoveryCodesStatusQuery.key);
+    revalidate(recoveryCodesStatusQuery.key);
   }
 
   const passkeyEnrollment = usePasskeyEnrollment({

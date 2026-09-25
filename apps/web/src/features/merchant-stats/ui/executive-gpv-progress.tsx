@@ -48,13 +48,13 @@ export function ExecutiveGpvProgress() {
 
   return (
     <AppPageBody>
-      <Errored fallback={<PortfolioError />}>
-        <Loading fallback={<PortfolioLoading />}>
+      <Loading fallback={<PortfolioLoading />}>
+        <Errored fallback={<PortfolioError />}>
           <Show when={portfolio()}>
             {(data) => <PortfolioContent portfolio={data()} />}
           </Show>
-        </Loading>
-      </Errored>
+        </Errored>
+      </Loading>
     </AppPageBody>
   );
 }

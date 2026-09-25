@@ -9,11 +9,10 @@ import {
 } from "./observability/diagnostics/hydration";
 import { setupBrowserRequestSecurity } from "./security/csrf-client";
 
-// Start mode generates the client entry, so what the old entry-client.tsx did
-// at module scope lives here, imported by App.tsx. This module evaluates
-// immediately before hydration begins, which is what the old mount timings
-// bracketed. `isServer` is a build-time constant, so none of it reaches the
-// SSR bundle.
+// Browser setup that must run before hydration begins. Imported for its side
+// effects by App.tsx, because start mode generates the client entry and leaves
+// no file to put this in. `isServer` is a build-time constant, so none of it
+// reaches the SSR bundle.
 const HYDRATION_SCOPE = "client-bootstrap";
 
 function startSentry(): void {

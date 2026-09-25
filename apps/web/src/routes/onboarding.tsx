@@ -87,6 +87,8 @@ function OnboardingContent() {
 
   const [recoveryCodes, setRecoveryCodes] = createSignal<string[]>([]);
 
+  // Seeded once rather than derived: the snapshot query revalidates after every
+  // onboarding mutation, and a writable memo would overwrite what is being typed.
   let initializedPhone = false;
 
   createEffect(

@@ -174,23 +174,23 @@ export function QualityPage() {
             <>
               <h1 class={styles.title}>{label()}</h1>
 
-              <Errored
-                fallback={renderDataGrid(
-                  label(),
-                  [],
-                  "No se pudo cargar la cola.",
-                )}
+              <Loading
+                fallback={renderDataGrid(label(), [], "Cargando cola...")}
               >
-                <Loading
-                  fallback={renderDataGrid(label(), [], "Cargando cola...")}
+                <Errored
+                  fallback={renderDataGrid(
+                    label(),
+                    [],
+                    "No se pudo cargar la cola.",
+                  )}
                 >
                   {renderDataGrid(
                     label(),
                     grid.rows(),
                     "No hay comercios pendientes en esta cola.",
                   )}
-                </Loading>
-              </Errored>
+                </Errored>
+              </Loading>
             </>
           );
         }}

@@ -1,7 +1,7 @@
 import { useAction, useSubmissions } from "@solidjs/router";
 import { createSignal, For, Show } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { Button } from "~/components/ui/input/button";
 import { Input } from "~/components/ui/input/input";

@@ -35,17 +35,17 @@ export function Router(props: { isMobile: boolean }) {
               return (
                 <HotkeyBoundary class={styles.pageContent}>
                   <PageInstanceProvider pageId={entry.pageId}>
-                    <Errored
-                      fallback={
-                        <div class={styles.pageState}>
-                          No se pudo cargar el panel.
-                        </div>
-                      }
-                    >
-                      <Loading fallback={<PageSkeleton />}>
+                    <Loading fallback={<PageSkeleton />}>
+                      <Errored
+                        fallback={
+                          <div class={styles.pageState}>
+                            No se pudo cargar el panel.
+                          </div>
+                        }
+                      >
                         <PageComponent />
-                      </Loading>
-                    </Errored>
+                      </Errored>
+                    </Loading>
                   </PageInstanceProvider>
                 </HotkeyBoundary>
               );

@@ -1,4 +1,4 @@
-import { revalidate, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import { Show, createEffect, createMemo } from "solid-js";
 
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
@@ -18,7 +18,6 @@ import {
   type NextActionTarget,
 } from "~/features/record-show/workflow/next-action";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
-import { leadListQuery } from "~/rpc/workflow/lead-list";
 
 import { SidePanelPage } from "../../components/page";
 import {
@@ -62,12 +61,6 @@ export function RecordPage() {
     detailData,
     pollIntervalMs: POLL_INTERVAL_MS,
     pollTimeoutMs: POLL_TIMEOUT_MS,
-    revalidateLeadDetail: async (currentLeadId) => {
-      await revalidate(leadDetailQuery.keyFor(currentLeadId));
-    },
-    revalidateLeadList: async () => {
-      await revalidate(leadListQuery.key);
-    },
   });
 
   async function handleAddToFavorites() {

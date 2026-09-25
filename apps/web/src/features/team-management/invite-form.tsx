@@ -1,7 +1,7 @@
 import { useAction } from "@solidjs/router";
 import { For, Show, createEffect, createSignal } from "solid-js";
 
-import { createActionPending } from "~/browser/ui/create-action-pending";
+import { createActionPending } from "~/browser/ui/action-in-flight";
 import { useSnackBar } from "~/components/feedback/snack-bar-manager/use-snack-bar";
 import { DatePicker } from "~/components/ui/date-picker/date-picker-field";
 import { Button } from "~/components/ui/input/button";
