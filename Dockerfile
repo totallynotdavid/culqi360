@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.14 AS production-deps
+FROM oven/bun:1.4.2 AS production-deps
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY tools/codegen/package.json ./tools/codegen/package.json
 
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
-FROM oven/bun:1.3.14 AS build
+FROM oven/bun:1.4.2 AS build
 
 WORKDIR /app
 
@@ -41,7 +41,7 @@ ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
 
 RUN bun run --cwd apps/web build:container
 
-FROM oven/bun:1.3.14 AS runtime
+FROM oven/bun:1.4.2 AS runtime
 
 ENV NODE_ENV=production \
     NITRO_HOST=0.0.0.0 \
