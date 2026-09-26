@@ -48,7 +48,7 @@ export interface ValueStore {
     keyframe: ValueKeyframesDefinition,
     transition: Transition | undefined,
   ): AnimationPlaybackControlsWithThen | undefined;
-  /** Sets a property without animating, used for `transitionEnd`. */
+  /** Applies `transitionEnd` values without starting an animation. */
   set(key: string, value: string | number): void;
   /**
    * The value this property was bound at, which is where it returns when the
@@ -64,23 +64,19 @@ export interface ValueStore {
 }
 
 /**
- * The one `ValueStore` an element may have. A `createMotion` binding and an
- * `animate()` call that targets the same node have to drive the same
- * `MotionValue` per key instead of each building their own: two independent
- * stores both calling `styleEffect` for, say, `x` leaves only the
- * most-recently-created one actually wired to the DOM (motion-dom's per-key
- * binding replaces whichever value held it before), so the other's writes go
- * nowhere. Sharing this store is what lets `ensure()` in `createValueStore`
- * hand back the existing `MotionValue` to whichever side asks second.
+ * Share one `ValueStore` per element. A `createMotion` binding and an
+ * `animate()` call targeting the same node must drive the same `MotionValue`
+ * for each key. If both stores call `styleEffect` for a key, motion-dom's
+ * per-key binding replaces the earlier binding, so the first store's writes
+ * go nowhere. Sharing the store lets `ensure()` return the existing value to
+ * whichever side asks second.
  */
 const sharedStores = new WeakMap<Element, ValueStore>();
 
 /**
- * Whoever claims the element first decides `initialValues`, `bound`, and
- * `layout`; a later claim reuses the store as-is. That matches the only
- * ordering this package produces one for: a `createMotion` ref fires as its
- * element mounts, before anything else could have a reference to that
- * element to hand to `animate()`.
+ * The first call fixes `initialValues`, `bound`, and `layout`. Later calls reuse
+ * the store. The controller creates it from its mount ref before it starts any
+ * queued pass, so animation work sees an initialized store.
  */
 export function sharedValueStore(
   element: HTMLElement | SVGElement,
@@ -96,24 +92,19 @@ export function sharedValueStore(
   return store;
 }
 
-/** Releases this element's slot so a later claim builds a fresh store. */
+/** Releases the element slot when it still points to this store. */
 export function releaseValueStore(element: Element, store: ValueStore): void {
   if (sharedStores.get(element) === store) sharedStores.delete(element);
 }
 
 /**
- * Whoever is currently animating one element's property, so a later claim
- * on the same pair can settle whatever the earlier claimant was waiting on
- * instead of leaving it to wait on a `MotionValue` that just stopped
- * animating out from under it.
+ * Track the current claimant for each element-property pair. A later claim
+ * notifies the earlier caller instead of leaving it waiting on a `MotionValue`
+ * that `MotionValue.start()` stopped.
  *
- * Shared between `create-animate.ts`'s imperative calls and `controller.ts`'s
- * reactive pass, the two places that call `ValueStore.animate()`: a property
- * has exactly one `MotionValue` regardless of which side is driving it, so
- * motion-dom's own per-value `start()` stealing it from underneath a caller
- * (verified against motion-dom 13.1.1: it stops the previous animation
- * without ever settling that animation's own `finished`) needs one registry
- * both sides feed, not two that only know about their own calls.
+ * Both `create-animate.ts` and `controller.ts` use this registry. motion-dom
+ * stops the previous animation when a new call starts on the same value but
+ * does not settle its `finished`, so both paths must share the registry.
  */
 const claims = new WeakMap<Element, Map<string, VoidFunction>>();
 
@@ -133,9 +124,9 @@ export function claim(
 
 export function createValueStore(
   element: HTMLElement | SVGElement,
-  /** Where a property starts when the element was rendered carrying it. */
+  /** Initial values rendered on the element. */
   initialValues: Record<string, string | number>,
-  /** Caller-owned values from `style`, which this store must not create or destroy. */
+  /** Caller-owned `style` values. This store must not create or destroy them. */
   bound: ReadonlyMap<string, MotionValue>,
   /** Present when the element asked for `layout` or `layoutId`. */
   layout?: LayoutOptions,
@@ -155,11 +146,10 @@ export function createValueStore(
     vars: {},
   };
 
-  // Every value this store writes lands in the element's inline style, so the
-  // layout watcher must read those writes as paint rather than as movement.
+  // The layout watcher must read this store's inline-style writes as paint.
   claimInlineStyle(element);
 
-  // Projection supports HTML only. SVG keeps its existing property effects.
+  // Projection is HTML-only. SVG uses its normal property effects.
   const projection =
     layout && isHTMLElement(element)
       ? createProjection(element, latestValues, renderState, layout)
@@ -173,7 +163,7 @@ export function createValueStore(
         renderHTML(element as HTMLElement, renderState);
       };
 
-  // Projecting HTML nodes use `render`; SVG and non-projecting HTML use effects.
+  // Projection renders HTML values itself. Other nodes use motion-dom effects.
   const bindToDom = isHTMLElement(element) ? styleEffect : svgEffect;
 
   const attach = (key: string, value: MotionValue, base: string | number) => {
@@ -193,8 +183,7 @@ export function createValueStore(
     if (current !== undefined) latestValues[key] = current;
   };
 
-  // Bind caller-owned values immediately because they already define the element's
-  // rendered appearance.
+  // Bind caller-owned values immediately so they define the initial appearance.
   for (const [key, value] of bound) {
     attach(key, value, value.get() as string | number);
   }
@@ -221,27 +210,25 @@ export function createValueStore(
    * on its own frame loop, batching every element's reads before any writes so
    * a list of collapsing rows costs one layout pass rather than one each.
    *
-   * `WithRender` is the five-member interface that machinery actually asks for,
-   * so a value store can satisfy it directly. This is the narrow resolver shim
-   * that adopting `VisualElement` was always the alternative to, and
-   * `VisualElement` would bring a props model, a variant tree and an event
-   * system with it, all of which Solid's graph already covers. Layout
-   * projection needs its own narrow stand-in for the same reason (`getProps`
-   * and friends on `projection.ts`'s `host`): the engine only ever reads off
-   * whatever it is animating against, never the object it usually comes bundled
-   * with.
+   * The resolver needs only this element, the keyframe resolver, value access,
+   * rendering, and measurement. Using `VisualElement` would also bring a props
+   * model, a variant tree, and an event system that Solid's graph already
+   * covers. Layout projection uses a narrow host for the same reason
+   * (`getProps` and friends on `projection.ts`'s `host`): its engine reads from
+   * the object it animates, not from the full object that normally owns it.
    *
-   * HTML only. `renderHTML` and `measureViewportBox` both take an HTMLElement,
-   * and without the view SVG keeps exactly the behaviour it has today.
+   * This adapter is for HTML only. `renderHTML` and `measureViewportBox` both
+   * take an `HTMLElement`, so SVG keeps its current behavior when no view is
+   * provided.
    */
   const resolverView = isHTMLElement(element)
     ? {
-        // `AsyncMotionValueAnimation` takes the resolver class from this view.
+        // The resolver reads `KeyframeResolver` from this view.
         KeyframeResolver: DOMKeyframesResolver,
         current: element,
 
-        // A fallback means the resolver is about to write; otherwise preserve
-        // the distinction between an absent value and an existing one.
+        // The resolver passes a fallback before writing. Preserve the
+        // distinction between an absent value and an existing one.
         getValue: (key: string, fallback?: string | number) => {
           const existing = values.get(key);
           if (existing || fallback === undefined) return existing;
@@ -261,19 +248,22 @@ export function createValueStore(
     animate(key, keyframe, transition) {
       const value = ensure(key);
 
-      // The property name supplies motion's default and per-property transition.
-      value.start(
-        animateMotionValue(
-          key,
-          value,
-          keyframe,
-          transition,
-          // This adapter supplies the members read by the resolver.
-          resolverView as unknown as VisualElement,
-        ),
+      // Motion derives the default and per-property transition from the key.
+      const startAnimation = animateMotionValue(
+        key,
+        value,
+        keyframe,
+        transition,
+        // The resolver reads only this narrow adapter at this boundary.
+        resolverView as unknown as VisualElement,
       );
+      let animation: AnimationPlaybackControlsWithThen | undefined;
+      value.start((complete) => {
+        animation = startAnimation(complete);
+        return animation;
+      });
 
-      return value.animation;
+      return animation;
     },
 
     set(key, value) {
@@ -322,8 +312,8 @@ function readStartValue(
     return readTransformValue(element as HTMLElement, key);
   }
 
-  // SVG geometry lives in attributes, while properties such as `fill` can use
-  // either attributes or styles.
+  // SVG geometry lives in attributes.
+  // Properties such as `fill` can use either attributes or styles.
   if (!isHTMLElement(element)) {
     const attribute = element.getAttribute(attributeName(key));
     if (attribute !== null) return toNumberIfUnitless(attribute);
@@ -332,7 +322,7 @@ function readStartValue(
   return toNumberIfUnitless(getComputedStyle(element, key) || 0);
 }
 
-/** Converts unitless computed-style strings to numbers for interpolation. */
+/** Converts unitless style values to numbers for interpolation. */
 function toNumberIfUnitless(value: string | number): string | number {
   if (typeof value === "number") return value;
 

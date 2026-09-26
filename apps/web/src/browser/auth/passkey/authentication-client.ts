@@ -24,7 +24,7 @@ export async function createAuthenticationResponse(
       userVerification: options.userVerification,
       allowCredentials: options.allowCredentials?.map((descriptor) => ({
         id: decodeBase64Url(descriptor.id),
-        type: descriptor.type,
+        type: "public-key",
       })),
     },
   });

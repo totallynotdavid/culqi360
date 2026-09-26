@@ -21,17 +21,16 @@ const COLLAPSED = {
 const EXPANDED = {
   height: "auto",
   opacity: 1,
-  // Keep content clipped during the height animation.
+  // Hide overflow until the expansion transition completes.
   overflow: "hidden",
   pointerEvents: "auto",
 } as const;
 
+const seconds = (ms: number | undefined) => (ms ?? DEFAULT_DURATION_MS) / 1000;
+
 export function AnimatedExpandableContainer(
   props: AnimatedExpandableContainerProps,
 ) {
-  const seconds = (ms: number | undefined) =>
-    (ms ?? DEFAULT_DURATION_MS) / 1000;
-
   return (
     <motion.div
       initial={props.isExpanded ? EXPANDED : COLLAPSED}

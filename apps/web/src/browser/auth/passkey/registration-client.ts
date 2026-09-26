@@ -1,10 +1,20 @@
 import type {
-  AuthenticatorTransportFuture,
   PublicKeyCredentialCreationOptionsJSON,
   RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 
 import { decodeBase64Url, encodeBase64Url } from "./client-shared";
+
+// Filter runtime transport names to supported WebAuthn values.
+const REGISTRATION_TRANSPORTS = new Set([
+  "ble",
+  "cable",
+  "hybrid",
+  "internal",
+  "nfc",
+  "smart-card",
+  "usb",
+]);
 
 export function isPasskeyRegistrationSupported(): boolean {
   return (
@@ -31,7 +41,7 @@ export async function createRegistrationResponse(
       authenticatorSelection: options.authenticatorSelection,
       excludeCredentials: options.excludeCredentials?.map((descriptor) => ({
         id: decodeBase64Url(descriptor.id),
-        type: descriptor.type,
+        type: "public-key",
       })),
     },
   });
@@ -71,22 +81,8 @@ export async function createRegistrationResponse(
   };
 }
 
-function normalizeRegistrationTransports(
-  transports: string[],
-): AuthenticatorTransportFuture[] {
-  return transports.filter(isAuthenticatorTransportFuture);
-}
-
-function isAuthenticatorTransportFuture(
-  value: string,
-): value is AuthenticatorTransportFuture {
-  return [
-    "ble",
-    "cable",
-    "hybrid",
-    "internal",
-    "nfc",
-    "smart-card",
-    "usb",
-  ].includes(value);
+function normalizeRegistrationTransports(transports: string[]): string[] {
+  return transports.filter((transport) =>
+    REGISTRATION_TRANSPORTS.has(transport),
+  );
 }
