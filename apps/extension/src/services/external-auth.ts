@@ -83,6 +83,14 @@ async function verifyTokenSignature(
   }
 
   const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  if (
+    encodedHeader === undefined ||
+    encodedPayload === undefined ||
+    encodedSignature === undefined
+  ) {
+    throw new Error("invalid token format");
+  }
+
   const header = decodeJsonPart(encodedHeader);
   if (
     typeof header !== "object" ||
@@ -172,7 +180,7 @@ export async function claimExternalSession(input: {
         errorMessage = body.error;
       }
     } catch {
-      // Ignore JSON parsing failures and keep the status-based fallback.
+      // Use the status-based fallback when reading the error body fails.
     }
     throw new Error(errorMessage);
   }

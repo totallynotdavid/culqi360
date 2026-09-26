@@ -24,29 +24,29 @@ function withJitter(delayMs: number): number {
   return delayMs * (0.5 + Math.random());
 }
 
-// LISTEN uses one dedicated client. Every reconnect reissues the fixed channel set.
+function reportListenerHook(
+  name: "connected" | "disconnected",
+  hook: (() => void | Promise<void>) | undefined,
+): void {
+  void Promise.resolve(hook?.()).catch((error: unknown) => {
+    logger.error(`listener_on${name}_failed`, {
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  });
+}
+
 export function createPgListener(
   resolveConnectionString: () => string,
   channels: Record<string, PgListenerHandler[]>,
   options: PgListenerOptions = {},
 ): PgListener {
+  // LISTEN subscriptions belong to one client connection.
   let client: Client | null = null;
   let stopped = true;
   let connecting = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let connected = false;
   let reconnectDelayMs = RECONNECT_BASE_DELAY_MS;
-
-  function reportListenerHook(
-    name: "connected" | "disconnected",
-    hook: (() => void | Promise<void>) | undefined,
-  ): void {
-    void Promise.resolve(hook?.()).catch((error: unknown) => {
-      logger.error(`listener_on${name}_failed`, {
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    });
-  }
 
   function scheduleReconnect(): void {
     if (stopped || connecting || reconnectTimer !== null) {
@@ -72,7 +72,7 @@ export function createPgListener(
 
     if (current) {
       void current.end().catch(() => {
-        // The connection is already broken.
+        // Closing an errored or already-ended client can reject.
       });
     }
 
@@ -123,6 +123,8 @@ export function createPgListener(
 
     try {
       await next.connect();
+      // PostgreSQL drops subscriptions when the connection closes, so register
+      // every channel on each connection.
       for (const channel of Object.keys(channels)) {
         // eslint-disable-next-line no-await-in-loop
         await next.query(`LISTEN "${channel}"`);
@@ -142,7 +144,7 @@ export function createPgListener(
         error: error instanceof Error ? error.message : "Unknown error",
       });
       await next.end().catch(() => {
-        // The connection did not finish opening.
+        // Cleanup can reject after setup fails or the listener stops.
       });
       if (client === next) {
         client = null;

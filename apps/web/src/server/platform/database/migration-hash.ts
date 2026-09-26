@@ -1,7 +1,9 @@
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
+import type { Transaction } from "kysely";
 
 import type { ReferenceDataModule, SchemaModule } from "./schema";
+import type { Database } from "./types";
 
 export async function computeHash(
   schemas: readonly SchemaModule[],
@@ -30,7 +32,7 @@ export async function readStoredHash<T>(db: Kysely<T>): Promise<string | null> {
   }
 }
 
-async function ensureTable<T>(db: Kysely<T>): Promise<void> {
+async function ensureTable(db: Transaction<Database>): Promise<void> {
   await db.schema
     .createTable("schema_integrity")
     .ifNotExists()
@@ -38,8 +40,8 @@ async function ensureTable<T>(db: Kysely<T>): Promise<void> {
     .execute();
 }
 
-export async function writeStoredHash<T>(
-  db: Kysely<T>,
+export async function writeStoredHash(
+  db: Transaction<Database>,
   hash: string,
 ): Promise<void> {
   await ensureTable(db);

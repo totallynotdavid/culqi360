@@ -9,6 +9,13 @@ const VIEWPORT_PADDING = 8;
 
 type Anchor = HTMLElement | Accessor<HTMLElement | undefined>;
 
+function clampToViewport(value: number, size: number, viewport: number) {
+  return Math.max(
+    VIEWPORT_PADDING,
+    Math.min(value, viewport - size - VIEWPORT_PADDING),
+  );
+}
+
 export function AnchoredPopover(props: {
   id?: string;
   anchor: Anchor;
@@ -26,13 +33,6 @@ export function AnchoredPopover(props: {
   const anchor = () =>
     typeof props.anchor === "function" ? props.anchor() : props.anchor;
 
-  function clampToViewport(value: number, size: number, viewport: number) {
-    return Math.max(
-      VIEWPORT_PADDING,
-      Math.min(value, viewport - size - VIEWPORT_PADDING),
-    );
-  }
-
   function updatePosition() {
     const anchorElement = anchor();
 
@@ -43,8 +43,8 @@ export function AnchoredPopover(props: {
     const rect = anchorElement.getBoundingClientRect();
     const placement = props.placement ?? "bottom-start";
 
-    // Side placement clamps in place; bottom placements flip above if needed.
     if (placement === "left-start") {
+      // Keep the left placement within the viewport.
       const offset = props.offset ?? 0;
 
       panel.style.left = `${clampToViewport(
@@ -75,6 +75,7 @@ export function AnchoredPopover(props: {
 
     const preferredTop = placement === "overlap" ? rect.top : rect.bottom;
 
+    // Move bottom and overlap placements above the anchor when they overflow.
     const top =
       preferredTop + panel.offsetHeight + VIEWPORT_PADDING > window.innerHeight
         ? Math.max(VIEWPORT_PADDING, rect.top - panel.offsetHeight)

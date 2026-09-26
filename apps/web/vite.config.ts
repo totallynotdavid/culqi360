@@ -137,7 +137,7 @@ export default defineConfig(({ command }) => {
         : []),
     ],
 
-    esbuild: {
+    oxc: {
       target: "es2022",
     },
   };

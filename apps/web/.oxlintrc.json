@@ -26,24 +26,47 @@
         ]
       }
     ],
-    // identifier usage is important
     "solid/jsx-no-duplicate-props": 2,
     "solid/jsx-no-undef": [2, { "typescriptEnabled": true }],
     "solid/jsx-uses-vars": 2,
-    // security problems
     "solid/no-innerhtml": 2,
     "solid/jsx-no-script-url": 2,
-    // reactivity
     "solid/components-return-once": 1,
     "solid/no-destructure": 2,
     "solid/prefer-for": 2,
     "solid/reactivity": 0,
     "solid/event-handlers": 1,
-    // these rules are mostly style suggestions
     "solid/imports": 0,
     "solid/style-prop": 1,
     "solid/no-react-deps": 1,
     "solid/no-react-specific-props": 1,
     "solid/self-closing-comp": 1
-  }
+  },
+  "overrides": [
+    {
+      // Keep component-local handlers beside their effects and cleanup.
+      // Solid components run once, so hoisting handlers does not reduce
+      // per-render allocations.
+      "files": [
+        "src/features/side-panel/components/tab-strip/index.tsx",
+        "src/routes/(public).tsx",
+        "src/features/data-grid/effects/reorder.tsx",
+        "src/features/data-grid/effects/resize.tsx",
+        "src/features/data-grid/components/cell-editor.tsx",
+        "src/browser/hotkey/use-hotkey.ts",
+        "src/components/ui/date-picker/date-picker-field.tsx",
+        "src/components/ui/date-picker/date-picker-popover.tsx",
+        "src/features/record-show/tabs/files/preview-modal.tsx",
+        "src/features/record-show/tabs/files/attachment-actions-menu.tsx",
+        "src/features/side-panel/shell/mobile-shell.tsx",
+        "src/features/side-panel/shell/shell.tsx",
+        "src/features/record-show/header/record-show-actions-menu.tsx",
+        "src/components/ui/confirm-dialog.tsx",
+        "src/browser/visual/runtime/webgl-mount.tsx"
+      ],
+      "rules": {
+        "unicorn/consistent-function-scoping": "off"
+      }
+    }
+  ]
 }
