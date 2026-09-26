@@ -8,11 +8,11 @@
     "./vite": "./src/vite-plugin.ts"
   },
   "dependencies": {
-    "sharp": "^0.35.2"
+    "sharp": "^0.35.4"
   },
   "peerDependencies": {
-    "@solidjs/web": "^2.0.0-rc.1",
-    "solid-js": "^2.0.0-rc.1",
+    "@solidjs/web": "^2.0.0-rc.9",
+    "solid-js": "^2.0.0-rc.9",
     "vite": "^7.3.2 || ^8.0.0"
   }
 }
