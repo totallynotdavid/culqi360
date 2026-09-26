@@ -67,7 +67,7 @@
     "@mdx-js/rollup": "^3.1.1",
     "@playwright/test": "^1.62.1",
     "@sentry/vite-plugin": "^5.2.0",
-    "@solidjs/vite-plugin": "^3.0.0-next.31",
+    "@solidjs/vite-plugin": "^3.0.0-next.44",
     "@types/mdx": "^2.0.13",
     "@types/pg": "^8.21.0",
     "@types/qrcode": "^1.5.6",
