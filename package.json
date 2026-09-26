@@ -49,11 +49,11 @@
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
-    "@types/node": "^26.2.0",
-    "agent-browser": "^0.34.0",
-    "oxfmt": "^0.64.0",
-    "oxlint": "^1.79.0",
-    "oxlint-tsgolint": "^7.0.2001",
+    "@types/node": "^26.6.3",
+    "agent-browser": "^0.38.1",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2003",
     "shx": "^0.4.0"
   },
   "packageManager": "bun@1.4.2"
