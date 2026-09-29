@@ -6,10 +6,7 @@ import {
   renderProjectionContractRust,
   renderResultContractRust,
 } from "../src/search-projection/render-rust.ts";
-import {
-  renderProjectionContractTs,
-  renderResultContractTs,
-} from "../src/search-projection/render-ts.ts";
+import { renderResultContractTs } from "../src/search-projection/render-ts.ts";
 
 const SPEC = {
   projection: "search_projection",
@@ -136,20 +133,6 @@ describe("renderProjectionContract", () => {
     expect(nullableSection).toContain('"person.name"');
     expect(nullableSection).not.toContain('"person.dni"');
   });
-
-  test("TS emits only the path list (no NAME or NULLABLE sets)", () => {
-    const ts = renderProjectionContractTs(
-      parseProjectionSpec(SPEC),
-      "SEARCH_PROJECTION",
-      "contracts/engine/search-projection.json",
-    );
-
-    expect(ts).toContain("SEARCH_PROJECTION_PATHS");
-    expect(ts).toContain('"person.name"');
-    expect(ts).toContain('"person.dni"');
-    expect(ts).not.toContain("SEARCH_PROJECTION_NAME");
-    expect(ts).not.toContain("SEARCH_PROJECTION_NULLABLE_PATHS");
-  });
 });
 
 describe("renderResultContract", () => {
@@ -168,5 +151,17 @@ describe("renderResultContract", () => {
     expect(ts).toContain("name: string | null;");
     expect(ts).toContain("siblings: string[] | null;");
     expect(ts).toContain("org: OrgInfo | null;");
+  });
+
+  test("TS guards check the same fields the interfaces declare", () => {
+    const spec = parseProjectionSpec(SPEC);
+    const ts = renderResultContractTs(spec, spec);
+
+    expect(ts).toContain("isInteger(value.id)");
+    expect(ts).toContain("isString(value.dni) &&");
+    expect(ts).toContain("isNullable(value.name, isString)");
+    expect(ts).toContain("isNullable(value.siblings, isStringArray)");
+    expect(ts).toContain("isNullable(value.org, isOrgInfo)");
+    expect(ts).toContain("export function isSearchResult(");
   });
 });
