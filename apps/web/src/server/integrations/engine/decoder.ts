@@ -2,7 +2,10 @@ import type {
   RecordCandidate,
   RecordCandidatesResponse,
 } from "~/contracts/engine/record-api.generated";
-import type { SearchResponse } from "~/contracts/search/engine-results.generated";
+import {
+  isSearchResult,
+  type SearchResponse,
+} from "~/contracts/search/engine-results.generated";
 import { isPlainRecord } from "~/shared/type-guards";
 
 function isArray(value: unknown): value is unknown[] {
@@ -22,19 +25,21 @@ function isRecordCandidate(value: unknown): value is RecordCandidate {
   );
 }
 
-function isSearchResponse(value: unknown): value is SearchResponse {
-  return (
-    isPlainRecord(value) &&
-    isArray(value.results) &&
-    typeof value.count === "number"
-  );
-}
-
 export function decodeSearchResponse(value: unknown): SearchResponse {
-  if (!isSearchResponse(value)) {
+  if (
+    !isPlainRecord(value) ||
+    !isArray(value.results) ||
+    typeof value.count !== "number"
+  ) {
     throw new Error("Invalid SearchResponse structure");
   }
-  return value;
+
+  if (!value.results.every(isSearchResult)) {
+    const badRow = value.results.findIndex((row) => !isSearchResult(row));
+    throw new Error(`Invalid SearchResponse row at results[${badRow}]`);
+  }
+
+  return { results: value.results, count: value.count };
 }
 
 export function decodeRecordCandidatesResponse(
