@@ -2,6 +2,8 @@
 // Source: contracts/engine/doc-projection.json + contracts/engine/company-projection.json
 // Generator: tools/codegen/bin/generate.ts
 
+import { isPlainRecord } from "~/shared/type-guards";
+
 export interface DocInfo {
   doc_type: string;
   doc_number: string;
@@ -97,4 +99,148 @@ export type SearchResult =
 export interface SearchResponse {
   results: SearchResult[];
   count: number;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isInteger(value: unknown): value is number {
+  return Number.isInteger(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString);
+}
+
+function isNullable(
+  value: unknown,
+  guard: (value: unknown) => boolean,
+): boolean {
+  return value === null || guard(value);
+}
+
+function isDocInfo(value: unknown): value is DocInfo {
+  return (
+    isPlainRecord(value) &&
+    isString(value.doc_type) &&
+    isString(value.doc_number) &&
+    isNullable(value.name, isString) &&
+    isNullable(value.ruc, isString) &&
+    isNullable(value.birth_date, isString) &&
+    isNullable(value.birth_place, isString) &&
+    isNullable(value.sex, isString) &&
+    isNullable(value.marital_status, isString) &&
+    isNullable(value.location_text, isString) &&
+    isNullable(value.ubigeo_code, isString) &&
+    isNullable(value.mother_name, isString) &&
+    isNullable(value.father_name, isString) &&
+    isNullable(value.email, isString)
+  );
+}
+
+function isOrgInfo(value: unknown): value is OrgInfo {
+  return (
+    isPlainRecord(value) &&
+    isNullable(value.ruc, isString) &&
+    isNullable(value.name, isString) &&
+    isNullable(value.trade_name, isString) &&
+    isNullable(value.company_type, isString) &&
+    isNullable(value.status, isString) &&
+    isNullable(value.condition, isString) &&
+    isNullable(value.fiscal_address, isString) &&
+    isNullable(value.registration_date, isString) &&
+    isNullable(value.activity_start_date, isString) &&
+    isNullable(value.line_of_business, isString) &&
+    isNullable(value.economic_activity, isString) &&
+    isNullable(value.ubigeo_code, isString) &&
+    isNullable(value.department, isString) &&
+    isNullable(value.province, isString) &&
+    isNullable(value.district, isString)
+  );
+}
+
+function isRoleInfo(value: unknown): value is RoleInfo {
+  return (
+    isPlainRecord(value) &&
+    isNullable(value.name, isString) &&
+    isNullable(value.start_date, isString) &&
+    isNullable(value.rep_doc_type, isString) &&
+    isNullable(value.rep_doc_number, isString) &&
+    isNullable(value.rep_name, isString)
+  );
+}
+
+function isPhoneInfo(value: unknown): value is PhoneInfo {
+  return (
+    isPlainRecord(value) &&
+    isNullable(value.primary, isString) &&
+    isNullable(value.secondary, isString) &&
+    isNullable(value.siblings, isStringArray)
+  );
+}
+
+function isDocumentRow(value: unknown): value is DocumentRow {
+  return (
+    isPlainRecord(value) &&
+    isDocInfo(value.doc) &&
+    isNullable(value.org, isOrgInfo) &&
+    isNullable(value.role, isRoleInfo) &&
+    isPhoneInfo(value.phones)
+  );
+}
+
+function isCompanyInfo(value: unknown): value is CompanyInfo {
+  return (
+    isPlainRecord(value) &&
+    isInteger(value.id) &&
+    isString(value.ruc) &&
+    isNullable(value.legal_name, isString) &&
+    isNullable(value.trade_name, isString) &&
+    isNullable(value.company_type, isString) &&
+    isNullable(value.status, isString) &&
+    isNullable(value.condition, isString) &&
+    isNullable(value.fiscal_address, isString) &&
+    isNullable(value.registration_date, isString) &&
+    isNullable(value.activity_start_date, isString) &&
+    isNullable(value.line_of_business, isString) &&
+    isNullable(value.economic_activity, isString) &&
+    isNullable(value.ubigeo_code, isString) &&
+    isNullable(value.department, isString) &&
+    isNullable(value.province, isString) &&
+    isNullable(value.district, isString)
+  );
+}
+
+function isRepInfo(value: unknown): value is RepInfo {
+  return (
+    isPlainRecord(value) &&
+    isNullable(value.doc_type, isString) &&
+    isNullable(value.doc_number, isString) &&
+    isNullable(value.name, isString) &&
+    isNullable(value.role_name, isString) &&
+    isNullable(value.role_start_date, isString)
+  );
+}
+
+function isCompanyRow(value: unknown): value is CompanyRow {
+  return (
+    isPlainRecord(value) &&
+    isCompanyInfo(value.company) &&
+    isNullable(value.rep, isRepInfo) &&
+    isPhoneInfo(value.phones)
+  );
+}
+
+export function isSearchResult(value: unknown): value is SearchResult {
+  if (!isPlainRecord(value)) {
+    return false;
+  }
+  if (value.kind === "document") {
+    return isDocumentRow(value);
+  }
+  if (value.kind === "company") {
+    return isCompanyRow(value);
+  }
+  return false;
 }
