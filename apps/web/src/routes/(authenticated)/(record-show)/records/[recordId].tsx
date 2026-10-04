@@ -12,7 +12,11 @@ export const route = {
       return;
     }
 
-    void Promise.all([
+    // Warming only. Nothing awaits this promise, so a rejection (an unknown
+    // or deleted lead id is an expected one) would surface as an unhandled
+    // rejection and reach Sentry. The page reads the same cached queries and
+    // renders the failure through its error boundary.
+    void Promise.allSettled([
       leadDetailQuery(params.recordId),
       leadListQuery({
         limit: LEAD_NAVIGATION_LIMIT,
