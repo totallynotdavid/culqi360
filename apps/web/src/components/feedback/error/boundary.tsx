@@ -1,6 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import { Errored } from "solid-js";
 
+import { NotFoundPage } from "~/components/layout/not-found-page";
+import { parseWireError } from "~/contracts/errors";
 import { createLogger } from "~/shared/observability/runtime-logger";
 
 import { getErrorMessage, reportBoundaryError } from "./boundary-utils";
@@ -19,6 +21,12 @@ export function AppErrorBoundary(props: AppErrorBoundaryProps) {
       fallback={(error, reset) => {
         // Solid 2 hands the fallback an accessor rather than the value.
         const thrown = error();
+
+        // A missing record is an expected outcome, not a fault: it gets the
+        // same page as an unknown URL and is not reported.
+        if (parseWireError(thrown).kind === "not_found") {
+          return <NotFoundPage />;
+        }
 
         reportBoundaryError(logger, thrown);
 
