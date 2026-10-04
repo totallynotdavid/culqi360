@@ -5,6 +5,8 @@ const HEALTH_POLL_MS = 200;
 
 export interface RunningServer {
   baseURL: string;
+  /** Everything the server has written to stdout and stderr so far. */
+  output(): string;
   stop(): Promise<void>;
 }
 
@@ -65,8 +67,16 @@ export async function startServer(options: {
       // Run notification flows without sending real email.
       NOTIFICATION_ROUTES: "email:log",
     },
-    stdio: ["ignore", "inherit", "inherit"],
+    stdio: ["ignore", "pipe", "pipe"],
   });
+
+  let output = "";
+  for (const stream of [proc.stdout, proc.stderr]) {
+    stream?.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
+      process.stdout.write(chunk);
+    });
+  }
 
   try {
     await waitForHealth(baseURL, proc);
@@ -77,6 +87,7 @@ export async function startServer(options: {
 
   return {
     baseURL,
+    output: () => output,
 
     async stop() {
       if (proc.exitCode !== null) {
