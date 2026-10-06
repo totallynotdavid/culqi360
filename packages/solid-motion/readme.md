@@ -152,8 +152,8 @@ other attribute on Solid's compiled setters instead of a runtime spread.
 ## `createMotionValue`
 
 ```tsx
-import { createSignal } from "solid-js";
 import { createMotionValue, motion } from "@crm/solid-motion";
+import { createSignal } from "solid-js";
 
 function Ball() {
   const [targetX, setTargetX] = createSignal(0);
@@ -235,8 +235,8 @@ sentinel, a lazily mounted chart, or an impression tracker that has nothing to
 do with motion:
 
 ```tsx
-import { createSignal } from "solid-js";
 import { createInView } from "@crm/solid-motion";
+import { createSignal } from "solid-js";
 
 function LazyChart() {
   const [node, setNode] = createSignal<HTMLElement>();
