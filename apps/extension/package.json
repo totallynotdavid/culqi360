@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/chrome": "^0.3.0",
+    "@types/chrome": "^0.3.4",
     "@wxt-dev/module-solid": "^1.1.4",
     "typescript": "^7.0.2",
     "wxt": "^0.21.4"
