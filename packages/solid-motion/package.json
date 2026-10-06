@@ -16,7 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "motion-dom": "^13.4.4"
+    "motion-dom": "^14.0.0"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^1.0.0-beta.3",
