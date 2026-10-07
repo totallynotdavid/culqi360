@@ -57,6 +57,7 @@ const projects: TestProjectInlineConfiguration[] = [
 export default defineConfig({
   plugins: [codspeedPlugin()],
   test: {
+    globalSetup: ["../../packages/email-composer/tests/global-setup.ts"],
     reporters: process.env.GITHUB_ACTIONS
       ? ["dot", "github-actions"]
       : ["default", "github-actions"],
