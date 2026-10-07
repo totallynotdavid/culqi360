@@ -1,5 +1,7 @@
 use crate::PipelineError;
-use crate::config::manifest::{SourceManifestEntry, load_manifest, verify_manifest};
+use crate::config::manifest::{
+    ManifestInputPolicy, SourceManifestEntry, verify_manifest, verify_manifest_with_policy,
+};
 use crate::config::mapping::SourceMapping;
 use crate::normalize::{self, PhoneKind, hash_record, normalize_phone_with_kind};
 use std::fs;
@@ -27,7 +29,7 @@ pub fn normalize_source(
     row_cap: usize,
     out_dir: &str,
 ) -> Result<(), PipelineError> {
-    let manifest = load_manifest(manifest_path)?;
+    let manifest = verify_manifest(manifest_path)?;
     let source = manifest
         .sources
         .iter()
@@ -41,10 +43,44 @@ pub fn normalize_matrix(
     row_cap: usize,
     out_dir: &str,
 ) -> Result<(), PipelineError> {
-    let manifest = verify_manifest(manifest_path)?;
+    normalize_matrix_with_policy(
+        manifest_path,
+        row_cap,
+        out_dir,
+        ManifestInputPolicy::RequireRawInputs,
+    )
+}
+
+pub fn normalize_matrix_for_checkout(
+    manifest_path: &str,
+    row_cap: usize,
+    out_dir: &str,
+) -> Result<(), PipelineError> {
+    normalize_matrix_with_policy(
+        manifest_path,
+        row_cap,
+        out_dir,
+        ManifestInputPolicy::AllowMissingOptionalRawInputs,
+    )
+}
+
+fn normalize_matrix_with_policy(
+    manifest_path: &str,
+    row_cap: usize,
+    out_dir: &str,
+    input_policy: ManifestInputPolicy,
+) -> Result<(), PipelineError> {
+    let manifest = verify_manifest_with_policy(manifest_path, input_policy)?;
 
     for source in &manifest.sources {
         if !source.enabled {
+            continue;
+        }
+        if !source.has_raw_input() {
+            eprintln!(
+                "[pipeline] warning: optional raw source skipped source={} path={}",
+                source.source_key, source.raw_path
+            );
             continue;
         }
         normalize_source_entry(source, row_cap, out_dir)?;

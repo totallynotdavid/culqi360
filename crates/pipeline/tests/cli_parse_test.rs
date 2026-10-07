@@ -26,3 +26,20 @@ fn parses_refresh_with_default_slice() {
         _ => panic!("expected refresh command"),
     }
 }
+
+#[test]
+fn parses_checkout_manifest_policy_flag() {
+    let args = vec![
+        "verify-manifest".to_owned(),
+        "--allow-missing-optional".to_owned(),
+    ];
+    let command = parse_args(&args).expect("parse should succeed");
+
+    match command {
+        Command::VerifyManifest {
+            allow_missing_optional,
+            ..
+        } => assert!(allow_missing_optional),
+        _ => panic!("expected verify-manifest command"),
+    }
+}

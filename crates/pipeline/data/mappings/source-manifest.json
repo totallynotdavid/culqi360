@@ -7,7 +7,8 @@
       "snapshot_date": "2025-02-28",
       "raw_path": "crates/pipeline/data/raw/celulares.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/celulares.json",
-      "enabled": true
+      "enabled": true,
+      "raw_optional": true
     },
     {
       "source_key": "claro_post_202508",
@@ -15,7 +16,8 @@
       "snapshot_date": "2025-08-31",
       "raw_path": "crates/pipeline/data/raw/CLARO_POST_202508.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/claro_post_202508.json",
-      "enabled": true
+      "enabled": true,
+      "raw_optional": true
     },
     {
       "source_key": "consolidado_ruc_representantes_ok",
@@ -23,7 +25,8 @@
       "snapshot_date": "2025-11-24",
       "raw_path": "crates/pipeline/data/raw/Consolidado_RUC20_Representantes_MERGED.tsv",
       "mapping_path": "crates/pipeline/data/mappings/sources/consolidado_ruc_representantes_ok.json",
-      "enabled": true
+      "enabled": true,
+      "raw_optional": true
     },
     {
       "source_key": "representantes_enriquecido",
@@ -31,7 +34,8 @@
       "snapshot_date": "2025-10-10",
       "raw_path": "crates/pipeline/data/raw/Representantes_ENRIQUECIDO.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/representantes_enriquecido.json",
-      "enabled": true
+      "enabled": true,
+      "raw_optional": true
     },
     {
       "source_key": "osiptel",
@@ -39,7 +43,8 @@
       "snapshot_date": "2025-09-27",
       "raw_path": "crates/pipeline/data/raw/osiptel_2025.csv",
       "mapping_path": "crates/pipeline/data/mappings/sources/osiptel_2025.json",
-      "enabled": true
+      "enabled": true,
+      "raw_optional": true
     },
     {
       "source_key": "bitel_post_ms_2025",
@@ -71,7 +76,8 @@
       "snapshot_date": "2026-01-30",
       "raw_path": "crates/pipeline/data/raw/PadronRUC_202601.csv",
       "mapping_path": "crates/pipeline/data/mappings/sources/padron_ruc_202601.json",
-      "enabled": true
+      "enabled": true,
+      "raw_optional": true
     },
     {
       "source_key": "consolidado_ruc_representantes_bppo",

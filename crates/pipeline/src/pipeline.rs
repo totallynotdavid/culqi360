@@ -1,8 +1,8 @@
 use crate::PipelineError;
 use crate::cli::Command;
-use crate::config::manifest::verify_manifest;
+use crate::config::manifest::{verify_manifest, verify_manifest_for_checkout};
 use crate::config::runtime::{PipelineRuntimeConfig, ProfileMode};
-use crate::contract_guard::validate_contracts;
+use crate::contract_guard::{validate_contracts, validate_contracts_for_checkout};
 use crate::gate;
 use crate::promote;
 use crate::report;
@@ -14,20 +14,44 @@ use std::time::SystemTime;
 
 pub fn run(command: Command) -> Result<(), PipelineError> {
     match command {
-        Command::VerifyManifest { manifest } => {
-            verify_manifest(&manifest)?;
-            validate_contracts(&manifest)?;
+        Command::VerifyManifest {
+            manifest,
+            allow_missing_optional,
+        } => {
+            if allow_missing_optional {
+                verify_manifest_for_checkout(&manifest)?;
+                validate_contracts_for_checkout(&manifest)?;
+            } else {
+                verify_manifest(&manifest)?;
+                validate_contracts(&manifest)?;
+            }
             Ok(())
         }
-        Command::Validate { config, profile } => {
+        Command::Validate {
+            config,
+            profile,
+            allow_missing_optional,
+        } => {
             let runtime = PipelineRuntimeConfig::from_path(&config)?;
-            validate_contracts(&runtime.paths.manifest)?;
+            if allow_missing_optional {
+                validate_contracts_for_checkout(&runtime.paths.manifest)?;
+            } else {
+                validate_contracts(&runtime.paths.manifest)?;
+            }
             let resolved = runtime.resolve_profile(&profile)?;
-            report::normalize_matrix(
-                &runtime.paths.manifest,
-                resolved.row_cap,
-                &runtime.paths.normalized_dir,
-            )
+            if allow_missing_optional {
+                report::normalize_matrix_for_checkout(
+                    &runtime.paths.manifest,
+                    resolved.row_cap,
+                    &runtime.paths.normalized_dir,
+                )
+            } else {
+                report::normalize_matrix(
+                    &runtime.paths.manifest,
+                    resolved.row_cap,
+                    &runtime.paths.normalized_dir,
+                )
+            }
         }
         Command::Bench { config, profile } => {
             let runtime = PipelineRuntimeConfig::from_path(&config)?;

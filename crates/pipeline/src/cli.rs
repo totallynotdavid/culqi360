@@ -6,10 +6,12 @@ use std::collections::HashMap;
 pub enum Command {
     VerifyManifest {
         manifest: String,
+        allow_missing_optional: bool,
     },
     Validate {
         config: String,
         profile: String,
+        allow_missing_optional: bool,
     },
     Bench {
         config: String,
@@ -49,6 +51,7 @@ pub fn parse_args(args: &[String]) -> Result<Command, PipelineError> {
                 .get("--manifest")
                 .cloned()
                 .unwrap_or_else(|| default_source_manifest().to_string_lossy().to_string()),
+            allow_missing_optional: flags.contains_key("--allow-missing-optional"),
         }),
         "validate" => Ok(Command::Validate {
             config: flags
@@ -59,6 +62,7 @@ pub fn parse_args(args: &[String]) -> Result<Command, PipelineError> {
                 .get("--profile")
                 .cloned()
                 .unwrap_or_else(|| "quick".to_owned()),
+            allow_missing_optional: flags.contains_key("--allow-missing-optional"),
         }),
         "bench" => Ok(Command::Bench {
             config: flags
@@ -122,6 +126,11 @@ fn parse_flags(args: &[String]) -> Result<HashMap<String, String>, PipelineError
             return Err(PipelineError::Args(format!(
                 "expected flag starting with --, got: {key}"
             )));
+        }
+        if key == "--allow-missing-optional" {
+            out.insert(key, String::new());
+            i += 1;
+            continue;
         }
         let Some(value) = args.get(i + 1) else {
             return Err(PipelineError::Args(format!(
