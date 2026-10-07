@@ -1,13 +1,12 @@
 # Solid Motion
 
-`@crm/solid-motion` is a Solid-native animation package built directly on
-[`motion-dom`](https://motion.dev). It is not a port of Motion React or Motion
-Vue. There is no `VisualElement`, props proxy, or framework adapter. Solid's own
-reactive graph drives animation state: a `createEffect` diffs the active target
-against the live value map and starts per-value `motion-dom` animations
-directly.
+`@crm/solid-motion` is a private, Solid-native animation package built directly
+on [`motion-dom`](https://motion.dev). It is not a port of Motion React or
+Motion Vue. Solid's reactive graph drives animation state, and the package
+starts per-value `motion-dom` animations directly.
 
-Peer dependencies: `solid-js` and `@solidjs/web`, both `^2.0.0-rc.1`.
+Install workspace dependencies from the repository root with `bun install`. Peer
+dependencies are `solid-js` and `@solidjs/web`, both `^2.0.0-rc.9`.
 
 ```tsx
 import { motion } from "@crm/solid-motion";

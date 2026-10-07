@@ -1,44 +1,46 @@
-# The extension
+# Browser extension
 
-Runs in the browser during calls. It tracks call state, records audio, and syncs
-events back to the web application.
+The browser extension is the call companion for Culqi360. It tracks an
+assignment and call lifecycle, records audio through the browser's offscreen
+document, persists state locally, and queues events for synchronization with the
+web application.
 
-The service worker entrypoint is
-[`entrypoints/background.ts`](entrypoints/background.ts). Runtime orchestration
-is in [`src/background/runtime.ts`](src/background/runtime.ts). That runtime
-hydrates persisted state on startup, ensures the sync alarm exists, accepts
-internal and external messages, mutates state, appends queue jobs, and flushes
-jobs when transitions require sync. Popup and sidepanel entrypoints are under
-[`entrypoints/popup/`](entrypoints/popup/) and
-[`entrypoints/sidepanel/`](entrypoints/sidepanel/). Message contracts are in
-[`src/domain/messages.ts`](src/domain/messages.ts). State shape is in
-[`src/domain/model.ts`](src/domain/model.ts).
+## Runtime
 
-The handoff starts in the web application. The web application creates a signed
-handoff token through
-[`handoff-token.ts (web)`](../web/src/routes/api/extension/handoff-token.ts) and
-sends `assignment.handoff` through
-[`runtime.ts (web extension)`](../web/src/lib/extension/runtime.ts). The
-extension verifies sender origin and token signature in
-[`src/services/external-auth.ts`](src/services/external-auth.ts), then claims a
-session through
-[`claim.ts (web)`](../web/src/routes/api/extension/session/claim.ts). Queued
-extension events are posted to
-[`events.ts (web)`](../web/src/routes/api/extension/events.ts). Session refresh
-uses [`refresh.ts (web)`](../web/src/routes/api/extension/session/refresh.ts).
+The service worker starts at
+[`entrypoints/background.ts`](entrypoints/background.ts) and registers
+[`src/background/runtime.ts`](src/background/runtime.ts). The runtime restores
+state, ensures the sync alarm exists, handles internal and external messages,
+updates the state model, and flushes queued jobs when a transition needs sync.
 
-`CRM_WEB_ORIGIN` is read by [`wxt.config.ts`](wxt.config.ts) and converted into
-host permissions and externally connectable origins. `VITE_CRM_WEB_ORIGIN` is
-read by the client runtime and defaults to `http://localhost:3000`. Durable
-state is stored through [`src/services/storage.ts`](src/services/storage.ts).
-Large recording payloads are stored through
-[`src/services/journal.ts`](src/services/journal.ts). Queue and sync helpers are
-in [`src/services/queue.ts`](src/services/queue.ts) and
-[`src/services/sync.ts`](src/services/sync.ts).
+The state model and message contracts are
+[`src/domain/model.ts`](src/domain/model.ts) and
+[`src/domain/messages.ts`](src/domain/messages.ts). Popup and side-panel
+entrypoints are under [`entrypoints/`](entrypoints/).
 
-## Running
+Durable state uses `browser.storage.local` through
+[`src/services/storage.ts`](src/services/storage.ts). Large recording payloads
+use IndexedDB through [`src/services/journal.ts`](src/services/journal.ts).
+Queue and retry behavior are in
+[`src/services/queue.ts`](src/services/queue.ts). Network delivery and session
+refresh are in [`src/services/sync.ts`](src/services/sync.ts).
 
-Run from `apps/extension/`:
+## Web handoff
+
+The web application creates a signed handoff token and sends an
+`assignment.handoff` message. The extension verifies the sender origin and
+signature in [`src/services/external-auth.ts`](src/services/external-auth.ts),
+then claims a session through the web API. Queued events use the web
+extension-events API, and refresh uses the web session-refresh API.
+
+`CRM_WEB_ORIGIN` configures build-time host permissions in
+[`wxt.config.ts`](wxt.config.ts). The client runtime reads `VITE_CRM_WEB_ORIGIN`
+and defaults to `http://localhost:3000`. It reads the verification key from
+`VITE_CRM_HANDOFF_PUBLIC_KEY_RAW_BASE64`.
+
+## Run and validate
+
+Run these commands from `apps/extension/`:
 
 ```sh
 bun run dev
@@ -47,14 +49,14 @@ bun run build
 bun run zip
 ```
 
-## Validation
-
-Validation commands:
+Run the type check and browser integration suite:
 
 ```sh
 bun run check
 bun run test:integration
 ```
+
+The integration command builds the extension before running Playwright.
 
 ## First reads
 
@@ -62,5 +64,5 @@ Start with [`src/background/runtime.ts`](src/background/runtime.ts),
 [`src/domain/model.ts`](src/domain/model.ts), and
 [`src/domain/messages.ts`](src/domain/messages.ts). Then read
 [`src/services/external-auth.ts`](src/services/external-auth.ts),
-[`src/services/sync.ts`](src/services/sync.ts), and
-[`extension service (web)`](../web/src/server/extension/service.ts).
+[`src/services/sync.ts`](src/services/sync.ts), and the web extension service at
+[`apps/web/src/server/extension/service.ts`](../web/src/server/extension/service.ts).

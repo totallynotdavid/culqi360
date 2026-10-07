@@ -1,32 +1,15 @@
 # Culqi360
 
-Culqi360 is Infinity's internal sales CRM. It combines lead management, sales
-workflows, merchant performance reporting, search, and call handling.
-
-<p align="center">
-  <a href="https://github.com/totallynotdavid/culqi360/actions/workflows/web.yml"><img src="https://github.com/totallynotdavid/culqi360/actions/workflows/web.yml/badge.svg?branch=master" alt="Web workflow status"></a>
-  <a href="https://github.com/totallynotdavid/culqi360/actions/workflows/engine.yml"><img src="https://github.com/totallynotdavid/culqi360/actions/workflows/engine.yml/badge.svg?branch=master" alt="Engine workflow status"></a>
-  <a href="https://github.com/totallynotdavid/culqi360/actions/workflows/pipeline.yml"><img src="https://github.com/totallynotdavid/culqi360/actions/workflows/pipeline.yml/badge.svg?branch=master" alt="Pipeline workflow status"></a>
-  <a href="https://github.com/totallynotdavid/culqi360/actions/workflows/extension.yml"><img src="https://github.com/totallynotdavid/culqi360/actions/workflows/extension.yml/badge.svg?branch=master" alt="Extension workflow status"></a>
-  <a href="https://github.com/totallynotdavid/culqi360/actions/workflows/contracts.yml"><img src="https://github.com/totallynotdavid/culqi360/actions/workflows/contracts.yml/badge.svg?branch=master" alt="Contracts workflow status"></a>
-</p>
-
-This repository contains four main components:
-
-- [`apps/web/`](apps/web/) serves the Culqi360 UI, API routes, and maintenance
-  worker.
-- [`crates/engine/`](crates/engine/) serves contact search and candidate
-  selection from published SQLite datasets.
-- [`crates/pipeline/`](crates/pipeline/) builds those datasets from source
-  files.
-- [`apps/extension/`](apps/extension/) handles browser-based call workflows.
-
-See [System architecture](docs/architecture.md) for the connections between
-these components and their data stores.
+Culqi360 is Infinity's internal sales CRM for sales teams and the services that
+support their workflows. The repository contains the web application, a
+contact-data pipeline, a search and records engine, and a browser extension for
+call work. The web application owns CRM state in PostgreSQL. The engine owns
+read-only contact search data and engine-local records. The pipeline publishes
+that search data.
 
 ## Get started
 
-Install the toolchain and dependencies, then create the local environment file:
+Install the pinned toolchain and workspace dependencies:
 
 ```sh
 mise install
@@ -34,9 +17,8 @@ bun install
 cp .env.example .env
 ```
 
-Fill the required values in `.env`. See
-[Web configuration](apps/web/docs/configuration.md) for requirements and
-defaults. Then generate contracts, initialize PostgreSQL, and start Culqi360:
+Fill the required values in `.env`. Then generate the checked-in contracts and
+email templates, initialize PostgreSQL, and start the local services:
 
 ```sh
 bun run generate
@@ -44,15 +26,42 @@ bun run dev:infra:setup
 bun run dev
 ```
 
-Run `bun run dev:infra:setup` once for a new checkout. The normal development
-command, `bun run dev`, starts PostgreSQL, the engine, the web server, and the
-maintenance worker. The web process creates the schema and seeds development
-data before starting Vite.
+`dev:infra:setup` is a one-time setup for a new checkout. `dev` starts
+PostgreSQL, the engine, the web application, and the maintenance worker. The web
+process creates and seeds the development schema. The
+[web configuration guide](apps/web/docs/configuration.md) describes the
+environment values.
 
-See [Database development](apps/web/docs/database.md) before resetting the local
-database or changing a schema module.
+The smallest useful check after setup is:
+
+```sh
+bun run check:contracts
+```
+
+It should print `all contracts are up to date`. Use the
+[documentation index](docs/readme.md) for component guides and operational
+procedures before running a larger workflow.
+
+## What is here
+
+- [`apps/web/`](apps/web/) serves the UI and HTTP routes, owns PostgreSQL-backed
+  CRM state, and runs the maintenance worker.
+- [`crates/pipeline/`](crates/pipeline/) validates source files and publishes
+  SQLite contact datasets.
+- [`crates/engine/`](crates/engine/) serves signed search, candidate, import,
+  health, and optional ingest endpoints.
+- [`apps/extension/`](apps/extension/) tracks browser call state, recording
+  payloads, and synchronization jobs.
+- [`contracts/`](contracts/) holds the JSON contracts used to generate and check
+  cross-package bindings.
+
+The [architecture guide](docs/architecture.md) shows the boundaries between
+these parts. The [documentation index](docs/readme.md) is the starting point for
+component guides and operational procedures.
 
 ## Run one component
+
+From the repository root:
 
 ```sh
 bun run dev:infra
@@ -61,39 +70,31 @@ bun run dev:web
 bun run dev:worker
 ```
 
-The web server requires PostgreSQL. Search and candidate-assignment flows also
-require the engine.
+The web application requires PostgreSQL. Search and candidate assignment also
+require a published contacts database and the engine.
 
-## Validate the repository
+## Validate changes
 
-Run the complete repository check from the root:
+Run the repository checks before sending a cross-package change for review:
 
 ```sh
 bun run check
 ```
 
-The command checks Rust, generated contracts, search compatibility, web types,
-lint, and formatting. Focused checks are available in
-[`package.json`](package.json).
+The web typecheck and lint commands generate email templates through the root
+`generate:templates` script. The web Vitest projects generate the same templates
+through shared global setup, so tests do not require a prepared generated-file
+directory.
 
-Run tests with the component that owns them:
+Run focused tests from the package that owns the change. The
+[contributing guide](.github/contributing.md) lists the available checks and the
+expected review path.
 
-```sh
-bun run --cwd apps/web test
-bun run test:engine
-bun run test:extension:integration
-```
+## Deployments
 
-## Documentation
-
-- [System architecture](docs/architecture.md)
-- [Web application](apps/web/readme.md)
-- [Web configuration](apps/web/docs/configuration.md)
-- [Database development](apps/web/docs/database.md)
-- [End-to-end testing](apps/web/docs/e2e-testing.md)
-- [Merchant GPV](apps/web/docs/merchant-gpv.md)
-- [User-facing terminology](apps/web/docs/glossary.md)
-
-Container deployments use [`compose.app.yml`](compose.app.yml) and
-[`compose.engine.yml`](compose.engine.yml). Their environment templates live in
-[`ops/deployment/`](ops/deployment/).
+The application and engine compose files are
+[`compose.app.yml`](compose.app.yml) and
+[`compose.engine.yml`](compose.engine.yml). Their environment templates are in
+[`ops/deployment/`](ops/deployment/). The pipeline owns contact-dataset
+publication; see its [pipeline guide](crates/pipeline/readme.md) before running
+a full rebuild.

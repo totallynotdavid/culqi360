@@ -1,122 +1,65 @@
-# The engine
+# Engine
 
-The engine is the HTTP runtime for contact search and record workflows. It reads
-the published contacts database in read-only mode, owns a small writable leads
-database, validates both schemas at startup, and serves signed API requests.
+The engine is the signed HTTP service for contact search, candidate selection,
+record imports, health checks, and optional source-data ingestion. It reads the
+published contacts SQLite database, keeps a writable leads database, validates
+both schemas at startup, and serves the routers assembled in
+[`src/runtime.rs`](src/runtime.rs).
 
-Startup begins in [`src/main.rs`](src/main.rs) and immediately delegates to
-[`src/runtime.rs`](src/runtime.rs). Runtime setup loads the repo root `.env`,
-parses [`src/config.rs`](src/config.rs), verifies that the contacts database
-exists, opens SQLite pools, validates the `search` and `leads` schemas,
-constructs service state, mounts the routers from the domain crates, and starts
-the Axum listener.
+The engine does not build the contacts database. The
+[pipeline](../pipeline/readme.md) builds and promotes it. Restart the engine
+after promotion so new connections read the new file.
 
-## Architecture
+## Endpoints
 
-This crate owns runtime assembly, configuration, health checks, observability,
-and benchmark support. Search behavior lives in the `search` crate. Record
-candidate and import behavior lives in the `leads` crate. Shared HMAC, rate
-limit, error, and SQLite helpers live in the `shared` crate.
+The always-on endpoints are:
 
-The source layout is intentionally small. [`src/runtime.rs`](src/runtime.rs)
-wires the process. [`src/config.rs`](src/config.rs) validates environment
-configuration. [`src/health.rs`](src/health.rs) probes the published contacts
-database and exposes build metadata. [`src/benchmark/`](src/benchmark/) contains
-benchmark contracts and comparison logic, while
-[`src/bin/bench_search/`](src/bin/bench_search/) is the benchmark CLI.
-
-## Dataset dependency
-
-The contacts database is produced by `the pipeline` and defaults to
-`crates/engine/data/contacts.sqlite`. The engine reads this database in place
-through a read-only pool. After the pipeline promotes a new full database,
-restart the engine process so new connections read the promoted file.
-
-For local development, a sample contacts database is usually enough:
-
-```sh
-bun run pipeline:refresh
-```
-
-For a full production-size rebuild, use the full rebuild flow documented in
-[`../pipeline/readme.md`](../pipeline/readme.md). Do not use `pipeline:refresh`
-when the goal is to regenerate the full `contacts.sqlite`.
-
-## HTTP API
-
-The mounted endpoints are:
-
-```http
+```text
 GET  /health
 POST /search
 POST /records/candidates
 POST /records/imports
 ```
 
-Every `POST` endpoint requires `x-key-id`, `x-timestamp`, and `x-signature`. The
-signature is `hex(hmac_sha256(timestamp_be_u64 + raw_body, secret))`. Requests
-that pass HMAC verification are then charged against endpoint-specific rate
-limit keys.
+Every `POST` request requires `x-key-id`, `x-timestamp`, and `x-signature`. The
+signature is the lowercase hexadecimal HMAC-SHA256 of the big-endian unsigned
+timestamp followed by the raw request body. Timestamps must be within
+`ENGINE_HMAC_MAX_SKEW_SECS` of the engine clock. Authenticated requests are
+rate-limited per key and endpoint.
 
-`POST /search` accepts:
-
-```json
-{
-  "intent": "people | companies | mixed",
-  "query": "string",
-  "limit": 20
-}
-```
-
-`limit` defaults to `20`, is clamped to at least `1`, and is capped by
+`POST /search` accepts `intent` (`people`, `companies`, or `mixed`), `query`,
+and an optional `limit`. The default limit is 20 and the configured maximum is
 `ENGINE_MAX_LIMIT`.
 
-`POST /records/candidates` accepts:
+`POST /records/candidates` accepts branch and user IDs, an optional team and
+product ID, an optional amount (default 20), and `strategy` (`balanced`,
+`freshness`, or `conversion`). Responses contain normalized candidate rows.
 
-```json
-{
-  "branch_id": 1,
-  "user_id": 10,
-  "amount": 25,
-  "team_id": null,
-  "product_id": null,
-  "strategy": "balanced"
-}
+`POST /records/imports` accepts a `rows` array. Each row contains `ruc`,
+`organization_name`, `dni`, `person_name`, and `phone_primary`; `quality_tier`,
+`product_tag`, and `branch_tag` are optional. The request body is capped at 10
+MiB.
+
+Set `ENGINE_INGEST_ENABLED=true` to mount the additional signed endpoints:
+
+```text
+POST /ingest-uploads
+PUT  /ingest-uploads/{upload_id}/blob
+GET  /ingest-jobs/{job_id}
+GET  /ingest-sources
 ```
 
-`strategy` can be `balanced`, `freshness`, or `conversion`. The response
-contains normalized candidate rows with `ruc`, `organization_name`, `dni`,
-`person_name`, and `phone_primary`.
-
-`POST /records/imports` accepts:
-
-```json
-{
-  "source": "manual-import",
-  "rows": [
-    {
-      "ruc": "20100000001",
-      "organization_name": "Example SAC",
-      "dni": "10000001",
-      "person_name": "Example Person",
-      "phone_primary": "999100001",
-      "quality_tier": 1,
-      "product_tag": "loan",
-      "branch_tag": 10
-    }
-  ]
-}
-```
-
-The import endpoint has a 10 MB request body cap and reports inserted, updated,
-skipped, and total row counts.
+The register request declares the source key, snapshot label and date, byte
+size, and lowercase SHA-256. The blob is streamed to the engine-owned upload
+directory, hashed, and queued for processing. The configured limits are in
+`.env.example`.
 
 ## Configuration
 
-Configuration is loaded from the repo root `.env`. `ENGINE_HMAC_KEYS_JSON` is
-required and must be a JSON object such as `{"web":"secret"}`.
+The engine loads the repository root `.env`. `ENGINE_HMAC_KEYS_JSON` is required
+and must be a non-empty JSON object such as `{"web":"secret"}`.
 
-Defaults:
+Defaults from [`src/config.rs`](src/config.rs) are:
 
 ```text
 ENGINE_CONNECT_MODE=local
@@ -129,50 +72,43 @@ ENGINE_RATE_LIMIT_PER_KEY=600
 ENGINE_MAX_LIMIT=100
 ```
 
-In local mode, `ENGINE_HOST` must bind to loopback. Use
-`ENGINE_CONNECT_MODE=internal` for a private container network. Use
-`ENGINE_CONNECT_MODE=remote` when the service is intentionally exposed behind
+Local mode requires a loopback `ENGINE_HOST`. Use `internal` for a private
+container network and `remote` when the service is deliberately exposed behind
 public network infrastructure.
 
-## Running
+When ingest is enabled, the defaults are 4 workers, a batch size of 5,000, a 2
+GiB upload limit, a 10 million row limit, and 8 queued uploads. Override those
+values with `ENGINE_INGEST_WORKERS`, `ENGINE_INGEST_BATCH_SIZE`,
+`ENGINE_INGEST_MAX_UPLOAD_BYTES`, `ENGINE_INGEST_MAX_ROWS`, and
+`ENGINE_INGEST_MAX_QUEUED_UPLOADS`.
 
-Build or refresh the contacts database before starting the server:
+## Run and validate
+
+Build a sample contacts database, then start the engine from the repository
+root:
 
 ```sh
 bun run pipeline:refresh
 bun run dev:engine
 ```
 
-For full database promotion, run the pipeline full rebuild and promotion first,
-then restart the engine.
-
-## Validation
+Run the engine checks and tests:
 
 ```sh
 bun run check:engine
 bun run test:engine
 ```
 
-`check:engine` runs the Rust workspace checks used for engine and pipeline
-changes. `test:engine` runs the engine test target directly.
+## Code map
 
-## Benchmarks
-
-The benchmark binary is `bench-search` under
-[`src/bin/bench_search/`](src/bin/bench_search/). The Criterion benchmark target
-is [`benches/search_service.rs`](benches/search_service.rs), and its default
-workload fixture is
-[`benches/workloads/default.json`](benches/workloads/default.json).
-
-Operational benchmark scripts live under [`../../ops/bench/`](../../ops/bench/).
-Smoke benchmark runs can refresh a sample dataset. Full benchmark runs expect an
-existing full dataset and do not build it.
-
-## First reads
-
-Start with [`src/runtime.rs`](src/runtime.rs), [`src/config.rs`](src/config.rs),
-and [`src/health.rs`](src/health.rs). Then read the mounted API crates:
-[`../search/src/api.rs`](../search/src/api.rs),
-[`../search/src/service.rs`](../search/src/service.rs),
-[`../leads/src/api.rs`](../leads/src/api.rs), and
-[`../leads/src/service.rs`](../leads/src/service.rs).
+- [`src/runtime.rs`](src/runtime.rs) loads configuration, validates databases,
+  and mounts the routers.
+- [`src/health.rs`](src/health.rs) probes the published database and reports
+  build metadata.
+- [`src/ingest/`](src/ingest/) owns optional streamed uploads and ingest jobs.
+- [`../search/`](../search/) owns search queries and response contracts.
+- [`../leads/`](../leads/) owns candidate selection and record imports.
+- [`../shared/`](../shared/) owns HMAC, rate limiting, errors, and SQLite
+  helpers.
+- [`../../ops/bench/readme.md`](../../ops/bench/readme.md) owns benchmark
+  operation.

@@ -1,63 +1,81 @@
-# System architecture
+# Architecture
 
-Culqi360 runs as a web application, a maintenance worker, a search engine, and a
-browser extension. PostgreSQL stores application state and the worker queue. The
-search engine reads SQLite datasets built by the source-data pipeline.
+Culqi360 is a web application connected to PostgreSQL, a search and records
+engine backed by SQLite, a source-data pipeline, and a browser extension.
+PostgreSQL is the system of record for CRM state. The pipeline owns the
+published contact dataset. The engine reads that dataset and exposes it to the
+web application through signed HTTP requests.
 
 ```mermaid
 flowchart LR
-    Sources[Source databases and files] --> Pipeline[Dataset pipeline]
-    Pipeline --> Contacts[(Published SQLite datasets)]
-    Contacts --> Engine[Search engine]
-    Web[Culqi360 web] --> Engine
+    Sources[Source files] --> Pipeline[Pipeline]
+    Pipeline --> Contacts[(contacts.sqlite)]
+    Contacts --> Engine[Engine]
+    Web[Web application] --> Engine
     Web <--> Postgres[(PostgreSQL)]
     Worker[Maintenance worker] <--> Postgres
-    Worker --> Engine
     Extension[Browser extension] <--> Web
-    Browser[Browser] <--> Web
 ```
 
 ## Web application
 
-The web application serves the Culqi360 UI and API routes. It stores sessions,
-organizations, workflow state, sales data, notification state, and reporting
-data in PostgreSQL. Search and candidate assignment are delegated to the engine.
+The web application serves the UI and API routes. Request middleware builds
+request context, resolves the session, applies the navigation policy, and then
+dispatches the route. Authenticated routes are under
+[`apps/web/src/routes/(authenticated)/`](../apps/web/src/routes/%28authenticated%29/);
+public routes are under
+[`apps/web/src/routes/(public)/`](../apps/web/src/routes/%28public%29/); API
+routes are under [`apps/web/src/routes/api/`](../apps/web/src/routes/api/).
 
-The maintenance worker uses the same application services and PostgreSQL
-database as the web application. PostgreSQL `LISTEN`/`NOTIFY` wakes the worker
-when work is available, and a one-second poll recovers missed notifications.
+RPC modules in [`apps/web/src/rpc/`](../apps/web/src/rpc/) validate transport
+input and call a capability in
+[`apps/web/src/server/`](../apps/web/src/server/).
+`src/server/composition/application.ts` assembles request-scoped capabilities.
+`src/server/platform/database/` owns PostgreSQL access and schema creation.
 
-Realtime browser delivery is separate from queue execution. Record-import
-progress, GPV report imports, and event logs all use the same server-sent event
-pipeline, backed by one PostgreSQL `LISTEN` connection per process. Each
-connection reads the subscriber's current state in the same query that
-authorizes it, so reconnects lose no events.
+The maintenance worker starts at
+[`maintenance-runner.ts`](../apps/web/src/workers/maintenance-runner.ts). It
+uses the shared server runtime without request or framework dependencies. Queue
+notifications use PostgreSQL `LISTEN`/`NOTIFY`; the worker also polls so a
+missed notification does not leave work pending.
 
-See the [web application guide](../apps/web/readme.md) for request handling,
-persistence, and background processing.
+Browser progress and event updates use the server-sent event service under
+[`src/server/realtime/`](../apps/web/src/server/realtime/). The browser client
+and reconnect policy are under
+[`src/browser/realtime/`](../apps/web/src/browser/realtime/). The
+[realtime guide](../apps/web/docs/realtime.md) owns that protocol.
 
-## Search data
+## Contact data and engine
 
-The pipeline validates source files and publishes SQLite datasets. The engine
-serves those datasets over signed HTTP endpoints for search, candidate
-selection, record imports, and health checks.
+The pipeline reads source files described by
+[`source-manifest.json`](../crates/pipeline/data/mappings/source-manifest.json),
+normalizes rows, merges them into SQLite, materializes engine projections, and
+promotes a database only after the quality gate passes. The runtime and command
+flow are implemented under [`crates/pipeline/src/`](../crates/pipeline/src/).
 
-Engine HTTP and projection contracts live in
-[`contracts/engine/`](../contracts/engine/). Run `bun run check:contracts` to
-check generated bindings. Run `bun run check:search-contract` to check search
-compatibility.
+The engine opens the promoted contacts database through a read-only pool and
+opens its writable leads database separately. It validates both schemas during
+startup, then mounts the search and records routers. The runtime assembly is in
+[`runtime.rs`](../crates/engine/src/runtime.rs); search is in
+[`crates/search/`](../crates/search/); candidate and import workflows are in
+[`crates/leads/`](../crates/leads/). Optional upload ingestion is in
+[`crates/engine/src/ingest/`](../crates/engine/src/ingest/).
 
-The implementation entry points are:
-
-- Pipeline orchestration: [`pipeline.rs`](../crates/pipeline/src/pipeline.rs)
-- Engine runtime: [`runtime.rs`](../crates/engine/src/runtime.rs)
-- Search API: [`api.rs`](../crates/search/src/api.rs)
-- Web engine adapter:
-  [`client.ts`](../apps/web/src/server/adapters/engine/client.ts)
+The JSON contracts in [`contracts/engine/`](../contracts/engine/) and
+[`contracts/pipeline/`](../contracts/pipeline/) are the source of truth for
+generated projection and API types. Run `bun run check:contracts` and
+`bun run check:search-contract` when changing a contract boundary.
 
 ## Browser extension
 
-The extension receives signed handoff messages and synchronizes call state
-through extension API routes. Start with
-[`runtime.ts`](../apps/extension/src/background/runtime.ts) and
-[`external-auth.ts`](../apps/extension/src/services/external-auth.ts).
+The extension service worker starts at
+[`entrypoints/background.ts`](../apps/extension/entrypoints/background.ts) and
+registers [`runtime.ts`](../apps/extension/src/background/runtime.ts). It
+persists call state, stores large recording payloads separately, queues sync
+jobs, and sends those jobs to the web application.
+
+The web application creates the signed handoff and session endpoints under
+[`apps/web/src/routes/api/extension/`](../apps/web/src/routes/api/extension/).
+The extension verifies the handoff in
+[`external-auth.ts`](../apps/extension/src/services/external-auth.ts) before it
+claims a session.

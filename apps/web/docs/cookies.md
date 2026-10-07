@@ -16,8 +16,7 @@ response SolidStart is already building.
 Typical uses include session cookies and other `httpOnly` server-managed
 cookies.
 
-See
-[`server/auth/session/cookies.ts`](../apps/web/src/server/auth/session/cookies.ts).
+See [`server/auth/session/cookies.ts`](../src/server/auth/session/cookies.ts).
 
 ## `cookie-es`
 
@@ -32,5 +31,5 @@ Typical uses include:
 
 See:
 
-- [`browser/ui/ui-preference-cookie.ts`](../apps/web/src/browser/ui/ui-preference-cookie.ts)
-- [`server/auth/google/google-oauth-cookies.ts`](../apps/web/src/server/auth/google/google-oauth-cookies.ts)
+- [`browser/ui/ui-preference-cookie.ts`](../src/browser/ui/ui-preference-cookie.ts)
+- [`server/auth/google/google-oauth-cookies.ts`](../src/server/auth/google/google-oauth-cookies.ts)

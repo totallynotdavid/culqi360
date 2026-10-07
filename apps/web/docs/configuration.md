@@ -5,8 +5,8 @@ package script. Production reads them from the process environment.
 
 [`src/server/platform/config/env.ts`](../src/server/platform/config/env.ts) is
 the canonical server configuration. [`vite.config.ts`](../vite.config.ts) and
-[`src/entry-client.tsx`](../src/entry-client.tsx) read build and browser values
-directly.
+[`src/shared/observability/runtime-env.ts`](../src/shared/observability/runtime-env.ts)
+read build and browser values directly.
 
 ## Application and storage
 

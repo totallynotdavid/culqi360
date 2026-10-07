@@ -7,8 +7,8 @@ connection.
 ## Publishing
 
 A writer publishes with PostgreSQL `NOTIFY`. Each process holds a single
-`LISTEN` connection covering every channel registered in
-[`registry.ts`](../src/server/realtime/registry.ts), started lazily by
+`LISTEN` connection covering every channel assembled in
+[`application.ts`](../src/server/composition/application.ts), started lazily by
 [`runtime.ts`](../src/server/realtime/runtime.ts) so processes that never serve
 streams open no connection.
 
@@ -62,15 +62,14 @@ second cap, reset once a stream opens. It reports `idle`, `connecting`, `live`,
 
 ## Consuming a topic
 
-Features never open a stream directly. Two primitives wrap
-`createTopicConnection`:
-[`createTopicState`](../src/browser/realtime/create-topic-state.ts) keeps the
-latest value and can stop once that value is final, and
-[`createTopicFeed`](../src/browser/realtime/create-topic-feed.ts) accumulates a
-capped list. Both return their data alongside the connection state, because a
-surface that cannot see `offline` or `denied` renders stale data as if it were
-current: a progress bar frozen at its last row count looks identical to one that
-is simply between updates.
+Features never open a stream directly. The
+[`createTopicConnection`](../src/browser/realtime/create-topic-connection.ts)
+primitive owns a topic's connection state. The
+[`createTopicFeed`](../src/browser/realtime/create-topic-feed.ts) helper uses it
+to accumulate a capped list and returns the records with the connection state,
+because a surface that cannot see `offline` or `denied` renders stale data as if
+it were current: a progress bar frozen at its last row count looks identical to
+one that is simply between updates.
 
 ## Cursors and recovery
 
