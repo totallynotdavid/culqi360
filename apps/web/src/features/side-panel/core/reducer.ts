@@ -165,20 +165,3 @@ export function reduceSidePanelPatch(
     }
   }
 }
-
-export function updateSidePanelPageState(
-  pageStateById: Record<string, SidePanelPageState>,
-  pageId: string,
-  updater: (state: SidePanelPageState) => SidePanelPageState,
-) {
-  const current = pageStateById[pageId];
-
-  if (!current) {
-    return pageStateById;
-  }
-
-  return {
-    ...pageStateById,
-    [pageId]: updater(current),
-  };
-}

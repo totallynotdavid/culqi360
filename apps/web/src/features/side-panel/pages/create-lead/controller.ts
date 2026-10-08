@@ -2,6 +2,7 @@ import {
   action,
   createOptimistic,
   createSignal,
+  latest,
   type Accessor,
 } from "solid-js";
 
@@ -60,7 +61,11 @@ export function createCreateLeadController(input: CreateLeadControllerInput) {
       return;
     }
 
-    const ruc = input.validRuc();
+    // The RUC lookup holds every later draft write in a transition until it
+    // resolves, and a plain read returns the committed values meanwhile. A
+    // click that lands during the lookup would submit the draft from before the
+    // user typed, so read what the user sees.
+    const ruc = latest(input.validRuc);
 
     if (!ruc) {
       setErrorMessage("El RUC debe tener 11 dígitos.");
@@ -68,7 +73,7 @@ export function createCreateLeadController(input: CreateLeadControllerInput) {
       return;
     }
 
-    const scopePayload = toCommercialScopePayload(input.scope());
+    const scopePayload = toCommercialScopePayload(latest(input.scope));
 
     if (!scopePayload.ok) {
       setErrorMessage(scopePayload.error);

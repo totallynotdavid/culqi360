@@ -1,10 +1,7 @@
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js";
 
-import {
-  reduceSidePanelPatch,
-  updateSidePanelPageState,
-} from "../core/reducer";
+import { reduceSidePanelPatch } from "../core/reducer";
 import type {
   SidePanelPageDefinition,
   SidePanelPageState,
@@ -34,13 +31,13 @@ export function createSidePanelStore(options?: SidePanelStoreOptions) {
   });
 
   function applyAction(action: Parameters<typeof reduceSidePanelPatch>[1]) {
-    const patch = reduceSidePanelPatch(state, action);
+    setState((draft) => {
+      const patch = reduceSidePanelPatch(draft, action);
 
-    if (!patch) {
-      return;
-    }
-
-    setState((draft) => Object.assign(draft, patch));
+      if (patch) {
+        Object.assign(draft, patch);
+      }
+    });
   }
 
   const openPanel = (page: SidePanelPageDefinition) => {
@@ -82,18 +79,17 @@ export function createSidePanelStore(options?: SidePanelStoreOptions) {
     pageId: string,
     updater: (state: SidePanelPageState) => SidePanelPageState,
   ) => {
-    const updatedPageStateById = updateSidePanelPageState(
-      state.pageStateById,
-      pageId,
-      updater,
-    );
-
-    if (updatedPageStateById === state.pageStateById) {
-      return;
-    }
-
+    // The updater must read through the draft. Outside the setter the store
+    // returns committed values only, so while an earlier write is held back
+    // (an async lookup in flight) a patch built from `state` drops it.
     setState((draft) => {
-      draft.pageStateById = updatedPageStateById;
+      const current = draft.pageStateById[pageId];
+
+      if (!current) {
+        return;
+      }
+
+      draft.pageStateById[pageId] = updater(current);
     });
   };
 
