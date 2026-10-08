@@ -7,16 +7,8 @@ assignment, record imports and data-source ingestion.
 
 ## Run
 
-From the repository root, after the [setup](../../readme.md#get-started):
-
-```sh
-bun run dev:infra:setup
-bun run dev
-```
-
-`dev:infra:setup` initializes the local PostgreSQL cluster and creates the `crm`
-database. `dev` starts PostgreSQL, the engine, the web server and the
-maintenance worker. The web server is at <http://localhost:3000>. The
+The [root readme](../../readme.md#get-started) owns the setup and start
+sequence. `bun run dev` serves the web server at <http://localhost:3000>. The
 [database guide](../../docs/database.md) covers migrate, seed and reset.
 
 To run the web server alone, use `bun run dev:web` and `bun run dev:worker`.
@@ -47,6 +39,7 @@ moves through these layers.
 
 - [Configuration](../../docs/web-configuration.md)
 - [Database development](../../docs/database.md)
+- [Preview](../../docs/preview.md)
 - [Action runtime](../../docs/action-runtime.md)
 - [Cookies](../../docs/cookies.md)
 - [Diagnostics](../../docs/diagnostics.md)

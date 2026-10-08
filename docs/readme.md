@@ -7,6 +7,9 @@ covers setup. Each guide below owns one subject.
 
 - [Architecture](architecture.md): how the web application, engine, pipeline and
   extension fit together, and where the code is.
+- [Contracts](contracts.md): the JSON contracts and the files generated from
+  them.
+- [Deployment](deployment.md): the application and engine Compose stacks.
 - [Contributing](../.github/contributing.md): setup, checks and review.
 
 ## Web application
@@ -15,11 +18,12 @@ covers setup. Each guide below owns one subject.
   required.
 - [Database development](database.md): initialize, reset and change the
   disposable schema.
+- [Preview](preview.md): an authenticated local session for checking the UI.
 - [Action runtime](action-runtime.md): how a server action parses,
   authenticates, authorizes and reports errors.
 - [Cookies](cookies.md): which cookie API to use in each context.
 - [Realtime](realtime.md): server-sent events, reconnects and recovery.
-- [Diagnostics](diagnostics.md): SSR, hydration and request tracing output.
+- [Diagnostics](diagnostics.md): hydration and request tracing output.
 - [End-to-end testing](e2e-testing.md): Playwright, isolated databases and
   fixtures.
 - [Web benchmarks](web-benchmarks.md): CPU benchmarks for the web application.

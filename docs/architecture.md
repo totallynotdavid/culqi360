@@ -35,8 +35,10 @@ flowchart TD
 security headers, resolves the session, applies the navigation policy and
 dispatches the route. Authenticated routes are under
 [`routes/(authenticated)/`](../apps/web/src/routes/%28authenticated%29/), public
-routes under [`routes/(public)/`](../apps/web/src/routes/%28public%29/) and API
-routes under [`routes/api/`](../apps/web/src/routes/api/).
+routes under [`routes/(public)/`](../apps/web/src/routes/%28public%29/), login
+and password-reset routes under
+[`routes/(auth)/`](../apps/web/src/routes/%28auth%29/), and API routes under
+[`routes/api/`](../apps/web/src/routes/api/).
 
 RPC modules in [`rpc/`](../apps/web/src/rpc/) validate transport input and call
 a capability in [`server/`](../apps/web/src/server/). Capabilities and
@@ -85,10 +87,9 @@ startup, then mounts the search and records routers.
 [`crates/leads/`](../crates/leads/), and the optional upload ingestion is in
 [`crates/engine/src/ingest/`](../crates/engine/src/ingest/).
 
-The JSON contracts in [`contracts/engine/`](../contracts/engine/) and
-[`contracts/pipeline/`](../contracts/pipeline/) are the source of truth for the
-generated projection and API types. After changing one, run
-`bun run check:contracts` and `bun run check:search-contract`.
+The [engine readme](../crates/engine/readme.md#code-map) maps the crates. The
+[contracts guide](contracts.md) owns the JSON contracts and their generated
+files.
 
 ## Browser extension
 
@@ -103,3 +104,28 @@ The web application creates the signed handoff and session endpoints in
 verifies the handoff in
 [`external-auth.ts`](../apps/extension/src/services/external-auth.ts) before it
 claims a session.
+
+## Deployment
+
+The application and the engine deploy as two Compose stacks. The
+[deployment guide](deployment.md) describes them.
+
+## Shared packages and tools
+
+TypeScript packages under [`packages/`](../packages/) are Bun workspace members
+that the applications import:
+
+- [`contracts`](../packages/contracts/): extension bridge types.
+- `email-composer`: email templates. `bun run generate:templates` compiles them
+  into ignored modules.
+- `fetch-refs`: `bun run refs:fetch` downloads third-party reference
+  documentation (OWASP, SolidJS, Twenty) for local reading.
+- `images`: the responsive image component and its Vite plugin.
+- `message-channels`: the email and WhatsApp delivery providers.
+- [`solid-motion`](../packages/solid-motion/readme.md): animation primitives.
+
+[`tools/codegen/`](../tools/codegen/) generates the contract artifacts.
+[`tools/data-conversion/`](../tools/data-conversion/) holds scripts that convert
+and merge source files, generate sample import responses from an export, and
+compare pipeline runs. [`tools/review/churn.ts`](../tools/review/churn.ts) ranks
+the files a branch changed by how much of each changed.

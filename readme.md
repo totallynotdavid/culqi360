@@ -106,7 +106,8 @@ The [contributing guide](.github/contributing.md) lists the focused checks.
 
 [`compose.app.yml`](compose.app.yml) and
 [`compose.engine.yml`](compose.engine.yml) deploy the application and the
-engine. Their environment templates are in [`ops/deployment/`](ops/deployment/).
+engine. The [deployment guide](docs/deployment.md) describes both stacks and
+their environment templates.
 
 ## Documentation
 

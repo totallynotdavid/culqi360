@@ -2,21 +2,15 @@
 
 JSON files in [`contracts/`](../contracts/) define the shapes that cross a
 package boundary. [`tools/codegen/`](../tools/codegen/) turns the engine
-contracts into checked-in Rust and TypeScript. Generated files are committed, so
-Rust builds need no Bun and a fresh checkout needs no generation step.
+contracts into checked-in Rust and TypeScript.
 
 ## Engine contracts
 
-| Contract                                   | Generated files                                                                                               |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `contracts/engine/record-api.json`         | `crates/leads/src/contracts_generated.rs`, `apps/web/src/contracts/engine/record-api.generated.ts`            |
-| `contracts/engine/doc-projection.json`     | `crates/search/src/doc_projection_contract_generated.rs`                                                      |
-| `contracts/engine/company-projection.json` | `crates/search/src/company_projection_contract_generated.rs`                                                  |
-| Both projection contracts                  | `crates/search/src/result_contract_generated.rs`, `apps/web/src/contracts/search/engine-results.generated.ts` |
-
-Edit the JSON, then run `bun run generate:contracts`. Do not edit the generated
-files. `bun run check:contracts` regenerates in memory and fails when a
-committed file differs.
+Edit the JSON under `contracts/engine/`, then run `bun run generate:contracts`.
+Do not edit the generated files. `bun run check:contracts` regenerates in memory
+and fails when a committed file differs. The docblock in
+[`generate.ts`](../tools/codegen/bin/generate.ts) maps each contract to its
+generated files.
 
 ## Pipeline contracts
 

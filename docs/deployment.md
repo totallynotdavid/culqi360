@@ -10,9 +10,8 @@ application stack and the engine stack run separately and meet on the external
 | Engine      | [`compose.engine.yml`](../compose.engine.yml) | [`Dockerfile.engine`](../Dockerfile.engine) | [`ops/deployment/engine.env.example`](../ops/deployment/engine.env.example) |
 
 Copy each template to `.env` in the stack's working directory. The web
-[configuration](../apps/web/docs/configuration.md) describes the application
-values. The [engine readme](../crates/engine/readme.md) describes the engine
-values.
+[configuration](web-configuration.md) describes the application values. The
+[engine readme](../crates/engine/readme.md) describes the engine values.
 
 ## Application stack
 
@@ -32,9 +31,7 @@ The template sets three names that must be unique per deployment:
 production values for `HOST`, `PORT`, `WEB_DB_URL`, `ENGINE_CONNECT_MODE`,
 `ENGINE_URL`, and `WEB_UPLOADS_ROOT`, so the `.env` file does not set them.
 
-The build accepts the optional arguments `SENTRY_ORG`, `SENTRY_PROJECT`, and
-`SENTRY_AUTH_TOKEN` to upload source maps. The Sentry DSN is read at runtime
-from `SENTRY_DSN`.
+Sentry settings are in [web configuration](web-configuration.md#observability).
 
 ## Engine stack
 

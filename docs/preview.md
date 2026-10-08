@@ -5,7 +5,8 @@ session cookie for a chosen user. Use it to open a signed-in page without typing
 credentials, in a browser or with `bunx agent-browser`.
 
 PostgreSQL must be running (`bun run dev:infra`), and `.env` must be filled in
-as described in [configuration](configuration.md). Run from the repository root:
+as described in [configuration](web-configuration.md). Run from the repository
+root:
 
 ```sh
 bun run preview                      # list roles and their user counts
