@@ -1,4 +1,4 @@
-import type { Transition } from "@crm/solid-motion";
+import type { Transition } from "@totallynotdavid/solid-motion";
 
 /**
  * The spring the small controls move on: a toggle knob sliding, a radio dot

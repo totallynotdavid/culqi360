@@ -1,4 +1,4 @@
-import { createMotion } from "@crm/solid-motion";
+import { createMotion } from "@totallynotdavid/solid-motion";
 import { clsx } from "clsx";
 
 import { CONTROL_SPRING } from "~/components/ui/animation/springs";

@@ -1,5 +1,5 @@
-import { AnimatePresenceList, motion } from "@crm/solid-motion";
 import { Portal, type JSX } from "@solidjs/web";
+import { AnimatePresenceList, motion } from "@totallynotdavid/solid-motion";
 import { createContext, createMemo, createStore } from "solid-js";
 
 import { useIsMobile } from "~/components/ui/layout/responsive/use-is-mobile";

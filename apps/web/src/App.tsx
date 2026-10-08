@@ -1,5 +1,5 @@
-import { MotionConfig } from "@crm/solid-motion";
 import { Title } from "@solidjs/meta";
+import { MotionConfig } from "@totallynotdavid/solid-motion";
 import { Loading } from "solid-js";
 
 import { PLATFORM_NAME } from "~/shared/branding";

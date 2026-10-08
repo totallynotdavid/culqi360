@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
+import { AnimatePresence, motion } from "@totallynotdavid/solid-motion";
 
 interface PresenceTransitionProps {
   show: boolean;

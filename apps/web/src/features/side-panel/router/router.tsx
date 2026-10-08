@@ -1,4 +1,4 @@
-import { motion } from "@crm/solid-motion";
+import { motion } from "@totallynotdavid/solid-motion";
 import { Errored, Show, Loading } from "solid-js";
 
 import { HotkeyBoundary } from "../core/hotkeys/hotkey-boundary";

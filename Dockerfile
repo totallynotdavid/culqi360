@@ -10,7 +10,6 @@ COPY packages/email-composer/package.json ./packages/email-composer/package.json
 COPY packages/fetch-refs/package.json ./packages/fetch-refs/package.json
 COPY packages/images/package.json ./packages/images/package.json
 COPY packages/message-channels/package.json ./packages/message-channels/package.json
-COPY packages/solid-motion/package.json ./packages/solid-motion/package.json
 COPY tools/codegen/package.json ./tools/codegen/package.json
 
 RUN bun install --frozen-lockfile --production --ignore-scripts

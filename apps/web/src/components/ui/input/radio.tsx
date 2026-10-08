@@ -1,5 +1,5 @@
-import { createMotion } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
+import { createMotion } from "@totallynotdavid/solid-motion";
 import { clsx } from "clsx";
 import { type ParentProps } from "solid-js";
 

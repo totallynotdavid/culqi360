@@ -1,5 +1,9 @@
-import { motion, useReducedMotion, type Transition } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
+import {
+  motion,
+  useReducedMotion,
+  type Transition,
+} from "@totallynotdavid/solid-motion";
 import { createEffect, createSignal } from "solid-js";
 
 interface SpringParallaxProps {

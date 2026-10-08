@@ -1,5 +1,5 @@
-import { motion } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
+import { motion } from "@totallynotdavid/solid-motion";
 
 interface AnimatedExpandableContainerProps {
   isExpanded: boolean;

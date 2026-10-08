@@ -1,5 +1,5 @@
-import { motion } from "@crm/solid-motion";
 import { type JSX } from "@solidjs/web";
+import { motion } from "@totallynotdavid/solid-motion";
 
 const SLIDE_OFFSET_PX = 12;
 const STAGGER_DELAY_S = 0.07;

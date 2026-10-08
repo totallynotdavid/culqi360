@@ -24,8 +24,7 @@
     "@crm/email-composer",
     "@crm/fetch-refs",
     "@crm/images",
-    "@crm/message-channels",
-    "@crm/solid-motion"
+    "@crm/message-channels"
   ],
   "ignorePatterns": [
     "**/*.generated.ts",
