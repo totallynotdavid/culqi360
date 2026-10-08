@@ -19,8 +19,8 @@ bun run dev:engine
 ```
 
 The engine exits at startup when `ENGINE_CONTACTS_DB_PATH` does not exist. A
-clean checkout has no contacts database. `bun run pipeline:refresh:fixture`
-builds a small one from synthetic data (see
+clean checkout has no contacts database. `bun run pipeline:fixture` builds a
+small one from synthetic data (see
 [Pipeline](../pipeline/readme.md#source-files)). The engine also needs
 `ENGINE_HMAC_KEYS_JSON`, which is in `.env.example`.
 

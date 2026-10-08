@@ -15,8 +15,10 @@ raw files -> manifest and mappings -> normalized rows -> staged SQLite
 
 The manifest is
 [`data/mappings/source-manifest.json`](data/mappings/source-manifest.json). Each
-enabled entry names a raw file and a mapping. Raw files go in
-[`data/raw/`](data/raw/). Mappings go in
+enabled entry names a raw file (`raw_file`) and a mapping. The raw directory
+resolves the file names. It is `raw_dir` in the config, by default
+[`data/raw/`](data/raw/), and `--raw-dir <path>` replaces it for any command
+that reads raw files. Mappings go in
 [`data/mappings/sources/`](data/mappings/sources/). Canonical and projection
 contracts are in [`../../contracts/`](../../contracts/).
 
@@ -31,10 +33,10 @@ because their snapshots live outside the repository: `celulares`,
   `verify-manifest` prints one JSON line, an array with a result per source.
 - `refresh`, `build` and direct Cargo commands are strict. They need every
   enabled raw input.
-- `bun run pipeline:refresh:fixture` runs `refresh` with
-  [`data/fixture/pipeline.toml`](data/fixture/pipeline.toml), which points the
-  manifest at the synthetic files in [`data/fixture/raw/`](data/fixture/raw/).
-  It needs no real data and promotes a small database to
+- `bun run pipeline:fixture` runs `refresh --slice 10k` with
+  [`data/fixture/pipeline.toml`](data/fixture/pipeline.toml), whose `raw_dir` is
+  the synthetic files in [`data/fixture/raw/`](data/fixture/raw/). It needs no
+  real data and promotes a small database to
   `crates/engine/data/contacts.sqlite`.
 
 ## Commands
@@ -47,15 +49,15 @@ bun run pipeline:engine <command>
 
 This is `cargo run -p pipeline -- <command>`. The commands and their defaults:
 
-| Command           | Options (default first)                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------- |
-| `verify-manifest` | `--manifest <path>`, `--allow-missing-optional`                                               |
-| `validate`        | `--config <path>`, `--profile quick`\|`standard`\|`heavy`\|`full`, `--allow-missing-optional` |
-| `bench`           | `--config <path>`, `--profile standard`\|`quick`\|`heavy`                                     |
-| `bench-map`       | `--config <path>`, `--profile standard`\|`quick`\|`heavy`                                     |
-| `build`           | `--config <path>`, `--profile full`                                                           |
-| `promote`         | `--config <path>`, `--from <path>`, `--to <path>`                                             |
-| `refresh`         | `--config <path>`, `--slice 100k`\|`10k`\|`100k-osiptel`, `--to <path>`                       |
+| Command           | Options (default first)                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `verify-manifest` | `--manifest <path>`, `--raw-dir <path>`, `--allow-missing-optional`                                               |
+| `validate`        | `--config <path>`, `--raw-dir <path>`, `--profile quick`\|`standard`\|`heavy`\|`full`, `--allow-missing-optional` |
+| `bench`           | `--config <path>`, `--raw-dir <path>`, `--profile standard`\|`quick`\|`heavy`                                     |
+| `bench-map`       | `--config <path>`, `--raw-dir <path>`, `--profile standard`\|`quick`\|`heavy`                                     |
+| `build`           | `--config <path>`, `--raw-dir <path>`, `--profile full`                                                           |
+| `promote`         | `--config <path>`, `--from <path>`, `--to <path>`                                                                 |
+| `refresh`         | `--config <path>`, `--raw-dir <path>`, `--slice 100k`\|`10k`\|`100k-osiptel`, `--to <path>`                       |
 
 `validate` defaults to the `quick` profile. A `refresh` slice selects a profile
 from [`pipeline.toml`](pipeline.toml):
@@ -70,7 +72,7 @@ from [`pipeline.toml`](pipeline.toml):
 does not create the full production-size dataset. Shortcuts:
 
 ```sh
-bun run pipeline:refresh          # slice 100k
+bun run pipeline:refresh
 bun run pipeline:refresh:10k
 bun run pipeline:refresh:100k
 bun run pipeline:engine validate --profile standard
@@ -111,6 +113,7 @@ Default paths from [`pipeline.toml`](pipeline.toml):
 
 ```toml
 manifest = "crates/pipeline/data/mappings/source-manifest.json"
+raw_dir = "crates/pipeline/data/raw"
 normalized_dir = "crates/pipeline/data/normalized"
 staged_db = "crates/pipeline/data/build/staged/contacts.pipeline.staged.sqlite"
 bench_dir = "crates/pipeline/data/build/bench"

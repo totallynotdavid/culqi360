@@ -10,7 +10,7 @@ assignment, record imports and data-source ingestion.
 From the repository root, after the [setup](../../readme.md#get-started):
 
 ```sh
-bun run dev:infra:setup   # once per checkout
+bun run dev:infra:setup
 bun run dev
 ```
 

@@ -27,7 +27,7 @@ bun run check
 ```
 
 It runs the Rust checks (`cargo xtask-check`, `xtask-fmt`, `xtask-clippy`), the
-contract checks, the web checks and the TypeScript format check.
+contract checks, the web checks and the TypeScript and Markdown format checks.
 
 Focused checks:
 
@@ -47,13 +47,13 @@ global setup, so the tests run without a prepared checkout. The
 [end-to-end guide](../docs/e2e-testing.md) covers the Playwright suite and the
 [benchmark guide](../docs/web-benchmarks.md) the `test:perf` suite.
 
-Format TypeScript and Rust with `bun run format`. The pipeline has more commands
-in [its README](../crates/pipeline/readme.md).
+Format TypeScript, Markdown and Rust with `bun run format`. The pipeline has
+more commands in [its README](../crates/pipeline/readme.md).
 
 ## Documentation
 
 Each subsystem has one documentation owner. Component behavior lives in the
 README next to the component. Cross-cutting guides live in
 [`docs/`](../docs/readme.md), and every guide is listed in its index. When a
-change alters documented behavior, update that document in the same pull
-request and run every command you document.
+change alters documented behavior, update that document in the same pull request
+and run every command you document.

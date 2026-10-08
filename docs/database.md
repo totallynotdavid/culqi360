@@ -37,8 +37,7 @@ bun run db:reset
 It drops the database named in `WEB_DB_URL` (default `crm`), disconnecting its
 clients, creates it empty, then runs `migrate` and `seed`. Restart the web
 server and the worker afterwards. The command refuses to run with
-`NODE_ENV=production` or against a host other than `localhost`, `127.0.0.1` or
-`::1`.
+`NODE_ENV=production`. It never recreates the `postgres` maintenance database.
 
 To discard the whole local cluster instead, stop PostgreSQL, run
 `bun run clean:db` (it removes `.pgdata` only) and repeat

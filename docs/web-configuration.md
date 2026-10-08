@@ -86,22 +86,22 @@ secret-entropy check.
 
 | Variable                                            | Default                                      | Purpose                                                                     |
 | --------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------- |
-| `VITE_SENTRY_DSN`                                   | Empty                                        | Sentry DSN for server and browser.                                          |
+| `SENTRY_DSN`                                        | Empty                                        | Sentry DSN for server and browser.                                          |
 | `SENTRY_TRACES_SAMPLE_RATE`                         | `0.1`                                        | Server trace sample rate. The server initializes Sentry only in production. |
-| `VITE_SENTRY_TRACES_SAMPLE_RATE`                    | `0.1`                                        | Browser trace sample rate.                                                  |
-| `VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE`            | `0.05`                                       | Browser session replay sample rate.                                         |
-| `VITE_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE`           | `1.0`                                        | Browser replay sample rate for sessions with an error.                      |
+| `SENTRY_BROWSER_TRACES_SAMPLE_RATE`                 | `0.1`                                        | Browser trace sample rate.                                                  |
+| `SENTRY_BROWSER_REPLAY_SESSION_SAMPLE_RATE`         | `0.05`                                       | Browser session replay sample rate.                                         |
+| `SENTRY_BROWSER_REPLAY_ON_ERROR_SAMPLE_RATE`        | `1.0`                                        | Browser replay sample rate for sessions with an error.                      |
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | None                                         | Upload source maps during the build.                                        |
 | `LOG_LEVEL`                                         | `debug` in development, `info` in production | Minimum log level (`debug`, `info`, `warn`, `error`).                       |
 | `LOG_FORMAT`                                        | Unset                                        | `json` forces JSON output. Production always logs JSON.                     |
 
-`VITE_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` are
-read at Vite build time, not only at container runtime. The browser DSN and the
-other `VITE_SENTRY_*` values are compiled into the image, so changing them
-requires a rebuild, and one image serves one Sentry project. The container build
-must receive them as Docker build args. `compose.app.yml` passes them through
-`build.args`; `environment:` or `env_file:` alone does not reach the build
-stage.
+The server reads `SENTRY_DSN` and the `SENTRY_BROWSER_*` rates at runtime and
+sends the browser values to each page in a `sentry-browser-config` meta tag, so
+one image serves any DSN. A browser rate outside 0 to 1 is a configuration
+error. `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` are read at Vite
+build time to upload source maps. The container build must receive them as
+Docker build args. `compose.app.yml` passes them through `build.args`;
+`environment:` or `env_file:` alone does not reach the build stage.
 
 The `DEBUG_DIAGNOSTICS*` variables are described in
 [Diagnostics](diagnostics.md).

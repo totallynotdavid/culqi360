@@ -14,7 +14,7 @@ signed HTTP.
 You need [mise](https://mise.jdx.dev) and a checkout of this repository.
 
 ```sh
-mise install                # Rust, Bun, PostgreSQL, uv, Python
+mise install
 bun install
 cp .env.example .env
 bun run generate
@@ -26,7 +26,7 @@ how to generate each secret. Then create the local database and start
 everything:
 
 ```sh
-bun run dev:infra:setup     # once per checkout
+bun run dev:infra:setup
 bun run dev
 ```
 
@@ -46,7 +46,7 @@ engine without the real data, build the database from the synthetic fixture in
 invented people and companies, so search returns a handful of results.
 
 ```sh
-bun run pipeline:refresh:fixture   # writes crates/engine/data/contacts.sqlite
+bun run pipeline:fixture           # writes crates/engine/data/contacts.sqlite
 bun run dev:engine                 # or restart `bun run dev`
 ```
 
@@ -56,8 +56,9 @@ They are not in the repository, and the origin and retrieval command of the raw
 snapshots are not recorded anywhere in it, so the maintainer must supply them.
 With the snapshots in [`crates/pipeline/data/raw/`](crates/pipeline/data/raw/)
 under the names in the manifest, run `bun run pipeline:refresh:10k`, which
-samples 10,000 rows per source. The
-[pipeline guide](crates/pipeline/readme.md#source-files) lists the other slices.
+samples 10,000 rows per source. `--raw-dir` points the pipeline at another
+directory. The [pipeline guide](crates/pipeline/readme.md#source-files) lists
+the other slices.
 
 To check the setup:
 
@@ -84,7 +85,7 @@ all contracts are up to date
 ## Run one part
 
 ```sh
-bun run dev:infra     # PostgreSQL
+bun run dev:infra
 bun run dev:engine
 bun run dev:web
 bun run dev:worker
