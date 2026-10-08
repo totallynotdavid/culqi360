@@ -1,0 +1,14 @@
+[paths]
+manifest = "crates/pipeline/data/mappings/source-manifest.json"
+raw_dir = "crates/pipeline/data/fixture/raw"
+normalized_dir = "crates/pipeline/data/build/fixture/normalized"
+staged_db = "crates/pipeline/data/build/fixture/staged/contacts.pipeline.staged.sqlite"
+bench_dir = "crates/pipeline/data/build/fixture"
+engine_db = "crates/engine/data/contacts.sqlite"
+
+[profiles.quick]
+mode = "sample"
+workers = 1
+row_cap = 100
+batch_size = 1000
+include_osiptel = true
