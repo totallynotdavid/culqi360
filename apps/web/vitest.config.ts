@@ -28,6 +28,19 @@ const projects: TestProjectInlineConfiguration[] = [
     },
   },
   {
+    // Browser builds of Solid, so effects run and cleanups fire. The unit
+    // project resolves the server build, where effects never run.
+    extends: true,
+    resolve: { conditions: ["browser"] },
+    ssr: { resolve: { conditions: ["browser"] } },
+    test: {
+      name: "client",
+      include: ["tests/client/**/*.test.ts"],
+      environment: "node",
+      server: { deps: { inline: [/solid-js/, /@solidjs/] } },
+    },
+  },
+  {
     extends: true,
     test: {
       name: "contract",

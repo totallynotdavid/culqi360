@@ -1,6 +1,6 @@
-import { createElementSize } from "@solid-primitives/resize-observer";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
+import { borderBoxSize, createResizeRef } from "~/browser/ui/resize-ref";
 import { Present } from "~/components/ui/control-flow/present";
 import type { CalendarMonth } from "~/domain/time/calendar-date";
 
@@ -23,9 +23,9 @@ const FALLBACK_WIDTH = 640;
 export function LineChart(props: LineChartProps) {
   const height = () => props.height ?? 220;
 
-  const [container, setContainer] = createSignal<HTMLDivElement>();
-  const size = createElementSize(container);
-  const width = () => size.width ?? FALLBACK_WIDTH;
+  const [size, setSize] = createSignal<{ width: number; height: number }>();
+  const resizeRef = createResizeRef((entry) => setSize(borderBoxSize(entry)));
+  const width = () => size()?.width ?? FALLBACK_WIDTH;
 
   const geometry = createMemo(() => {
     const points = props.points;
@@ -69,7 +69,7 @@ export function LineChart(props: LineChartProps) {
   });
 
   return (
-    <div ref={setContainer} style={{ width: "100%" }}>
+    <div ref={resizeRef} style={{ width: "100%" }}>
       <svg
         viewBox={`0 0 ${width()} ${height()}`}
         width={width()}

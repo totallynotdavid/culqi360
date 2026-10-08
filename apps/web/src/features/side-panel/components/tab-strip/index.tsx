@@ -1,4 +1,3 @@
-import { createResizeObserver } from "@solid-primitives/resize-observer";
 import { type JSX } from "@solidjs/web";
 import {
   For,
@@ -12,6 +11,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js";
 
+import { createResizeRef } from "~/browser/ui/resize-ref";
 import ChevronDown from "~/components/icons/chevron-down";
 import {
   TabButton,
@@ -49,10 +49,14 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
   const [moreButtonWidth, setMoreButtonWidth] = createSignal(0);
   const [isOverflowOpen, setIsOverflowOpen] = createSignal(false);
 
-  const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
-  const [moreButtonMeasureRef, setMoreButtonMeasureRef] =
-    createSignal<HTMLDivElement>();
   const [overflowWrapRef, setOverflowWrapRef] = createSignal<HTMLDivElement>();
+
+  const containerRef = createResizeRef((entry) =>
+    setContainerWidth(entry.contentRect.width),
+  );
+  const moreButtonMeasureRef = createResizeRef((entry) =>
+    setMoreButtonWidth(entry.contentRect.width),
+  );
 
   const visibleTabCount = createMemo(() => {
     const width = containerWidth();
@@ -93,14 +97,6 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
     hiddenTabs().some((tab) => tab.id === props.activeTab),
   );
 
-  createResizeObserver(containerRef, ({ width }) => {
-    setContainerWidth(width);
-  });
-
-  createResizeObserver(moreButtonMeasureRef, ({ width }) => {
-    setMoreButtonWidth(width);
-  });
-
   createEffect(
     () => hasHiddenTabs(),
     (hasHidden) => {
@@ -137,17 +133,15 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
   });
 
   return (
-    <div class={styles.tabs} ref={setContainerRef}>
+    <div class={styles.tabs} ref={containerRef}>
       <div class={styles.hiddenMeasure}>
         <For each={props.tabs}>
           {(tab) => {
-            const [element, setElement] = createSignal<HTMLDivElement>();
-
-            createResizeObserver(element, ({ width }) => {
+            const tabRef = createResizeRef((entry) =>
               setTabWidths((widths) => {
-                widths[tab.id] = width;
-              });
-            });
+                widths[tab.id] = entry.contentRect.width;
+              }),
+            );
 
             onCleanup(() => {
               setTabWidths((widths) => {
@@ -157,7 +151,7 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
 
             return (
               <TabMeasure
-                ref={setElement}
+                ref={tabRef}
                 icon={tab.icon}
                 title={tab.label}
                 pill={tab.pill}
@@ -166,7 +160,7 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
           }}
         </For>
 
-        <div ref={setMoreButtonMeasureRef} class={styles.moreTab}>
+        <div class={styles.moreTab} ref={moreButtonMeasureRef}>
           <span class={styles.moreTabContent}>
             <span>+99 más</span>
             <ChevronDown size={16} />

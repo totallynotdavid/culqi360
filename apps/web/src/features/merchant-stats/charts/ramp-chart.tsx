@@ -1,6 +1,6 @@
-import { createElementSize } from "@solid-primitives/resize-observer";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
+import { borderBoxSize, createResizeRef } from "~/browser/ui/resize-ref";
 import { Present } from "~/components/ui/control-flow/present";
 import type { CalendarMonth } from "~/domain/time/calendar-date";
 
@@ -43,12 +43,14 @@ const SERIES_COLORS = [
 export function RampChart(props: RampChartProps) {
   const height = () => props.height ?? 240;
 
-  const [container, setContainer] = createSignal<HTMLDivElement>();
-  const [tooltipEl, setTooltipEl] = createSignal<HTMLDivElement>();
+  const [size, setSize] = createSignal<{ width: number; height: number }>();
+  const [tooltipSize, setTooltipSize] = createSignal<{
+    width: number;
+    height: number;
+  }>();
   const [activeOffset, setActiveOffset] = createSignal<number | null>(null);
-  const size = createElementSize(container);
-  const tooltipSize = createElementSize(tooltipEl);
-  const width = () => size.width ?? FALLBACK_WIDTH;
+  const canvasRef = createResizeRef((entry) => setSize(borderBoxSize(entry)));
+  const width = () => size()?.width ?? FALLBACK_WIDTH;
 
   const maxOffset = createMemo(() =>
     Math.max(
@@ -143,7 +145,7 @@ export function RampChart(props: RampChartProps) {
     if (!point) {
       return 0;
     }
-    const tipWidth = tooltipSize.width ?? TOOLTIP_WIDTH;
+    const tipWidth = tooltipSize()?.width ?? TOOLTIP_WIDTH;
     const leftPlaced = point.x - tipWidth - TOOLTIP_GAP;
     const placed =
       leftPlaced >= TOOLTIP_BOUNDARY_PAD ? leftPlaced : point.x + TOOLTIP_GAP;
@@ -159,7 +161,7 @@ export function RampChart(props: RampChartProps) {
     if (!point) {
       return 0;
     }
-    const tipHeight = tooltipSize.height ?? TOOLTIP_FALLBACK_HEIGHT;
+    const tipHeight = tooltipSize()?.height ?? TOOLTIP_FALLBACK_HEIGHT;
     return clamp(
       point.y - tipHeight / 2,
       TOOLTIP_BOUNDARY_PAD,
@@ -177,7 +179,7 @@ export function RampChart(props: RampChartProps) {
 
   return (
     <div class={styles.wrap}>
-      <div ref={setContainer} class={styles.canvas}>
+      <div ref={canvasRef} class={styles.canvas}>
         <svg
           viewBox={`0 0 ${width()} ${height()}`}
           width={width()}
@@ -263,30 +265,36 @@ export function RampChart(props: RampChartProps) {
         </svg>
 
         <Show when={tooltip()}>
-          {(active) => (
-            <div
-              ref={setTooltipEl}
-              class={styles.tooltip}
-              style={{ left: `${tooltipLeft()}px`, top: `${tooltipTop()}px` }}
-            >
-              <span class={styles.tooltipHeader}>M{active().offset}</span>
-              <For each={active().items}>
-                {(item) => (
-                  <div class={styles.tooltipRow}>
-                    <span
-                      class={styles.legendSwatch}
-                      style={{ "background-color": item.color }}
-                      aria-hidden="true"
-                    />
-                    <span class={styles.tooltipLabel}>{item.label}</span>
-                    <span class={styles.tooltipValue}>
-                      {formatSolesCompact(item.value)}
-                    </span>
-                  </div>
-                )}
-              </For>
-            </div>
-          )}
+          {(active) => {
+            const tooltipRef = createResizeRef((entry) =>
+              setTooltipSize(borderBoxSize(entry)),
+            );
+
+            return (
+              <div
+                ref={tooltipRef}
+                class={styles.tooltip}
+                style={{ left: `${tooltipLeft()}px`, top: `${tooltipTop()}px` }}
+              >
+                <span class={styles.tooltipHeader}>M{active().offset}</span>
+                <For each={active().items}>
+                  {(item) => (
+                    <div class={styles.tooltipRow}>
+                      <span
+                        class={styles.legendSwatch}
+                        style={{ "background-color": item.color }}
+                        aria-hidden="true"
+                      />
+                      <span class={styles.tooltipLabel}>{item.label}</span>
+                      <span class={styles.tooltipValue}>
+                        {formatSolesCompact(item.value)}
+                      </span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            );
+          }}
         </Show>
       </div>
 
