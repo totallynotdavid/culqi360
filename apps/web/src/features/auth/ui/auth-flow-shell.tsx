@@ -23,7 +23,7 @@ export function AuthFlowShell(props: AuthFlowShellProps) {
       <section class={styles.surface}>
         <div class={styles.content}>
           <Show when={props.topBar}>
-            <div class={styles.topBar}>{props.topBar}</div>
+            {(topBar) => <div class={styles.topBar}>{topBar()}</div>}
           </Show>
 
           <div class={styles.logo}>
@@ -45,7 +45,7 @@ export function AuthFlowShell(props: AuthFlowShellProps) {
           <div class={styles.body}>{props.children}</div>
 
           <Show when={props.footer}>
-            <footer class={styles.footer}>{props.footer}</footer>
+            {(footer) => <footer class={styles.footer}>{footer()}</footer>}
           </Show>
         </div>
       </section>

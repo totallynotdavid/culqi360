@@ -1,6 +1,6 @@
 import { type JSX } from "@solidjs/web";
 /* oxlint-disable jsx-a11y/no-noninteractive-element-to-interactive-role */
-import { Show } from "solid-js";
+import { Show, children } from "solid-js";
 
 import { useDataGrid } from "../context/instance-context";
 import {
@@ -24,9 +24,15 @@ type DataGridSurfaceProps<T> = Omit<
 };
 
 function SurfaceMessage(props: { content: JSX.Element }) {
+  // `props.content` is a getter that builds the element on every read. Reading
+  // it for the type check and again for the output creates the component twice
+  // and takes its hydration ids twice, in an order the server and the browser
+  // do not share.
+  const content = children(() => props.content);
+
   return (
-    <Show when={typeof props.content === "string"} fallback={props.content}>
-      <p class={styles.surfaceMessage}>{props.content}</p>
+    <Show when={typeof content() === "string"} fallback={content()}>
+      <p class={styles.surfaceMessage}>{content()}</p>
     </Show>
   );
 }
