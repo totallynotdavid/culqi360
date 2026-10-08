@@ -1,4 +1,3 @@
-import { isServer } from "@solidjs/web";
 import { createEffect, type Accessor } from "solid-js";
 
 import { matchesEvent, parseCombo } from "./hotkey-utils";
@@ -50,17 +49,11 @@ export function useHotkey(
     shouldHandleEvent,
   } = options;
 
-  // Solid 2 runs an effect's compute phase during SSR (only the apply phase is
-  // client-only), and callers routinely gate `enabled` on `document.activeElement`
-  // or similar. A key binding has no meaning on the server, so the whole hook
-  // bails here: `isServer` is a build-time constant, so it drops out of the SSR
-  // bundle instead of every caller having to write an SSR-safe predicate.
-  if (isServer) {
-    return;
-  }
-
   const parsed = parseCombo(combo);
 
+  // Effects consume hydration ids in creation order. The server must reserve
+  // this effect's id even though the key listener only exists in the browser.
+  // `ssrSource: "client"` reserves the id without running the effect body.
   createEffect(
     () => enabled?.() ?? true,
     (isEnabled) => {
@@ -94,5 +87,6 @@ export function useHotkey(
       // longer needed to unbind before the next run.
       return () => document.removeEventListener("keydown", listener);
     },
+    { ssrSource: "client" },
   );
 }
