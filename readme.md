@@ -72,15 +72,15 @@ all contracts are up to date
 
 ## What is here
 
-| Path                                            | Contents                                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [`apps/web/`](apps/web/readme.md)               | SolidStart UI and HTTP routes, PostgreSQL state and the maintenance worker.           |
-| [`apps/extension/`](apps/extension/readme.md)   | Browser extension that tracks call state and syncs it with the web application.       |
-| [`crates/engine/`](crates/engine/readme.md)     | Signed HTTP service for contact search, candidates and record imports.                |
-| [`crates/pipeline/`](crates/pipeline/readme.md) | Builds and publishes the SQLite contacts database.                                    |
-| [`contracts/`](contracts/)                      | JSON contracts that generate and check the cross-package types.                       |
-| [`packages/`](packages/)                        | Shared workspace packages, including [Solid Motion](packages/solid-motion/readme.md). |
-| [`ops/`](ops/)                                  | [Search benchmarks](ops/bench/readme.md) and deployment templates.                    |
+| Path                                            | Contents                                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`apps/web/`](apps/web/readme.md)               | SolidStart UI and HTTP routes, PostgreSQL state and the maintenance worker.     |
+| [`apps/extension/`](apps/extension/readme.md)   | Browser extension that tracks call state and syncs it with the web application. |
+| [`crates/engine/`](crates/engine/readme.md)     | Signed HTTP service for contact search, candidates and record imports.          |
+| [`crates/pipeline/`](crates/pipeline/readme.md) | Builds and publishes the SQLite contacts database.                              |
+| [`contracts/`](contracts/)                      | JSON contracts that generate and check the cross-package types.                 |
+| [`packages/`](packages/)                        | Shared workspace packages.                                                      |
+| [`ops/`](ops/)                                  | [Search benchmarks](ops/bench/readme.md) and deployment templates.              |
 
 ## Run one part
 

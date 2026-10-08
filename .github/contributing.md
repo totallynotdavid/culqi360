@@ -39,7 +39,6 @@ Focused checks:
 | Engine            | `bun run check:engine`, `bun run test:engine`                              |
 | Contracts         | `bun run check:contracts`, `bun run check:search-contract`                 |
 | Browser extension | `bun run --cwd apps/extension check`, `bun run test:extension:integration` |
-| Solid Motion      | `bun run --cwd packages/solid-motion test`                                 |
 
 `check:web`, `check:types` and `check:lint` generate the email templates first.
 The web Vitest projects and the email-composer Vitest config generate them in
