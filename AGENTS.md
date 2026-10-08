@@ -104,15 +104,15 @@ Failure points:
 
 1. Start with a discovery pass before any type refactor.
    - List candidate types in touched files.
-   - List current import paths across `apps/web/src/server`,
-     `apps/web/src/actions`, and `apps/web/src/features`.
+   - List current import paths across `apps/web/src/server`, `apps/web/src/rpc`,
+     and `apps/web/src/features`.
 2. Run usage-count checks only for discovered candidates. Do not guess ownership
    before enumeration.
    - Count references per candidate type with `rg -n "\\bTypeName\\b" <scope>`.
    - For web slices, use `<scope>` =
-     `apps/web/src/server apps/web/src/actions apps/web/src/features`.
+     `apps/web/src/server apps/web/src/rpc apps/web/src/features`.
    - Keep in contracts only if used by multiple files across boundaries
-     (`server`, `actions`, `features`).
+     (`server`, `rpc`, `features`).
    - Keep local if used in one file or one boundary.
    - Inline in a signature when the shape is small and one-off.
 3. Default to local changes, but escalate to structural refactor when the root
