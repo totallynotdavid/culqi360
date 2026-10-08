@@ -1,5 +1,5 @@
 import { browserTracingIntegration, init } from "@sentry/browser";
-import { isServer } from "@solidjs/web";
+import { enableRichArguments } from "@solidjs/web/server-functions/rich-args";
 
 import { sentryDefaultDataCollection } from "../shared/observability/sentry";
 import {
@@ -15,9 +15,8 @@ import {
 import { setupBrowserRequestSecurity } from "./security/csrf-client";
 
 // Browser setup that must run before hydration begins. Imported for its side
-// effects by App.tsx, because start mode generates the client entry and leaves
-// no file to put this in. `isServer` is a build-time constant, so none of it
-// reaches the SSR bundle.
+// effects by entry-client.tsx, ahead of the app, so the server bundle never
+// loads it.
 const HYDRATION_SCOPE = "client-bootstrap";
 
 function readSentryConfig(): SentryBrowserConfig | null {
@@ -83,14 +82,17 @@ function startHydrationDiagnostics(): void {
   });
 }
 
-if (!isServer) {
-  if (import.meta.env.PROD) {
-    startSentry();
-  }
+if (import.meta.env.PROD) {
+  startSentry();
+}
 
-  setupBrowserRequestSecurity();
+setupBrowserRequestSecurity();
 
-  if (isHydrationDiagnosticsEnabled(HYDRATION_SCOPE)) {
-    startHydrationDiagnostics();
-  }
+// Server functions cannot encode `undefined` in their default JSON arguments.
+// The rich-argument codec preserves optional fields and other non-JSON values
+// at every call site.
+enableRichArguments();
+
+if (isHydrationDiagnosticsEnabled(HYDRATION_SCOPE)) {
+  startHydrationDiagnostics();
 }
