@@ -11,25 +11,12 @@ SMOKE_MANIFEST_PATH="${SMOKE_MANIFEST_PATH:-$BENCH_ROOT/manifests/smoke.json}"
 WORKLOAD_PATH="${WORKLOAD_PATH:-$BENCH_ROOT/workloads/smoke.json}"
 DOC_PROJECTION_CONTRACT_PATH="${DOC_PROJECTION_CONTRACT_PATH:-$ROOT_DIR/contracts/engine/doc-projection.json}"
 COMPANY_PROJECTION_CONTRACT_PATH="${COMPANY_PROJECTION_CONTRACT_PATH:-$ROOT_DIR/contracts/engine/company-projection.json}"
-PIPELINE_MANIFEST_OUTPUT="${PIPELINE_MANIFEST_OUTPUT:-$BENCH_ROOT/pipeline/source-manifest.json}"
-PIPELINE_CONFIG_OUTPUT="${PIPELINE_CONFIG_OUTPUT:-$BENCH_ROOT/pipeline/pipeline.toml}"
-ENGINE_DB_PATH="${ENGINE_DB_PATH:-/srv/crm/full/contacts.sqlite}"
 PIPELINE_BIN="${PIPELINE_BIN:-}"
 
 if [[ ! -d "$RAW_SOURCE_DIR" ]]; then
   echo "raw source dir not found: $RAW_SOURCE_DIR" >&2
   exit 1
 fi
-
-echo "[bench] preparing pipeline runtime files under $BENCH_ROOT/pipeline"
-python3 "$ROOT_DIR/ops/bench/prepare_pipeline_runtime.py" \
-  --bench-root "$BENCH_ROOT" \
-  --raw-root "$RAW_SOURCE_DIR" \
-  --manifest-template "$ROOT_DIR/crates/pipeline/data/mappings/source-manifest.json" \
-  --pipeline-config-template "$ROOT_DIR/crates/pipeline/pipeline.toml" \
-  --manifest-output "$PIPELINE_MANIFEST_OUTPUT" \
-  --pipeline-config-output "$PIPELINE_CONFIG_OUTPUT" \
-  --engine-db-path "$ENGINE_DB_PATH"
 
 echo "[bench] building smoke dataset at $SMOKE_DB_PATH"
 mkdir -p "$(dirname "$SMOKE_DB_PATH")"
@@ -39,9 +26,9 @@ if [[ -n "$PIPELINE_BIN" ]]; then
     echo "pipeline binary is not executable: $PIPELINE_BIN" >&2
     exit 1
   fi
-  "$PIPELINE_BIN" refresh --config "$PIPELINE_CONFIG_OUTPUT" --slice 100k --to "$SMOKE_DB_PATH"
+  "$PIPELINE_BIN" refresh --raw-dir "$RAW_SOURCE_DIR" --slice 100k --to "$SMOKE_DB_PATH"
 else
-  cargo run -p pipeline --release -- refresh --config "$PIPELINE_CONFIG_OUTPUT" --slice 100k --to "$SMOKE_DB_PATH"
+  cargo run -p pipeline --release -- refresh --raw-dir "$RAW_SOURCE_DIR" --slice 100k --to "$SMOKE_DB_PATH"
 fi
 
 echo "[bench] generating smoke workload at $WORKLOAD_PATH"

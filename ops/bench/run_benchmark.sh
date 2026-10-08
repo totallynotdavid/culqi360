@@ -11,15 +11,11 @@ if [[ "$MODE" != "smoke" && "$MODE" != "full" ]]; then
   exit 1
 fi
 
-if [[ "$MODE" == "smoke" ]]; then
-  MANIFEST_PATH="${MANIFEST_PATH:-$BENCH_ROOT/manifests/smoke.json}"
-  BASELINE_PATH="${BASELINE_PATH:-$ROOT_DIR/ops/bench/baselines/smoke.json}"
-  WORKLOAD_PATH="${WORKLOAD_PATH:-$BENCH_ROOT/workloads/smoke.json}"
-else
-  MANIFEST_PATH="${MANIFEST_PATH:-$BENCH_ROOT/manifests/full.json}"
-  BASELINE_PATH="${BASELINE_PATH:-$ROOT_DIR/ops/bench/baselines/full.json}"
-  WORKLOAD_PATH="${WORKLOAD_PATH:-$BENCH_ROOT/workloads/full.json}"
-fi
+MANIFEST_PATH="${MANIFEST_PATH:-$BENCH_ROOT/manifests/$MODE.json}"
+WORKLOAD_PATH="${WORKLOAD_PATH:-$BENCH_ROOT/workloads/$MODE.json}"
+# Timings belong to the host that measured them, so the baseline lives with the
+# host's other benchmark state and is never committed.
+BASELINE_PATH="${BASELINE_PATH:-$BENCH_ROOT/baselines/$MODE.json}"
 
 OUTPUT_PATH="${OUTPUT_PATH:-$BENCH_ROOT/runs/${MODE}-${RUN_ID}.json}"
 STRICT_BASELINE="${STRICT_BASELINE:-0}"
@@ -31,6 +27,12 @@ if [[ ! -f "$MANIFEST_PATH" ]]; then
 fi
 if [[ ! -f "$WORKLOAD_PATH" ]]; then
   echo "workload path not found: $WORKLOAD_PATH" >&2
+  exit 1
+fi
+
+if [[ "$STRICT_BASELINE" == "1" && ! -f "$BASELINE_PATH" ]]; then
+  echo "baseline path not found: $BASELINE_PATH" >&2
+  echo "run once with STRICT_BASELINE=0, then: bash ops/bench/promote_baseline.sh <report-json> $BASELINE_PATH" >&2
   exit 1
 fi
 
