@@ -1,7 +1,7 @@
 # Architecture
 
 Culqi360 is a web application connected to PostgreSQL, a search and records
-engine backed by SQLite, a source-data pipeline, and a browser extension.
+engine backed by SQLite, a source-data pipeline and a browser extension.
 PostgreSQL is the system of record for CRM state. The pipeline owns the
 published contact dataset. The engine reads that dataset and exposes it to the
 web application through signed HTTP requests.
@@ -19,63 +19,87 @@ flowchart LR
 
 ## Web application
 
-The web application serves the UI and API routes. Request middleware builds
-request context, resolves the session, applies the navigation policy, and then
-dispatches the route. Authenticated routes are under
-[`apps/web/src/routes/(authenticated)/`](../apps/web/src/routes/%28authenticated%29/);
-public routes are under
-[`apps/web/src/routes/(public)/`](../apps/web/src/routes/%28public%29/); API
-routes are under [`apps/web/src/routes/api/`](../apps/web/src/routes/api/).
+A request passes through these layers:
 
-RPC modules in [`apps/web/src/rpc/`](../apps/web/src/rpc/) validate transport
-input and call a capability in
-[`apps/web/src/server/`](../apps/web/src/server/).
-`src/server/composition/application.ts` assembles request-scoped capabilities.
-`src/server/platform/database/` owns PostgreSQL access and schema creation.
+```mermaid
+flowchart TD
+    Request[HTTP request] --> Middleware[src/middleware.ts]
+    Middleware --> Route[src/routes/]
+    Route --> RPC[src/rpc/]
+    RPC --> Server[src/server/]
+    Server --> Postgres[(PostgreSQL)]
+    Server --> Engine[Signed engine request]
+```
+
+[`middleware.ts`](../apps/web/src/middleware.ts) adds request metadata and
+security headers, resolves the session, applies the navigation policy and
+dispatches the route. Authenticated routes are under
+[`routes/(authenticated)/`](../apps/web/src/routes/%28authenticated%29/), public
+routes under [`routes/(public)/`](../apps/web/src/routes/%28public%29/) and API
+routes under [`routes/api/`](../apps/web/src/routes/api/).
+
+RPC modules in [`rpc/`](../apps/web/src/rpc/) validate transport input and call
+a capability in [`server/`](../apps/web/src/server/). Capabilities and
+repositories live there.
+[`server/composition/application.ts`](../apps/web/src/server/composition/application.ts)
+assembles them. Actions run through the [action runtime](action-runtime.md).
+
+PostgreSQL stores sessions, organizations, workflow state, reporting data,
+notifications and durable jobs.
+[`server/platform/database/`](../apps/web/src/server/platform/database/) holds
+the access code and the schema. [Database development](database.md) covers
+initialization, reset and schema changes.
 
 The maintenance worker starts at
 [`maintenance-runner.ts`](../apps/web/src/workers/maintenance-runner.ts). It
-uses the shared server runtime without request or framework dependencies. Queue
-notifications use PostgreSQL `LISTEN`/`NOTIFY`; the worker also polls so a
-missed notification does not leave work pending.
+uses the shared server runtime without request or framework dependencies and
+processes durable jobs from PostgreSQL. Queue notifications use `LISTEN` and
+`NOTIFY`, and the worker also polls so a missed notification does not leave work
+pending.
 
-Browser progress and event updates use the server-sent event service under
-[`src/server/realtime/`](../apps/web/src/server/realtime/). The browser client
-and reconnect policy are under
-[`src/browser/realtime/`](../apps/web/src/browser/realtime/). The
-[realtime guide](../apps/web/docs/realtime.md) owns that protocol.
+Browser progress and event updates use the server-sent event service in
+[`server/realtime/`](../apps/web/src/server/realtime/). The browser client and
+reconnect policy are in
+[`browser/realtime/`](../apps/web/src/browser/realtime/).
+[Realtime](realtime.md) describes the protocol.
+
+The engine client, request signing, response decoding and ingest contracts are
+in [`server/integrations/engine/`](../apps/web/src/server/integrations/engine/).
+Search is assembled in [`server/search/`](../apps/web/src/server/search/) and
+contact assignment is in
+[`server/contact-assignments/`](../apps/web/src/server/contact-assignments/).
 
 ## Contact data and engine
 
-The pipeline reads source files described by
+The pipeline reads the source files listed in
 [`source-manifest.json`](../crates/pipeline/data/mappings/source-manifest.json),
-normalizes rows, merges them into SQLite, materializes engine projections, and
-promotes a database only after the quality gate passes. The runtime and command
-flow are implemented under [`crates/pipeline/src/`](../crates/pipeline/src/).
+normalizes rows, merges them into SQLite, materializes the engine projections
+and promotes a database only after the quality gate passes. The code is in
+[`crates/pipeline/src/`](../crates/pipeline/src/).
 
 The engine opens the promoted contacts database through a read-only pool and
-opens its writable leads database separately. It validates both schemas during
-startup, then mounts the search and records routers. The runtime assembly is in
-[`runtime.rs`](../crates/engine/src/runtime.rs); search is in
-[`crates/search/`](../crates/search/); candidate and import workflows are in
-[`crates/leads/`](../crates/leads/). Optional upload ingestion is in
+opens its writable leads database separately. It validates both schemas at
+startup, then mounts the search and records routers.
+[`runtime.rs`](../crates/engine/src/runtime.rs) assembles them. Search is in
+[`crates/search/`](../crates/search/), candidate and import workflows are in
+[`crates/leads/`](../crates/leads/), and the optional upload ingestion is in
 [`crates/engine/src/ingest/`](../crates/engine/src/ingest/).
 
 The JSON contracts in [`contracts/engine/`](../contracts/engine/) and
-[`contracts/pipeline/`](../contracts/pipeline/) are the source of truth for
-generated projection and API types. Run `bun run check:contracts` and
-`bun run check:search-contract` when changing a contract boundary.
+[`contracts/pipeline/`](../contracts/pipeline/) are the source of truth for the
+generated projection and API types. After changing one, run
+`bun run check:contracts` and `bun run check:search-contract`.
 
 ## Browser extension
 
-The extension service worker starts at
+The service worker starts at
 [`entrypoints/background.ts`](../apps/extension/entrypoints/background.ts) and
 registers [`runtime.ts`](../apps/extension/src/background/runtime.ts). It
 persists call state, stores large recording payloads separately, queues sync
-jobs, and sends those jobs to the web application.
+jobs and sends them to the web application.
 
-The web application creates the signed handoff and session endpoints under
-[`apps/web/src/routes/api/extension/`](../apps/web/src/routes/api/extension/).
-The extension verifies the handoff in
+The web application creates the signed handoff and session endpoints in
+[`routes/api/extension/`](../apps/web/src/routes/api/extension/). The extension
+verifies the handoff in
 [`external-auth.ts`](../apps/extension/src/services/external-auth.ts) before it
 claims a session.

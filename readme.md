@@ -1,100 +1,113 @@
 # Culqi360
 
-Culqi360 is Infinity's internal sales CRM for sales teams and the services that
-support their workflows. The repository contains the web application, a
-contact-data pipeline, a search and records engine, and a browser extension for
-call work. The web application owns CRM state in PostgreSQL. The engine owns
-read-only contact search data and engine-local records. The pipeline publishes
-that search data.
+Culqi360 is Infinity's internal sales CRM. Sales teams use it to work assigned
+customers, search contact data and track merchant results. This repository holds
+the web application, the contact-data pipeline, the search engine and the
+browser extension for call work.
+
+PostgreSQL is the system of record for CRM state. The pipeline builds a SQLite
+contacts database. The engine serves that database to the web application over
+signed HTTP.
 
 ## Get started
 
-Install the pinned toolchain and workspace dependencies:
+You need [mise](https://mise.jdx.dev) and a checkout of this repository.
 
 ```sh
-mise install
+mise install                # Rust, Bun, PostgreSQL, uv, Python
 bun install
 cp .env.example .env
+bun run generate
 ```
 
-Fill the required values in `.env`. Then generate the checked-in contracts and
-email templates, initialize PostgreSQL, and start the local services:
+Edit `.env` and fill the empty values. The
+[web configuration guide](docs/web-configuration.md) says which are required and
+how to generate each secret. Then create the local database and start
+everything:
 
 ```sh
-bun run generate
-bun run dev:infra:setup
+bun run dev:infra:setup     # once per checkout
 bun run dev
 ```
 
-`dev:infra:setup` is a one-time setup for a new checkout. `dev` starts
-PostgreSQL, the engine, the web application, and the maintenance worker. The web
-process creates and seeds the development schema. The
-[web configuration guide](apps/web/docs/configuration.md) describes the
-environment values.
+`dev` runs PostgreSQL, the engine, the web application and the maintenance
+worker. The web application is at <http://localhost:3000>. Open it and it
+redirects to `/login`.
 
-The smallest useful check after setup is:
+The engine exits at startup because a clean checkout has no contacts database.
+The other three processes keep running, and search and candidate assignment stay
+unavailable until the engine is up.
+
+### Contact data
+
+The engine reads a SQLite contacts database that the pipeline builds. To run the
+engine without the real data, build the database from the synthetic fixture in
+[`crates/pipeline/data/fixture/`](crates/pipeline/data/fixture/). It holds a few
+invented people and companies, so search returns a handful of results.
+
+```sh
+bun run pipeline:refresh:fixture   # writes crates/engine/data/contacts.sqlite
+bun run dev:engine                 # or restart `bun run dev`
+```
+
+The real data comes from the raw source snapshots listed in
+[`source-manifest.json`](crates/pipeline/data/mappings/source-manifest.json).
+They are not in the repository, and the origin and retrieval command of the raw
+snapshots are not recorded anywhere in it, so the maintainer must supply them.
+With the snapshots in [`crates/pipeline/data/raw/`](crates/pipeline/data/raw/)
+under the names in the manifest, run `bun run pipeline:refresh:10k`, which
+samples 10,000 rows per source. The
+[pipeline guide](crates/pipeline/readme.md#source-files) lists the other slices.
+
+To check the setup:
 
 ```sh
 bun run check:contracts
 ```
 
-It should print `all contracts are up to date`. Use the
-[documentation index](docs/readme.md) for component guides and operational
-procedures before running a larger workflow.
+```text
+all contracts are up to date
+```
 
 ## What is here
 
-- [`apps/web/`](apps/web/) serves the UI and HTTP routes, owns PostgreSQL-backed
-  CRM state, and runs the maintenance worker.
-- [`crates/pipeline/`](crates/pipeline/) validates source files and publishes
-  SQLite contact datasets.
-- [`crates/engine/`](crates/engine/) serves signed search, candidate, import,
-  health, and optional ingest endpoints.
-- [`apps/extension/`](apps/extension/) tracks browser call state, recording
-  payloads, and synchronization jobs.
-- [`contracts/`](contracts/) holds the JSON contracts used to generate and check
-  cross-package bindings.
+| Path                                            | Contents                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [`apps/web/`](apps/web/readme.md)               | SolidStart UI and HTTP routes, PostgreSQL state and the maintenance worker.           |
+| [`apps/extension/`](apps/extension/readme.md)   | Browser extension that tracks call state and syncs it with the web application.       |
+| [`crates/engine/`](crates/engine/readme.md)     | Signed HTTP service for contact search, candidates and record imports.                |
+| [`crates/pipeline/`](crates/pipeline/readme.md) | Builds and publishes the SQLite contacts database.                                    |
+| [`contracts/`](contracts/)                      | JSON contracts that generate and check the cross-package types.                       |
+| [`packages/`](packages/)                        | Shared workspace packages, including [Solid Motion](packages/solid-motion/readme.md). |
+| [`ops/`](ops/)                                  | [Search benchmarks](ops/bench/readme.md) and deployment templates.                    |
 
-The [architecture guide](docs/architecture.md) shows the boundaries between
-these parts. The [documentation index](docs/readme.md) is the starting point for
-component guides and operational procedures.
-
-## Run one component
-
-From the repository root:
+## Run one part
 
 ```sh
-bun run dev:infra
+bun run dev:infra     # PostgreSQL
 bun run dev:engine
 bun run dev:web
 bun run dev:worker
 ```
 
-The web application requires PostgreSQL. Search and candidate assignment also
-require a published contacts database and the engine.
+The web application and the worker need PostgreSQL. Search and candidate
+assignment also need the engine and a contacts database.
 
-## Validate changes
-
-Run the repository checks before sending a cross-package change for review:
+## Check your change
 
 ```sh
 bun run check
 ```
 
-The web typecheck and lint commands generate email templates through the root
-`generate:templates` script. The web Vitest projects generate the same templates
-through shared global setup, so tests do not require a prepared generated-file
-directory.
+The [contributing guide](.github/contributing.md) lists the focused checks.
 
-Run focused tests from the package that owns the change. The
-[contributing guide](.github/contributing.md) lists the available checks and the
-expected review path.
+## Deploy
 
-## Deployments
-
-The application and engine compose files are
 [`compose.app.yml`](compose.app.yml) and
-[`compose.engine.yml`](compose.engine.yml). Their environment templates are in
-[`ops/deployment/`](ops/deployment/). The pipeline owns contact-dataset
-publication; see its [pipeline guide](crates/pipeline/readme.md) before running
-a full rebuild.
+[`compose.engine.yml`](compose.engine.yml) deploy the application and the
+engine. Their environment templates are in [`ops/deployment/`](ops/deployment/).
+
+## Documentation
+
+The [documentation index](docs/readme.md) lists every guide. Start with the
+[architecture](docs/architecture.md).

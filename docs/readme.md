@@ -1,34 +1,42 @@
 # Documentation
 
-This index is for contributors and operators working on Culqi360. The root
-[README](../readme.md) covers what the repository contains and the shortest
-local setup. This index points to the document that owns each deeper subject.
+Guides for people who build and operate Culqi360. The [README](../readme.md)
+covers setup. Each guide below owns one subject.
 
-- [Architecture](architecture.md): component boundaries and code map.
-- [Web application](../apps/web/readme.md): request handling, persistence,
-  workers, and engine integration.
-- [Web configuration](../apps/web/docs/configuration.md): environment values and
-  deployment-facing integrations.
-- [Database development](../apps/web/docs/database.md): disposable schema,
-  initialization, reset, and seed commands.
-- [End-to-end testing](../apps/web/docs/e2e-testing.md): Playwright setup,
-  isolated databases, fixtures, and mail assertions.
-- [Cookies](../apps/web/docs/cookies.md): choose the cookie API for request,
-  header, and browser contexts.
-- [Diagnostics](../apps/web/docs/diagnostics.md): enable SSR, hydration, and
-  request tracing diagnostics.
-- [Realtime](../apps/web/docs/realtime.md): server-sent event transport,
-  reconnect behavior, and topic recovery.
-- [Merchant statistics](../apps/web/docs/merchant-gpv.md): GPV imports,
-  attribution, targets, and access rules.
-- [User terminology](../apps/web/docs/glossary.md): the user-facing Spanish
-  terms owned by the web product.
-- [Engine](../crates/engine/readme.md): runtime, signed HTTP endpoints,
-  configuration, and validation.
-- [Pipeline](../crates/pipeline/readme.md): source mapping, builds, quality
-  gates, and publication.
-- [Browser extension](../apps/extension/readme.md): call state, handoff, and
-  synchronization.
-- [Search benchmarks](../ops/bench/readme.md): smoke and full benchmark modes.
-- [Solid Motion](../packages/solid-motion/readme.md): the local Solid animation
-  package and its public primitives.
+## Start here
+
+- [Architecture](architecture.md): how the web application, engine, pipeline and
+  extension fit together, and where the code is.
+- [Contributing](../.github/contributing.md): setup, checks and review.
+
+## Web application
+
+- [Web configuration](web-configuration.md): environment variables and which are
+  required.
+- [Database development](database.md): initialize, reset and change the
+  disposable schema.
+- [Action runtime](action-runtime.md): how a server action parses,
+  authenticates, authorizes and reports errors.
+- [Cookies](cookies.md): which cookie API to use in each context.
+- [Realtime](realtime.md): server-sent events, reconnects and recovery.
+- [Diagnostics](diagnostics.md): SSR, hydration and request tracing output.
+- [End-to-end testing](e2e-testing.md): Playwright, isolated databases and
+  fixtures.
+- [Web benchmarks](web-benchmarks.md): CPU benchmarks for the web application.
+
+## Product
+
+- [Merchant statistics](merchant-stats.md): GPV imports, attribution, targets
+  and access.
+- [Terminology](terminology.md): the Spanish terms the interface uses.
+
+## Other components
+
+- [Engine](../crates/engine/readme.md): signed endpoints, configuration and
+  startup.
+- [Pipeline](../crates/pipeline/readme.md): source files, commands, rebuild and
+  promotion.
+- [Browser extension](../apps/extension/readme.md): call state, web handoff and
+  sync.
+- [Search benchmarks](../ops/bench/readme.md): smoke and full engine benchmarks.
+- [Solid Motion](../packages/solid-motion/readme.md): the animation package.
