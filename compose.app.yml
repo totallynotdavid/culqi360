@@ -4,7 +4,6 @@ x-app: &app
     context: .
     dockerfile: Dockerfile
     args:
-      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
       SENTRY_ORG: ${SENTRY_ORG:-}
       SENTRY_PROJECT: ${SENTRY_PROJECT:-}
       SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
@@ -53,7 +52,6 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
         SENTRY_ORG: ${SENTRY_ORG:-}
         SENTRY_PROJECT: ${SENTRY_PROJECT:-}
         SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}

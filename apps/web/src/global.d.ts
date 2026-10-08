@@ -1,4 +1,5 @@
 import type { RequestContext } from "~/server/platform/http/request-context-storage";
+import type { SentryBrowserConfig } from "~/shared/observability/sentry-browser-config";
 
 declare module "@solidjs/web" {
   interface RequestEventLocals {
@@ -9,5 +10,10 @@ declare module "@solidjs/web" {
      * dev server owns that injection.
      */
     nonce?: string;
+    /**
+     * Seeded per request from the server environment and rendered into the
+     * document head. Null when no Sentry DSN is configured.
+     */
+    sentryBrowserConfig?: SentryBrowserConfig | null;
   }
 }

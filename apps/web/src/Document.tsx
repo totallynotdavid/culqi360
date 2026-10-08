@@ -4,6 +4,7 @@ import type { ParentProps } from "solid-js";
 import favicon from "~/assets/images/logo/logo.ico";
 
 import { CSRF_CONFIG } from "./shared/csrf-config";
+import { SENTRY_BROWSER_CONFIG_META_NAME } from "./shared/observability/sentry-browser-config";
 
 function requestCsrfToken(): string | null {
   const csrf = getRequestEvent()?.locals.requestContext?.csrf;
@@ -18,6 +19,8 @@ function requestCsrfToken(): string | null {
  */
 export default function Document(props: ParentProps) {
   const csrfToken = requestCsrfToken();
+  const sentryBrowserConfig =
+    getRequestEvent()?.locals.sentryBrowserConfig ?? null;
 
   return (
     <html lang="es">
@@ -27,6 +30,12 @@ export default function Document(props: ParentProps) {
         <NoHydration>
           {csrfToken ? (
             <meta name={CSRF_CONFIG.META_NAME} content={csrfToken} />
+          ) : null}
+          {sentryBrowserConfig ? (
+            <meta
+              name={SENTRY_BROWSER_CONFIG_META_NAME}
+              content={JSON.stringify(sentryBrowserConfig)}
+            />
           ) : null}
         </NoHydration>
         <link rel="icon" type="image/x-icon" href={favicon} />

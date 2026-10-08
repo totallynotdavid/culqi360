@@ -5,6 +5,7 @@ import { createAPIHandler } from "filesystem-routing/api";
 import routes from "virtual:file-routes";
 
 import { getApplication } from "./server/composition/application";
+import { sentryConfig } from "./server/platform/config/env";
 import { middlewareConfig } from "./server/platform/config/middleware-config";
 import { enforceAuthRequest } from "./server/platform/http/request-auth";
 import {
@@ -38,6 +39,8 @@ const identifyRequest: Middleware = (request, next) => {
   // Absent in development, where the Vite dev server owns that injection.
   const nonce = event.locals.nonce ?? null;
 
+  event.locals.sentryBrowserConfig = sentryConfig().browser;
+
   event.locals.requestContext = buildAnonymousRequestContext(
     request,
     {
@@ -55,7 +58,7 @@ const identifyRequest: Middleware = (request, next) => {
 
 const applySecurityResponseState: Middleware = (_request, next) => {
   const event = requestEventOrThrow();
-  const { sentryIngestHost } = middlewareConfig();
+  const { sentryIngestHost } = sentryConfig();
   const nonce = event.locals.requestContext.nonce;
 
   const sentryConnectSrc = sentryIngestHost

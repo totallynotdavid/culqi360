@@ -7,6 +7,8 @@ import {
   type NotificationRoutes,
 } from "@crm/message-channels";
 
+import type { SentryBrowserConfig } from "~/shared/observability/sentry-browser-config";
+
 const SECRET_MIN_LENGTH = 32;
 const SECRET_MIN_UNIQUE_CHARS = 10;
 
@@ -334,13 +336,49 @@ function sentryIngestHostFromDsn(dsn: string): string {
   }
 }
 
+function sampleRate(env: EnvSource, key: string, fallback: number): number {
+  const raw = env[key];
+
+  if (!raw) {
+    return fallback;
+  }
+
+  const rate = Number(raw);
+
+  if (!(rate >= 0 && rate <= 1)) {
+    throw new Error(`${key} must be a number between 0 and 1`);
+  }
+
+  return rate;
+}
+
 function parseSentryEnv(source: EnvSource) {
-  const sentryDsn = optional(source, "VITE_SENTRY_DSN", "");
+  const sentryDsn = optional(source, "SENTRY_DSN", "");
 
   return {
     sentryDsn,
     sentryIngestHost: sentryDsn ? sentryIngestHostFromDsn(sentryDsn) : "",
     sentryTraceSampleRate: optional(source, "SENTRY_TRACES_SAMPLE_RATE", "0.1"),
+    browser: sentryDsn
+      ? ({
+          dsn: sentryDsn,
+          tracesSampleRate: sampleRate(
+            source,
+            "SENTRY_BROWSER_TRACES_SAMPLE_RATE",
+            0.1,
+          ),
+          replaysSessionSampleRate: sampleRate(
+            source,
+            "SENTRY_BROWSER_REPLAY_SESSION_SAMPLE_RATE",
+            0.05,
+          ),
+          replaysOnErrorSampleRate: sampleRate(
+            source,
+            "SENTRY_BROWSER_REPLAY_ON_ERROR_SAMPLE_RATE",
+            1,
+          ),
+        } satisfies SentryBrowserConfig)
+      : null,
   } as const;
 }
 

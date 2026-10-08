@@ -3,6 +3,11 @@ import { isServer } from "@solidjs/web";
 
 import { sentryDefaultDataCollection } from "../shared/observability/sentry";
 import {
+  parseSentryBrowserConfig,
+  SENTRY_BROWSER_CONFIG_META_NAME,
+  type SentryBrowserConfig,
+} from "../shared/observability/sentry-browser-config";
+import {
   isHydrationDiagnosticsEnabled,
   isHydrationMismatchError,
   traceHydrationEvent,
@@ -15,22 +20,30 @@ import { setupBrowserRequestSecurity } from "./security/csrf-client";
 // reaches the SSR bundle.
 const HYDRATION_SCOPE = "client-bootstrap";
 
+function readSentryConfig(): SentryBrowserConfig | null {
+  const meta = document.querySelector<HTMLMetaElement>(
+    `meta[name="${SENTRY_BROWSER_CONFIG_META_NAME}"]`,
+  );
+
+  return parseSentryBrowserConfig(meta?.content ?? null);
+}
+
 function startSentry(): void {
+  const config = readSentryConfig();
+
+  if (!config) {
+    return;
+  }
+
   init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
+    dsn: config.dsn,
     // Router 2 navigates through the History API, which this integration
     // instruments directly. It replaces @sentry/solid's router integration,
     // which is pinned to Solid 1 and Router 0.x/1.x.
     integrations: [browserTracingIntegration()],
-    tracesSampleRate: Number(
-      import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? "0.1",
-    ),
-    replaysSessionSampleRate: Number(
-      import.meta.env.VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE ?? "0.05",
-    ),
-    replaysOnErrorSampleRate: Number(
-      import.meta.env.VITE_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE ?? "1.0",
-    ),
+    tracesSampleRate: config.tracesSampleRate,
+    replaysSessionSampleRate: config.replaysSessionSampleRate,
+    replaysOnErrorSampleRate: config.replaysOnErrorSampleRate,
     dataCollection: sentryDefaultDataCollection(),
   });
 
