@@ -1,6 +1,10 @@
 ---
 name: use-gt
-description: "Use Graphite CLI for branch stacks and pull requests in this repo. Use when creating commits, updating stacked branches, submitting PRs, syncing with trunk, or merging. Covers required commands, signed commit expectations, and forbidden shortcuts such as disabling verification."
+description:
+  "Use Graphite CLI for branch stacks and pull requests in this repo. Use when
+  creating commits, updating stacked branches, submitting PRs, syncing with
+  trunk, or merging. Covers required commands, signed commit expectations, and
+  forbidden shortcuts such as disabling verification."
 ---
 
 ## good path

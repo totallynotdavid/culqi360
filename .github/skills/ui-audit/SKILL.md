@@ -1,6 +1,9 @@
 ---
 name: ui-audit
-description: "Audit or plan product UI structure. Use when reviewing navigation, information hierarchy, action density, onboarding flow, or screen-level complexity before making design or frontend changes."
+description:
+  "Audit or plan product UI structure. Use when reviewing navigation,
+  information hierarchy, action density, onboarding flow, or screen-level
+  complexity before making design or frontend changes."
 ---
 
 ## workflow
@@ -18,7 +21,8 @@ description: "Audit or plan product UI structure. Use when reviewing navigation,
 - Information hierarchy: supporting detail does not compete with the main task.
 - Label consistency: one term per concept across the surface.
 - Onboarding flow: the next action is obvious for a first-time user.
-- Optional modules: secondary content can move behind menus, drawers, or progressive disclosure.
+- Optional modules: secondary content can move behind menus, drawers, or
+  progressive disclosure.
 
 ## output format
 
@@ -33,7 +37,8 @@ description: "Audit or plan product UI structure. Use when reviewing navigation,
 - Hierarchy: visual weight matches action priority.
 - Consistency: labels and interaction patterns do not drift.
 - Density: the first screen is readable without hiding key controls.
-- Changeability: the recommendation points to a specific component, route, or layout boundary.
+- Changeability: the recommendation points to a specific component, route, or
+  layout boundary.
 
 ## fail conditions
 
