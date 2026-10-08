@@ -1,81 +1,57 @@
 # Web application
 
 The web application serves the Culqi360 UI and HTTP routes, stores CRM state in
-PostgreSQL, and runs the maintenance worker. It calls the engine for contact
-search, candidate assignment, record imports, and data-source ingestion.
+PostgreSQL and runs the maintenance worker. It calls the
+[engine](../../crates/engine/readme.md) for contact search, candidate
+assignment, record imports and data-source ingestion.
 
-## Request flow
+## Run
 
-```mermaid
-flowchart TD
-    Request[HTTP request] --> Middleware[src/middleware.ts]
-    Middleware --> Route[src/routes/]
-    Route --> RPC[src/rpc/]
-    RPC --> Server[src/server/]
-    Server --> Postgres[(PostgreSQL)]
-    Server --> Engine[Signed engine request]
-```
-
-[`src/middleware.ts`](src/middleware.ts) adds request metadata and security
-headers, resolves the session, applies the navigation policy, and dispatches the
-route. Authenticated routes are under
-[`src/routes/(authenticated)/`](src/routes/%28authenticated%29/); public routes
-are under [`src/routes/(public)/`](src/routes/%28public%29/); API routes are
-under [`src/routes/api/`](src/routes/api/).
-
-RPC modules validate transport input before calling a capability. Server
-capabilities and repositories live under [`src/server/`](src/server/). Runtime
-assembly is in
-[`src/server/composition/application.ts`](src/server/composition/application.ts).
-
-## Persistence and workers
-
-PostgreSQL stores sessions, organizations, workflow state, reporting data,
-notifications, and durable jobs. Database access and schema modules live under
-[`src/server/platform/database/`](src/server/platform/database/). The
-[database guide](docs/database.md) owns initialization, reset, and schema
-changes.
-
-The maintenance worker starts at
-[`src/workers/maintenance-runner.ts`](src/workers/maintenance-runner.ts). It
-uses the shared server runtime, processes durable PostgreSQL jobs, and is woken
-by `LISTEN`/`NOTIFY` with polling as recovery. Browser progress and event logs
-use the [realtime service](docs/realtime.md).
-
-## Engine integration
-
-The engine client, request signing, response decoding, and ingest contracts are
-under [`src/server/integrations/engine/`](src/server/integrations/engine/).
-Search is assembled in [`src/server/search/`](src/server/search/), and contact
-assignment is under
-[`src/server/contact-assignments/`](src/server/contact-assignments/).
-
-## Run the application
-
-From the repository root, after completing the root setup:
+From the repository root, after the [setup](../../readme.md#get-started):
 
 ```sh
-bun run dev:infra:setup
+bun run dev:infra:setup   # once per checkout
 bun run dev
 ```
 
 `dev:infra:setup` initializes the local PostgreSQL cluster and creates the `crm`
-database. `dev` starts PostgreSQL, the engine, the web server, and the
-maintenance worker. See [configuration](docs/configuration.md) for required
-environment values.
+database. `dev` starts PostgreSQL, the engine, the web server and the
+maintenance worker. The web server is at <http://localhost:3000>. The
+[database guide](../../docs/database.md) covers migrate, seed and reset.
 
-Development uses Vite. A production build is served by the repository's
-`apps/web/server.ts` Bun adapter, which calls the generated SolidStart request
-handler. Nitro is not part of the current dependency graph or server path.
+To run the web server alone, use `bun run dev:web` and `bun run dev:worker`.
+Both need PostgreSQL.
 
-## Further reading
+A production build is served by [`server.ts`](server.ts), a Bun adapter that
+calls the generated SolidStart request handler. It listens on `PORT` (default
+3000).
 
-- [Configuration](docs/configuration.md)
-- [Database development](docs/database.md)
-- [Cookies](docs/cookies.md)
-- [Diagnostics](docs/diagnostics.md)
-- [Realtime](docs/realtime.md)
-- [End-to-end testing](docs/e2e-testing.md)
-- [Merchant statistics](docs/merchant-gpv.md)
-- [User terminology](docs/glossary.md)
-- [Repository architecture](../../docs/architecture.md)
+## Where things are
+
+| Path                                                                             | Contents                                                |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`src/middleware.ts`](src/middleware.ts)                                         | Request context, security headers, session, navigation. |
+| [`src/routes/`](src/routes/)                                                     | Authenticated, public and API routes.                   |
+| [`src/rpc/`](src/rpc/)                                                           | RPC modules that validate input and call a capability.  |
+| [`src/server/`](src/server/)                                                     | Capabilities, repositories and platform code.           |
+| [`src/server/composition/application.ts`](src/server/composition/application.ts) | Runtime assembly.                                       |
+| [`src/server/platform/database/`](src/server/platform/database/)                 | PostgreSQL access and schema.                           |
+| [`src/server/integrations/engine/`](src/server/integrations/engine/)             | Engine client, request signing and ingest contracts.    |
+| [`src/workers/maintenance-runner.ts`](src/workers/maintenance-runner.ts)         | Maintenance worker.                                     |
+| [`src/browser/`](src/browser/)                                                   | Browser-only code, including the realtime client.       |
+
+The [architecture guide](../../docs/architecture.md) describes how a request
+moves through these layers.
+
+## Guides
+
+- [Configuration](../../docs/web-configuration.md)
+- [Database development](../../docs/database.md)
+- [Action runtime](../../docs/action-runtime.md)
+- [Cookies](../../docs/cookies.md)
+- [Diagnostics](../../docs/diagnostics.md)
+- [Realtime](../../docs/realtime.md)
+- [End-to-end testing](../../docs/e2e-testing.md)
+- [Benchmarks](../../docs/web-benchmarks.md)
+- [Merchant statistics](../../docs/merchant-stats.md)
+- [Terminology](../../docs/terminology.md)

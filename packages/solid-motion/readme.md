@@ -1,9 +1,9 @@
 # Solid Motion
 
-`@crm/solid-motion` is a private, Solid-native animation package built directly
-on [`motion-dom`](https://motion.dev). It is not a port of Motion React or
-Motion Vue. Solid's reactive graph drives animation state, and the package
-starts per-value `motion-dom` animations directly.
+`@crm/solid-motion` is the workspace's animation package for Solid. It is built
+directly on [`motion-dom`](https://motion.dev). Solid's reactive graph drives
+animation state, and the package starts per-value `motion-dom` animations
+directly.
 
 Install workspace dependencies from the repository root with `bun install`. Peer
 dependencies are `solid-js` and `@solidjs/web`, both `^2.0.0-rc.9`.
@@ -513,7 +513,7 @@ orchestration or value APIs do not need a direct `motion-dom` dependency:
 across a change in its own measured box, and two elements sharing a `layoutId`
 animate as one shared element across a change in which of them is mounted.
 Neither needs `VisualElement`; the projection engine behind them is generic over
-the host element instead. See `todo.txt` item 29 for the design record.
+the host element instead.
 
 `createScroll`, `createVelocity`, and `createTime` are scroll-linked values, for
 a `style` entry driven by scroll position rather than a discrete state change:
@@ -522,8 +522,7 @@ default) and returns four `MotionValue`s (`scrollX`, `scrollY`,
 `scrollXProgress`, `scrollYProgress`) as raw pixel offsets and normalized 0-1
 progress, `createVelocity(source)` derives another `MotionValue`'s rate of
 change, decaying to zero once its source goes stale rather than freezing at the
-last reading, and `createTime()` is the animation frame loop's own clock. See
-`todo.txt` item 30.
+last reading, and `createTime()` is the animation frame loop's own clock.
 
 `createAnimate` and `createWillChange` are the imperative primitives for an
 element this package does not render itself, such as a chart library's own
@@ -532,19 +531,15 @@ signal ref, matching this package's own ref convention rather than motion-dom's
 `AnimationScope`, and `animate` targets the scope's own element, a descendant,
 an explicit element or array, or a sequence of `[target, definition]` steps
 played one after another. `createWillChange` builds a shared `will-change` value
-that several independent animations can each add a hint to. See `todo.txt`
-item 31.
+that several independent animations can each add a hint to.
 
 ## Development
 
-The application compiles this package's `.tsx` source directly, so there is no
-build step. Run these commands from `packages/solid-motion`:
+The application compiles this package's `.tsx` source directly. The `prepare`
+script emits the type declarations in `dist/` (`bun run build:types` repeats
+it). Run these commands from `packages/solid-motion`:
 
 ```sh
 bun run test
 bunx tsc --noEmit -p tsconfig.json
 ```
-
-`packages/solid-motion/todo.txt` is the architecture and decision record: every
-non-obvious design choice above, and why alternatives were rejected, is written
-up there in more detail than belongs in this file.

@@ -35,7 +35,8 @@ extension-events API, and refresh uses the web session-refresh API.
 
 `CRM_WEB_ORIGIN` configures build-time host permissions in
 [`wxt.config.ts`](wxt.config.ts). The client runtime reads `VITE_CRM_WEB_ORIGIN`
-and defaults to `http://localhost:3000`. It reads the verification key from
+and defaults to `http://localhost:3000`, where `bun run dev` serves the web
+application. It reads the verification key from
 `VITE_CRM_HANDOFF_PUBLIC_KEY_RAW_BASE64`.
 
 ## Run and validate
@@ -56,13 +57,6 @@ bun run check
 bun run test:integration
 ```
 
-The integration command builds the extension before running Playwright.
-
-## First reads
-
-Start with [`src/background/runtime.ts`](src/background/runtime.ts),
-[`src/domain/model.ts`](src/domain/model.ts), and
-[`src/domain/messages.ts`](src/domain/messages.ts). Then read
-[`src/services/external-auth.ts`](src/services/external-auth.ts),
-[`src/services/sync.ts`](src/services/sync.ts), and the web extension service at
+The integration command builds the extension before running Playwright. The web
+handoff endpoint is
 [`apps/web/src/server/extension/service.ts`](../web/src/server/extension/service.ts).
