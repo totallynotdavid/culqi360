@@ -1,10 +1,15 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const HEALTH_TIMEOUT_MS = 60_000;
 const HEALTH_POLL_MS = 200;
 
 export interface RunningServer {
   baseURL: string;
+  /** Directory this server alone stores uploaded documents in. */
+  uploadsRoot: string;
   /** Everything the server has written to stdout and stderr so far. */
   output(): string;
   stop(): Promise<void>;
@@ -51,6 +56,12 @@ export async function startServer(options: {
 }): Promise<RunningServer> {
   const baseURL = `http://127.0.0.1:${options.port}`;
 
+  // Workers run in parallel against the same checkout. A shared uploads root
+  // would let one worker's documents appear in, or be deleted from, another's.
+  const uploadsRoot = await mkdtemp(
+    join(tmpdir(), `crm-e2e-uploads-${options.port}-`),
+  );
+
   const proc = spawn("bun", ["run", options.serverEntry], {
     env: {
       ...process.env,
@@ -60,6 +71,7 @@ export async function startServer(options: {
       HOST: "127.0.0.1",
 
       WEB_DB_URL: options.dbUrl,
+      WEB_UPLOADS_ROOT: uploadsRoot,
 
       // Links are built from this value instead of the incoming request.
       APP_PUBLIC_ORIGIN: baseURL,
@@ -78,29 +90,35 @@ export async function startServer(options: {
     });
   }
 
+  const removeUploadsRoot = () =>
+    rm(uploadsRoot, { recursive: true, force: true });
+
   try {
     await waitForHealth(baseURL, proc);
   } catch (error) {
     proc.kill("SIGKILL");
+    await removeUploadsRoot();
     throw error;
   }
 
   return {
     baseURL,
+    uploadsRoot,
     output: () => output,
 
     async stop() {
-      if (proc.exitCode !== null) {
-        return;
+      // A process ended by a signal keeps `exitCode` null, so both are checked.
+      if (proc.exitCode === null && proc.signalCode === null) {
+        await new Promise<void>((resolve) => {
+          proc.once("exit", resolve);
+          proc.kill("SIGTERM");
+
+          // Prevent teardown from hanging if graceful shutdown fails.
+          setTimeout(() => proc.kill("SIGKILL"), 3_000);
+        });
       }
 
-      await new Promise<void>((resolve) => {
-        proc.once("exit", resolve);
-        proc.kill("SIGTERM");
-
-        // Prevent teardown from hanging if graceful shutdown fails.
-        setTimeout(() => proc.kill("SIGKILL"), 3_000);
-      });
+      await removeUploadsRoot();
     },
   };
 }
