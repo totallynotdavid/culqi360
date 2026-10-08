@@ -18,10 +18,13 @@ measures one layer. The file name prefix names the layer:
 | File                   | Measures                                                      |
 | ---------------------- | ------------------------------------------------------------- |
 | `component*.bench.ts`  | Pure CPU helpers and domain logic, with no repo or DB access. |
-| `boundary*.bench.ts`   | Parsing and validation only.                                  |
 | `repository*.bench.ts` | Direct repository and query calls.                            |
 | `command*.bench.ts`    | Application commands with prepared input.                     |
 | `service*.bench.ts`    | End-to-end business flows and orchestration.                  |
+
+`notifications-delivery` names its files by pipeline stage instead: `expand`,
+`planner` and `dispatch`. `fixtures.ts` in each directory seeds the data, and
+`_shared/` holds the database fixture and constants.
 
 A function appears in one benchmark unless the scenario differs. Parsing and
 database work are separate benchmarks, so each can be measured alone.

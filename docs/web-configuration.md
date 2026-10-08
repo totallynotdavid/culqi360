@@ -20,6 +20,9 @@ A secret passes the entropy check when it has at least 32 characters, at least
 10 distinct characters, and is neither one repeated character nor a run of
 sequential characters. `openssl rand -base64 32` produces one.
 
+Set `NOTIFICATION_ROUTES=email:log` to log emails instead of sending them, with
+WhatsApp disabled. Then no notification provider credentials are needed.
+
 ## Application and storage
 
 | Variable                | Required when     | Default                    | Purpose                                                                            |
@@ -57,14 +60,16 @@ supplies the forwarded origin headers.
 | `GOOGLE_CLIENT_SECRET` | Always        | None                    | Configures the Google OAuth secret.                          |
 | `GOOGLE_REDIRECT_URI`  | Always        | None                    | Sets the OAuth callback URL.                                 |
 
-The engine must hold the same secret under the same key ID in its
-`ENGINE_HMAC_KEYS_JSON`. See the [engine guide](../crates/engine/readme.md).
+The [engine guide](../crates/engine/readme.md#configuration) describes how
+`ENGINE_HMAC_KEY_ID` and `ENGINE_HMAC_SECRET` pair with the engine's keys.
 
 Extension handoff uses `EXTENSION_EXPECTED_ORIGIN`,
 `EXTENSION_HANDOFF_PRIVATE_KEY_PKCS8_BASE64`, and
 `EXTENSION_HANDOFF_PUBLIC_KEY_SPKI_BASE64`. The origin defaults to
 `http://localhost:3000`; both keys default to empty values.
-[`.env.example`](../.env.example) shows how to generate the key pair.
+[`.env.example`](../.env.example) shows how to generate the key pair. The build
+variable `VITE_CRM_EXTENSION_ID` holds the extension ID the web app messages.
+While it is empty, the web app reports that the extension is not configured.
 
 ## Notifications
 
@@ -76,11 +81,12 @@ Extension handoff uses `EXTENSION_EXPECTED_ORIGIN`,
 | Resend               | `RESEND_API_KEY`, `EMAIL_FROM`                                                                           |
 | Kapso                | `KAPSO_API_KEY`, `KAPSO_WHATSAPP_PHONE_NUMBER_ID`, optional `KAPSO_META_GRAPH_VERSION`                   |
 | Meta Cloud           | `WHATSAPP_CLOUD_ACCESS_TOKEN`, `WHATSAPP_CLOUD_PHONE_NUMBER_ID`, optional `WHATSAPP_CLOUD_GRAPH_VERSION` |
-| WhatsApp webhook     | `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, optional `KAPSO_WEBHOOK_SECRET`                                         |
+| WhatsApp webhook     | `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `KAPSO_WEBHOOK_SECRET`                                                  |
 
 Provider credentials are required only when `NOTIFICATION_ROUTES` selects the
 provider. `WHATSAPP_WEBHOOK_VERIFY_TOKEN` is always required and must pass the
-secret-entropy check.
+secret-entropy check. Startup does not check `KAPSO_WEBHOOK_SECRET`, but the
+webhook rejects every Kapso request while it is empty.
 
 ## Observability
 

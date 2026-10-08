@@ -26,23 +26,21 @@ closes.
 ## Transport
 
 Browsers subscribe at `/api/realtime/:channel/:id/stream`. The response is
-server-sent events with the content type `text/event-stream`. Keep that content
-type: cloudflared buffers proxied responses unless the content type is on its
-flushable list, and a buffered stream stalls delivery until it ends.
+server-sent events with the content type `text/event-stream`.
 
 An expired session gets a 401 on this path from
 [`request-auth.ts`](../apps/web/src/server/platform/http/request-auth.ts)
 instead of a redirect to the login page.
 
-The client reads the stream with `fetch` and `eventsource-parser`, not
-`EventSource`, so it can see the response status
-([`read-realtime-stream.ts`](../apps/web/src/browser/realtime/read-realtime-stream.ts)).
+[`read-realtime-stream.ts`](../apps/web/src/browser/realtime/read-realtime-stream.ts)
+reads the stream with `fetch` and `eventsource-parser`. It reports one of three
+outcomes:
 
-| Response             | Outcome  | Client behavior                            |
-| -------------------- | -------- | ------------------------------------------ |
-| Clean end of stream  | `closed` | Reopens, without reporting an outage       |
-| 401 or 404           | `denied` | Stops permanently                          |
-| 5xx or network error | `failed` | Reopens with backoff and reports `offline` |
+| Response                                                         | Outcome  | Client behavior                            |
+| ---------------------------------------------------------------- | -------- | ------------------------------------------ |
+| Clean end of stream                                              | `closed` | Reopens, without reporting an outage       |
+| 401 or 404                                                       | `denied` | Stops permanently                          |
+| Any other non-OK status, a network error, or an error mid-stream | `failed` | Reopens with backoff and reports `offline` |
 
 [`connection-lifecycle.ts`](../apps/web/src/browser/realtime/connection-lifecycle.ts)
 sets the retry policy: jittered exponential backoff from one second to a

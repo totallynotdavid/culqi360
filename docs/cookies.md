@@ -1,27 +1,28 @@
 # Cookies
 
-Choose the cookie API by where the cookie is read or written.
+Choose the cookie API by where the cookie is read or written. `serializeCookie`
+and `parseCookieHeader` come from `@solidjs/web`.
 
-| Situation                                         | Use                                                             |
-| ------------------------------------------------- | --------------------------------------------------------------- |
-| Read or write a cookie during the current request | `@solidjs/start/http`: `getCookie`, `setCookie`, `deleteCookie` |
-| Build or parse a `Set-Cookie` header manually     | `cookie-es`: `serializeCookie`, `parseCookie`                   |
-| Read or write `document.cookie` in the browser    | `cookie-es`: `serializeCookie`, `parseCookie`                   |
+| Situation                                           | Use                                                                               |
+| --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Read or write a cookie during the current request   | `readCookie`, `writeCookie`, `expireCookie` from `~/server/platform/http/cookies` |
+| Build or parse a cookie header on a manual response | `serializeCookie`, `parseCookieHeader`                                            |
+| Read or write `document.cookie` in the browser      | `serializeCookie`, `parseCookieHeader`                                            |
 
-## `@solidjs/start/http`
+## Request cookies
 
-Use it while handling the current request. It reads and writes cookies on the
-response SolidStart is already building. Session cookies and other `httpOnly`
-server-managed cookies use it, for example
-[`session/cookies.ts`](../apps/web/src/server/auth/session/cookies.ts).
+Server code reads and writes cookies through
+[`cookies.ts`](../apps/web/src/server/platform/http/cookies.ts). It throws
+outside a request scope: call it from middleware, a server function, or an API
+handler. The session cookie in
+[`session/cookies.ts`](../apps/web/src/server/auth/session/cookies.ts) uses it.
 
-## `cookie-es`
+## Header strings and `document.cookie`
 
-Use it when there is no current SolidStart request, or when you work directly
-with cookie header strings:
+Use `serializeCookie` and `parseCookieHeader` directly when no request scope
+exists or when the code handles header strings itself:
 
-- Browser code that uses `document.cookie`, for example
-  [`ui-preference-cookie.ts`](../apps/web/src/browser/ui/ui-preference-cookie.ts).
-- A `Set-Cookie` header on a manually constructed `Response`, for example
-  [`google-oauth-cookies.ts`](../apps/web/src/server/auth/google/google-oauth-cookies.ts).
-- Cookie headers passed into standalone functions.
+- [`ui-preference-cookie.ts`](../apps/web/src/browser/ui/ui-preference-cookie.ts)
+  reads and writes `document.cookie` in the browser.
+- [`google-oauth-cookies.ts`](../apps/web/src/server/auth/google/google-oauth-cookies.ts)
+  builds `Set-Cookie` header strings for the OAuth redirect and callback.

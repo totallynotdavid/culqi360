@@ -6,6 +6,14 @@ replace the engine, so it does not cover engine-backed search.
 
 ## Run the suite
 
+Install the browser once. On Linux, `--with-deps` also installs its system
+libraries and asks for `sudo` itself:
+
+```sh
+cd apps/web
+bunx playwright install --with-deps chromium
+```
+
 Start PostgreSQL, then run from `apps/web`:
 
 ```sh
@@ -16,9 +24,6 @@ bun run test:e2e:ui
 
 The commands load `.env.test`. `WEB_DB_URL` must point to a reachable local
 PostgreSQL server.
-
-Until the `fix-csp-nonce` task lands, `bun run test:e2e` fails 3 of 4 tests
-because the hydration scripts lack the CSP nonce.
 
 ## How it runs
 

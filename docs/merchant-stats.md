@@ -36,21 +36,35 @@ do not block activation.
 
 One snapshot is active. Activation locks the dataset row, supersedes the
 previous active snapshot, and freezes uncredited merchant months against the
-snapshot that first made them available.
+snapshot that first made them available. Activating a snapshot whose cut is
+older than the active one rejects it. Equal cuts compare by revision.
 
 ## Ownership, attribution, and targets
 
 CRM ownership decides which executive a RUC belongs to. Culqi's seller code is
 report context, not the internal executive identity. An executive reads a RUC
-only while they are its current CRM owner. Managers read the team view.
+only while they are its current CRM owner.
 
 A snapshot freezes monthly merchant credit when it first exposes the month, so a
-later ownership change does not rewrite historical progress. A manager can
-record an explicit monthly credit correction with
-[`adjustMonthCredit`](../apps/web/src/rpc/merchant-stats/attribution.ts).
+later ownership change does not rewrite historical progress.
+[`adjustMonthCredit`](../apps/web/src/rpc/merchant-stats/attribution.ts) records
+an explicit monthly credit correction.
 
 Targets are effective-dated per RUC. Updating the same RUC and effective month
 replaces that target. Adding a later effective month keeps the earlier periods.
+
+## Commission and export
+
+Commission rules are versioned by effective date in
+`commission_scheme_versions`.
+[`setCommissionScheme`](../apps/web/src/rpc/merchant-stats/commission-scheme.ts)
+sets a new version. The evaluators in
+[`commission/`](../apps/web/src/server/merchant-stats/commission/) apply the
+rules per desk (`MESA 1` to `MESA 3`).
+
+[`requestMerchantGpvExport`](../apps/web/src/server/merchant-stats/export/request-export.ts)
+builds an XLSX workbook of the filtered rows, stores it as a generated file, and
+returns a download token.
 
 ## Access
 
@@ -59,6 +73,8 @@ replaces that target. Adding a later effective month keeps the earlier periods.
 | `dashboards:read`     | Team dashboards and GPV quality views.                           |
 | `dashboards:read:own` | The caller's currently owned RUCs and progress.                  |
 | `dashboards:manage`   | Imports, issue resolution, targets, credits, and quality review. |
+| `commission:read`     | The commission manager dashboard.                                |
+| `commission:manage`   | Reading and setting a commission scheme version.                 |
 
 ## Realtime and storage
 
@@ -77,7 +93,8 @@ The tables are defined in
 [`merchant-stats.ts`](../apps/web/src/server/platform/database/schema/modules/merchant-stats.ts)
 and its types file. They include `gpv_snapshots`, `gpv_snapshot_jobs`,
 `gpv_snapshot_placements`, `gpv_snapshot_observations`, `gpv_snapshot_issues`,
-`merchant_month_credits`, and `merchant_gpv_targets`.
+`merchant_month_credits`, `merchant_month_credit_adjustments`,
+`commission_scheme_versions`, and `merchant_gpv_targets`.
 
 Demo data is in
 [`seeds/demo/merchant-stats/`](../apps/web/src/server/platform/database/seeds/demo/merchant-stats/).
