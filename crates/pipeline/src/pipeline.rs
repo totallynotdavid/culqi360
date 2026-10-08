@@ -1,8 +1,11 @@
 use crate::PipelineError;
 use crate::cli::Command;
-use crate::config::manifest::{verify_manifest, verify_manifest_for_checkout};
+use crate::config::manifest::{ManifestInputPolicy, ManifestLocation, check_manifest};
+use crate::config::paths::default_raw_dir;
 use crate::config::runtime::{PipelineRuntimeConfig, ProfileMode};
-use crate::contract_guard::{validate_contracts, validate_contracts_for_checkout};
+use crate::contract_guard::{
+    validate_contracts, validate_contracts_for_checkout, validate_contracts_with_policy,
+};
 use crate::gate;
 use crate::promote;
 use crate::report;
@@ -16,46 +19,55 @@ pub fn run(command: Command) -> Result<(), PipelineError> {
     match command {
         Command::VerifyManifest {
             manifest,
+            raw_dir,
             allow_missing_optional,
         } => {
-            if allow_missing_optional {
-                verify_manifest_for_checkout(&manifest)?;
-                validate_contracts_for_checkout(&manifest)?;
+            let raw_dir =
+                raw_dir.unwrap_or_else(|| default_raw_dir().to_string_lossy().to_string());
+            let location = ManifestLocation {
+                path: &manifest,
+                raw_dir: &raw_dir,
+            };
+            let input_policy = if allow_missing_optional {
+                ManifestInputPolicy::AllowMissingOptionalRawInputs
             } else {
-                verify_manifest(&manifest)?;
-                validate_contracts(&manifest)?;
-            }
-            Ok(())
+                ManifestInputPolicy::RequireRawInputs
+            };
+            let report = check_manifest(location, input_policy)?;
+            println!("{}", serde_json::to_string(&report.checks)?);
+            validate_contracts_with_policy(location, input_policy)
         }
         Command::Validate {
             config,
+            raw_dir,
             profile,
             allow_missing_optional,
         } => {
-            let runtime = PipelineRuntimeConfig::from_path(&config)?;
+            let runtime = PipelineRuntimeConfig::from_path(&config, raw_dir)?;
+            let manifest = runtime.paths.manifest_location();
             if allow_missing_optional {
-                validate_contracts_for_checkout(&runtime.paths.manifest)?;
+                validate_contracts_for_checkout(manifest)?;
             } else {
-                validate_contracts(&runtime.paths.manifest)?;
+                validate_contracts(manifest)?;
             }
             let resolved = runtime.resolve_profile(&profile)?;
             if allow_missing_optional {
                 report::normalize_matrix_for_checkout(
-                    &runtime.paths.manifest,
+                    manifest,
                     resolved.row_cap,
                     &runtime.paths.normalized_dir,
                 )
             } else {
-                report::normalize_matrix(
-                    &runtime.paths.manifest,
-                    resolved.row_cap,
-                    &runtime.paths.normalized_dir,
-                )
+                report::normalize_matrix(manifest, resolved.row_cap, &runtime.paths.normalized_dir)
             }
         }
-        Command::Bench { config, profile } => {
-            let runtime = PipelineRuntimeConfig::from_path(&config)?;
-            validate_contracts(&runtime.paths.manifest)?;
+        Command::Bench {
+            config,
+            raw_dir,
+            profile,
+        } => {
+            let runtime = PipelineRuntimeConfig::from_path(&config, raw_dir)?;
+            validate_contracts(runtime.paths.manifest_location())?;
             let resolved = runtime.resolve_profile(&profile)?;
             let bench_db =
                 Path::new(&runtime.paths.bench_dir).join(format!("bench-{}.sqlite", profile));
@@ -65,7 +77,7 @@ pub fn run(command: Command) -> Result<(), PipelineError> {
             run::matrix::run(run::matrix::Config {
                 db_path: &bench_db.to_string_lossy(),
                 build_dir: &bench_build_dir.to_string_lossy(),
-                manifest_path: &runtime.paths.manifest,
+                manifest: runtime.paths.manifest_location(),
                 workers: resolved.workers,
                 row_cap: resolved.row_cap,
                 run_osiptel_sample: resolved.include_osiptel,
@@ -73,24 +85,32 @@ pub fn run(command: Command) -> Result<(), PipelineError> {
                 source_row_caps: &resolved.source_row_caps,
             })
         }
-        Command::BenchMap { config, profile } => {
-            let runtime = PipelineRuntimeConfig::from_path(&config)?;
-            validate_contracts(&runtime.paths.manifest)?;
+        Command::BenchMap {
+            config,
+            raw_dir,
+            profile,
+        } => {
+            let runtime = PipelineRuntimeConfig::from_path(&config, raw_dir)?;
+            validate_contracts(runtime.paths.manifest_location())?;
             let resolved = runtime.resolve_profile(&profile)?;
             let bench_build_dir =
                 Path::new(&runtime.paths.bench_dir).join(format!("bench-map-{}", profile));
 
             run::matrix::map_only(
                 &bench_build_dir.to_string_lossy(),
-                &runtime.paths.manifest,
+                runtime.paths.manifest_location(),
                 resolved.row_cap,
                 resolved.include_osiptel,
                 &resolved.source_row_caps,
             )
         }
-        Command::Build { config, profile } => {
-            let runtime = PipelineRuntimeConfig::from_path(&config)?;
-            validate_contracts(&runtime.paths.manifest)?;
+        Command::Build {
+            config,
+            raw_dir,
+            profile,
+        } => {
+            let runtime = PipelineRuntimeConfig::from_path(&config, raw_dir)?;
+            validate_contracts(runtime.paths.manifest_location())?;
             let resolved = runtime.resolve_profile(&profile)?;
 
             if resolved.mode != ProfileMode::Full {
@@ -101,21 +121,26 @@ pub fn run(command: Command) -> Result<(), PipelineError> {
 
             run::full::run(
                 &runtime.paths.staged_db,
-                &runtime.paths.manifest,
+                runtime.paths.manifest_location(),
                 resolved.workers,
                 resolved.include_osiptel,
                 resolved.batch_size,
             )
         }
         Command::Promote { config, from, to } => {
-            let runtime = PipelineRuntimeConfig::from_path(&config)?;
+            let runtime = PipelineRuntimeConfig::from_path(&config, None)?;
             let from = from.unwrap_or(runtime.paths.staged_db);
             let to = to.unwrap_or(runtime.paths.engine_db);
             publish_with_gate_and_metadata(&from, &to)
         }
-        Command::Refresh { config, slice, to } => {
-            let runtime = PipelineRuntimeConfig::from_path(&config)?;
-            validate_contracts(&runtime.paths.manifest)?;
+        Command::Refresh {
+            config,
+            raw_dir,
+            slice,
+            to,
+        } => {
+            let runtime = PipelineRuntimeConfig::from_path(&config, raw_dir)?;
+            validate_contracts(runtime.paths.manifest_location())?;
             let profile = profile_for_slice(&slice)?;
             let resolved = runtime.resolve_profile(profile)?;
 
@@ -133,7 +158,7 @@ pub fn run(command: Command) -> Result<(), PipelineError> {
             run::matrix::run(run::matrix::Config {
                 db_path: &refresh_db.to_string_lossy(),
                 build_dir: &refresh_build_dir.to_string_lossy(),
-                manifest_path: &runtime.paths.manifest,
+                manifest: runtime.paths.manifest_location(),
                 workers: resolved.workers,
                 row_cap: resolved.row_cap,
                 run_osiptel_sample: resolved.include_osiptel,

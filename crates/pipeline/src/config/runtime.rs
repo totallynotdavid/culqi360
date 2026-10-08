@@ -1,4 +1,5 @@
 use crate::PipelineError;
+use crate::config::manifest::ManifestLocation;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
@@ -12,10 +13,20 @@ pub struct PipelineRuntimeConfig {
 #[derive(Debug, Deserialize)]
 pub struct RuntimePaths {
     pub manifest: String,
+    pub raw_dir: String,
     pub normalized_dir: String,
     pub staged_db: String,
     pub bench_dir: String,
     pub engine_db: String,
+}
+
+impl RuntimePaths {
+    pub fn manifest_location(&self) -> ManifestLocation<'_> {
+        ManifestLocation {
+            path: &self.manifest,
+            raw_dir: &self.raw_dir,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -50,10 +61,15 @@ pub enum ProfileMode {
 }
 
 impl PipelineRuntimeConfig {
-    pub fn from_path(path: &str) -> Result<Self, PipelineError> {
+    /// Reads the config. A `raw_dir` argument replaces `paths.raw_dir`, for a
+    /// host that keeps its raw snapshots outside the checkout.
+    pub fn from_path(path: &str, raw_dir: Option<String>) -> Result<Self, PipelineError> {
         let raw = fs::read_to_string(path)?;
-        let config = toml::from_str::<Self>(&raw)
+        let mut config = toml::from_str::<Self>(&raw)
             .map_err(|err| PipelineError::Args(format!("invalid pipeline config: {err}")))?;
+        if let Some(raw_dir) = raw_dir {
+            config.paths.raw_dir = raw_dir;
+        }
         Ok(config)
     }
 

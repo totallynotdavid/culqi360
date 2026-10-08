@@ -1,4 +1,5 @@
 use crate::PipelineError;
+use crate::config::manifest::ManifestLocation;
 use crate::ingest::map_snapshot_only;
 use crate::sample::sample_with_header;
 use crate::storage::schema::init_schema;
@@ -18,7 +19,7 @@ use super::sources::load_enabled_sources;
 pub struct Config<'a> {
     pub db_path: &'a str,
     pub build_dir: &'a str,
-    pub manifest_path: &'a str,
+    pub manifest: ManifestLocation<'a>,
     pub workers: usize,
     pub row_cap: usize,
     pub run_osiptel_sample: bool,
@@ -30,7 +31,7 @@ pub fn run(config: Config<'_>) -> Result<(), PipelineError> {
     let Config {
         db_path,
         build_dir,
-        manifest_path,
+        manifest,
         workers,
         row_cap,
         run_osiptel_sample,
@@ -43,7 +44,7 @@ pub fn run(config: Config<'_>) -> Result<(), PipelineError> {
     let mut checkpoints = Vec::new();
 
     let run_ctx = RunContext::new(db_path)?;
-    run_ctx.write_metadata(db_path, manifest_path, "sample", workers, batch_size)?;
+    run_ctx.write_metadata(db_path, manifest.path, "sample", workers, batch_size)?;
 
     let build_dir_path = Path::new(build_dir);
     fs::create_dir_all(build_dir_path)?;
@@ -55,7 +56,7 @@ pub fn run(config: Config<'_>) -> Result<(), PipelineError> {
     init_schema(db_path)?;
 
     let mut sources = Vec::new();
-    for source in load_enabled_sources(manifest_path)? {
+    for source in load_enabled_sources(manifest)? {
         if source.source_key == "osiptel" && !run_osiptel_sample {
             continue;
         }
@@ -105,7 +106,7 @@ pub fn run(config: Config<'_>) -> Result<(), PipelineError> {
 
 pub fn map_only(
     build_dir: &str,
-    manifest_path: &str,
+    manifest: ManifestLocation<'_>,
     row_cap: usize,
     run_osiptel_sample: bool,
     source_row_caps: &HashMap<String, usize>,
@@ -116,7 +117,7 @@ pub fn map_only(
     let build_dir_path = Path::new(build_dir);
     fs::create_dir_all(build_dir_path)?;
 
-    for source in load_enabled_sources(manifest_path)? {
+    for source in load_enabled_sources(manifest)? {
         if source.source_key == "osiptel" && !run_osiptel_sample {
             continue;
         }

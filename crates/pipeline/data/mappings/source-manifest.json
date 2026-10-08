@@ -5,7 +5,7 @@
       "source_key": "celulares",
       "snapshot_label": "2025-02",
       "snapshot_date": "2025-02-28",
-      "raw_path": "crates/pipeline/data/raw/celulares.txt",
+      "raw_file": "celulares.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/celulares.json",
       "enabled": true,
       "raw_optional": true
@@ -14,7 +14,7 @@
       "source_key": "claro_post_202508",
       "snapshot_label": "2025-08",
       "snapshot_date": "2025-08-31",
-      "raw_path": "crates/pipeline/data/raw/CLARO_POST_202508.txt",
+      "raw_file": "CLARO_POST_202508.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/claro_post_202508.json",
       "enabled": true,
       "raw_optional": true
@@ -23,7 +23,7 @@
       "source_key": "consolidado_ruc_representantes_ok",
       "snapshot_label": "2025-11",
       "snapshot_date": "2025-11-24",
-      "raw_path": "crates/pipeline/data/raw/Consolidado_RUC20_Representantes_MERGED.tsv",
+      "raw_file": "Consolidado_RUC20_Representantes_MERGED.tsv",
       "mapping_path": "crates/pipeline/data/mappings/sources/consolidado_ruc_representantes_ok.json",
       "enabled": true,
       "raw_optional": true
@@ -32,7 +32,7 @@
       "source_key": "representantes_enriquecido",
       "snapshot_label": "2025-10",
       "snapshot_date": "2025-10-10",
-      "raw_path": "crates/pipeline/data/raw/Representantes_ENRIQUECIDO.txt",
+      "raw_file": "Representantes_ENRIQUECIDO.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/representantes_enriquecido.json",
       "enabled": true,
       "raw_optional": true
@@ -41,7 +41,7 @@
       "source_key": "osiptel",
       "snapshot_label": "2025",
       "snapshot_date": "2025-09-27",
-      "raw_path": "crates/pipeline/data/raw/osiptel_2025.csv",
+      "raw_file": "osiptel_2025.csv",
       "mapping_path": "crates/pipeline/data/mappings/sources/osiptel_2025.json",
       "enabled": true,
       "raw_optional": true
@@ -50,7 +50,7 @@
       "source_key": "bitel_post_ms_2025",
       "snapshot_label": "2025-02",
       "snapshot_date": "2025-02-04",
-      "raw_path": "crates/pipeline/data/raw/BITEL_POST_MS.txt",
+      "raw_file": "BITEL_POST_MS.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/bitel_post_ms_2025.json",
       "enabled": false
     },
@@ -58,7 +58,7 @@
       "source_key": "movistar_post_202508",
       "snapshot_label": "2025-08",
       "snapshot_date": "2025-08-31",
-      "raw_path": "crates/pipeline/data/raw/MOVISTAR_POST_202508.txt",
+      "raw_file": "MOVISTAR_POST_202508.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/movistar_post_202508.json",
       "enabled": false
     },
@@ -66,7 +66,7 @@
       "source_key": "mov_me_sal_2025",
       "snapshot_label": "2025-10",
       "snapshot_date": "2025-10-18",
-      "raw_path": "crates/pipeline/data/raw/Mov_MeSal.txt",
+      "raw_file": "Mov_MeSal.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/mov_me_sal_2025.json",
       "enabled": false
     },
@@ -74,7 +74,7 @@
       "source_key": "padron_ruc_202601",
       "snapshot_label": "2026-01",
       "snapshot_date": "2026-01-30",
-      "raw_path": "crates/pipeline/data/raw/PadronRUC_202601.csv",
+      "raw_file": "PadronRUC_202601.csv",
       "mapping_path": "crates/pipeline/data/mappings/sources/padron_ruc_202601.json",
       "enabled": true,
       "raw_optional": true
@@ -83,7 +83,7 @@
       "source_key": "consolidado_ruc_representantes_bppo",
       "snapshot_label": "2025-11",
       "snapshot_date": "2025-11-24",
-      "raw_path": "crates/pipeline/data/raw/Consolidado_RUC20_Representantes_BPPO.txt",
+      "raw_file": "Consolidado_RUC20_Representantes_BPPO.txt",
       "mapping_path": "crates/pipeline/data/mappings/sources/consolidado_ruc_representantes_bppo.json",
       "enabled": false
     }

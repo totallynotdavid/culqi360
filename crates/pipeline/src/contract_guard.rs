@@ -1,6 +1,6 @@
 use crate::PipelineError;
 use crate::config::manifest::{
-    ManifestInputPolicy, SourceManifestEntry, verify_manifest_with_policy,
+    ManifestInputPolicy, ManifestLocation, SourceManifestEntry, verify_manifest_with_policy,
 };
 use crate::config::mapping::SourceMapping;
 use serde::Deserialize;
@@ -45,19 +45,18 @@ struct ProjectionField {
     derivation: Option<String>,
 }
 
-pub fn validate_contracts(manifest_path: &str) -> Result<(), PipelineError> {
-    validate_contracts_with_policy(manifest_path, ManifestInputPolicy::RequireRawInputs)
+pub fn validate_contracts(manifest: ManifestLocation<'_>) -> Result<(), PipelineError> {
+    validate_contracts_with_policy(manifest, ManifestInputPolicy::RequireRawInputs)
 }
 
-pub fn validate_contracts_for_checkout(manifest_path: &str) -> Result<(), PipelineError> {
-    validate_contracts_with_policy(
-        manifest_path,
-        ManifestInputPolicy::AllowMissingOptionalRawInputs,
-    )
+pub fn validate_contracts_for_checkout(
+    manifest: ManifestLocation<'_>,
+) -> Result<(), PipelineError> {
+    validate_contracts_with_policy(manifest, ManifestInputPolicy::AllowMissingOptionalRawInputs)
 }
 
-fn validate_contracts_with_policy(
-    manifest_path: &str,
+pub fn validate_contracts_with_policy(
+    manifest_location: ManifestLocation<'_>,
     input_policy: ManifestInputPolicy,
 ) -> Result<(), PipelineError> {
     let canonical: CanonicalContract =
@@ -76,7 +75,7 @@ fn validate_contracts_with_policy(
         .map(|entry| (entry.source_key.clone(), entry))
         .collect::<HashMap<_, _>>();
 
-    let manifest = verify_manifest_with_policy(manifest_path, input_policy)?;
+    let manifest = verify_manifest_with_policy(manifest_location, input_policy)?;
     let enabled_sources: Vec<SourceManifestEntry> =
         manifest.sources.into_iter().filter(|s| s.enabled).collect();
 

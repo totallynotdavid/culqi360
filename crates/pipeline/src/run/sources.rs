@@ -1,10 +1,12 @@
 use crate::PipelineError;
-use crate::config::manifest::{SourceManifest, SourceManifestEntry, verify_manifest};
+use crate::config::manifest::{
+    ManifestLocation, SourceManifest, SourceManifestEntry, verify_manifest,
+};
 
 pub(super) fn load_enabled_sources(
-    manifest_path: &str,
+    manifest: ManifestLocation<'_>,
 ) -> Result<Vec<SourceManifestEntry>, PipelineError> {
-    let SourceManifest { mut sources, .. } = verify_manifest(manifest_path)?;
+    let SourceManifest { mut sources, .. } = verify_manifest(manifest)?;
 
     sources.retain(|source| source.enabled);
 

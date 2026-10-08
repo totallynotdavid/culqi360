@@ -1,5 +1,6 @@
 [paths]
 manifest = "crates/pipeline/data/mappings/source-manifest.json"
+raw_dir = "crates/pipeline/data/raw"
 normalized_dir = "crates/pipeline/data/normalized"
 staged_db = "crates/pipeline/data/build/staged/contacts.pipeline.staged.sqlite"
 bench_dir = "crates/pipeline/data/build/bench"

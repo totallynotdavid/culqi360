@@ -2,27 +2,34 @@ use crate::PipelineError;
 use crate::config::paths::{default_pipeline_config, default_source_manifest};
 use std::collections::HashMap;
 
+/// Every command that reads raw files accepts `--raw-dir`, which replaces the
+/// raw directory the config or the default names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     VerifyManifest {
         manifest: String,
+        raw_dir: Option<String>,
         allow_missing_optional: bool,
     },
     Validate {
         config: String,
+        raw_dir: Option<String>,
         profile: String,
         allow_missing_optional: bool,
     },
     Bench {
         config: String,
+        raw_dir: Option<String>,
         profile: String,
     },
     BenchMap {
         config: String,
+        raw_dir: Option<String>,
         profile: String,
     },
     Build {
         config: String,
+        raw_dir: Option<String>,
         profile: String,
     },
     Promote {
@@ -32,6 +39,7 @@ pub enum Command {
     },
     Refresh {
         config: String,
+        raw_dir: Option<String>,
         slice: String,
         to: Option<String>,
     },
@@ -44,6 +52,19 @@ pub fn parse_args(args: &[String]) -> Result<Command, PipelineError> {
 
     let cmd = args[0].as_str();
     let flags = parse_flags(&args[1..])?;
+    let config = || {
+        flags
+            .get("--config")
+            .cloned()
+            .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string())
+    };
+    let profile = |default: &str| {
+        flags
+            .get("--profile")
+            .cloned()
+            .unwrap_or_else(|| default.to_owned())
+    };
+    let raw_dir = flags.get("--raw-dir").cloned();
 
     match cmd {
         "verify-manifest" => Ok(Command::VerifyManifest {
@@ -51,62 +72,38 @@ pub fn parse_args(args: &[String]) -> Result<Command, PipelineError> {
                 .get("--manifest")
                 .cloned()
                 .unwrap_or_else(|| default_source_manifest().to_string_lossy().to_string()),
+            raw_dir,
             allow_missing_optional: flags.contains_key("--allow-missing-optional"),
         }),
         "validate" => Ok(Command::Validate {
-            config: flags
-                .get("--config")
-                .cloned()
-                .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string()),
-            profile: flags
-                .get("--profile")
-                .cloned()
-                .unwrap_or_else(|| "quick".to_owned()),
+            config: config(),
+            raw_dir,
+            profile: profile("quick"),
             allow_missing_optional: flags.contains_key("--allow-missing-optional"),
         }),
         "bench" => Ok(Command::Bench {
-            config: flags
-                .get("--config")
-                .cloned()
-                .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string()),
-            profile: flags
-                .get("--profile")
-                .cloned()
-                .unwrap_or_else(|| "standard".to_owned()),
+            config: config(),
+            raw_dir,
+            profile: profile("standard"),
         }),
         "bench-map" => Ok(Command::BenchMap {
-            config: flags
-                .get("--config")
-                .cloned()
-                .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string()),
-            profile: flags
-                .get("--profile")
-                .cloned()
-                .unwrap_or_else(|| "standard".to_owned()),
+            config: config(),
+            raw_dir,
+            profile: profile("standard"),
         }),
         "build" => Ok(Command::Build {
-            config: flags
-                .get("--config")
-                .cloned()
-                .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string()),
-            profile: flags
-                .get("--profile")
-                .cloned()
-                .unwrap_or_else(|| "full".to_owned()),
+            config: config(),
+            raw_dir,
+            profile: profile("full"),
         }),
         "promote" => Ok(Command::Promote {
-            config: flags
-                .get("--config")
-                .cloned()
-                .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string()),
+            config: config(),
             from: flags.get("--from").cloned(),
             to: flags.get("--to").cloned(),
         }),
         "refresh" => Ok(Command::Refresh {
-            config: flags
-                .get("--config")
-                .cloned()
-                .unwrap_or_else(|| default_pipeline_config().to_string_lossy().to_string()),
+            config: config(),
+            raw_dir,
             slice: flags
                 .get("--slice")
                 .cloned()

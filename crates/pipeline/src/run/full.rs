@@ -1,4 +1,5 @@
 use crate::PipelineError;
+use crate::config::manifest::ManifestLocation;
 use crate::storage::schema::init_schema;
 use std::fs;
 use std::path::Path;
@@ -13,7 +14,7 @@ use super::sources::load_enabled_sources;
 
 pub fn run(
     db_path: &str,
-    manifest_path: &str,
+    manifest: ManifestLocation<'_>,
     workers: usize,
     include_osiptel: bool,
     batch_size: usize,
@@ -23,7 +24,7 @@ pub fn run(
     let mut checkpoints = Vec::new();
 
     let run_ctx = RunContext::new(db_path)?;
-    run_ctx.write_metadata(db_path, manifest_path, "full", workers, batch_size)?;
+    run_ctx.write_metadata(db_path, manifest.path, "full", workers, batch_size)?;
 
     if Path::new(db_path).exists() {
         fs::remove_file(db_path)?;
@@ -32,7 +33,7 @@ pub fn run(
     println!("[pipeline] init schema");
     init_schema(db_path)?;
 
-    for source in load_enabled_sources(manifest_path)? {
+    for source in load_enabled_sources(manifest)? {
         if source.source_key == "osiptel" && !include_osiptel {
             continue;
         }

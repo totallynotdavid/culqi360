@@ -1,6 +1,6 @@
 use crate::PipelineError;
 use crate::config::manifest::{
-    ManifestInputPolicy, SourceManifestEntry, verify_manifest, verify_manifest_with_policy,
+    ManifestInputPolicy, ManifestLocation, SourceManifestEntry, verify_manifest_with_policy,
 };
 use crate::config::mapping::SourceMapping;
 use crate::normalize::{self, PhoneKind, hash_record, normalize_phone_with_kind};
@@ -23,28 +23,13 @@ struct NormalizationSummary {
     fixed_phone_rows: usize,
 }
 
-pub fn normalize_source(
-    manifest_path: &str,
-    source_key: &str,
-    row_cap: usize,
-    out_dir: &str,
-) -> Result<(), PipelineError> {
-    let manifest = verify_manifest(manifest_path)?;
-    let source = manifest
-        .sources
-        .iter()
-        .find(|s| s.source_key == source_key)
-        .ok_or_else(|| PipelineError::Args(format!("source key not found: {source_key}")))?;
-    normalize_source_entry(source, row_cap, out_dir)
-}
-
 pub fn normalize_matrix(
-    manifest_path: &str,
+    manifest: ManifestLocation<'_>,
     row_cap: usize,
     out_dir: &str,
 ) -> Result<(), PipelineError> {
     normalize_matrix_with_policy(
-        manifest_path,
+        manifest,
         row_cap,
         out_dir,
         ManifestInputPolicy::RequireRawInputs,
@@ -52,12 +37,12 @@ pub fn normalize_matrix(
 }
 
 pub fn normalize_matrix_for_checkout(
-    manifest_path: &str,
+    manifest: ManifestLocation<'_>,
     row_cap: usize,
     out_dir: &str,
 ) -> Result<(), PipelineError> {
     normalize_matrix_with_policy(
-        manifest_path,
+        manifest,
         row_cap,
         out_dir,
         ManifestInputPolicy::AllowMissingOptionalRawInputs,
@@ -65,12 +50,12 @@ pub fn normalize_matrix_for_checkout(
 }
 
 fn normalize_matrix_with_policy(
-    manifest_path: &str,
+    manifest_location: ManifestLocation<'_>,
     row_cap: usize,
     out_dir: &str,
     input_policy: ManifestInputPolicy,
 ) -> Result<(), PipelineError> {
-    let manifest = verify_manifest_with_policy(manifest_path, input_policy)?;
+    let manifest = verify_manifest_with_policy(manifest_location, input_policy)?;
 
     for source in &manifest.sources {
         if !source.enabled {
