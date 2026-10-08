@@ -30,6 +30,7 @@
     "migrate": "bun --env-file=../../.env src/server/platform/database/migrate-cli.ts",
     "migrate:test": "bun --env-file=../../.env.test src/server/platform/database/migrate-cli.ts",
     "migrate:prod": "bun src/server/platform/database/migrate-cli.ts",
+    "db:reset": "bun --env-file=../../.env src/server/platform/database/reset-cli.ts && bun run migrate && bun run seed",
     "seed": "bun --env-file=../../.env src/server/platform/database/seed.ts",
     "seed:test": "bun --env-file=../../.env.test src/server/platform/database/seed.ts",
     "provision:prod": "bun src/server/platform/database/seed.ts"

@@ -12,6 +12,7 @@ import { Client } from "pg";
 
 import { createDb } from "~/server/platform/database/client";
 import { migrateToLatest } from "~/server/platform/database/migrate";
+import { recreateDatabase } from "~/server/platform/database/recreate";
 import { seedIfEmpty } from "~/server/platform/database/seed";
 
 import { withDatabase } from "../../tests/e2e/db";
@@ -89,12 +90,7 @@ async function databaseExists(): Promise<boolean> {
 async function rebuild(): Promise<void> {
   console.log("[preview] rebuilding crm_preview...");
 
-  await withMaintenance(async (client) => {
-    await client.query(
-      `DROP DATABASE IF EXISTS "${PREVIEW_DB_NAME}" WITH (FORCE)`,
-    );
-    await client.query(`CREATE DATABASE "${PREVIEW_DB_NAME}"`);
-  });
+  await recreateDatabase(previewDbUrl());
 
   const db = createDb(previewDbUrl);
 
