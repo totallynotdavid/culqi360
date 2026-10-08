@@ -12,15 +12,15 @@ function requestCsrfToken(): string | null {
 }
 
 /**
- * The HTML shell wrapped around <App /> by the plugin's generated entries.
- * The client entry hydrates this same tree, so anything derived from the
- * request event lives under <NoHydration>: the browser has no request event
- * and would otherwise resolve the branch differently than the server did.
+ * The HTML shell wrapped around <App /> by Root.tsx.
+ * Request-specific metadata and the client entry script live under
+ * <NoHydration> because the browser has no request event when it renders this
+ * tree.
  */
 export default function Document(props: ParentProps) {
   const csrfToken = requestCsrfToken();
-  const sentryBrowserConfig =
-    getRequestEvent()?.locals.sentryBrowserConfig ?? null;
+  const requestEvent = getRequestEvent();
+  const sentryBrowserConfig = requestEvent?.locals.sentryBrowserConfig ?? null;
 
   return (
     <html lang="es">
@@ -37,6 +37,12 @@ export default function Document(props: ParentProps) {
               content={JSON.stringify(sentryBrowserConfig)}
             />
           ) : null}
+          <script
+            type="module"
+            src="/src/entry-client.tsx"
+            nonce={requestEvent?.locals.nonce}
+            async
+          />
         </NoHydration>
         <link rel="icon" type="image/x-icon" href={favicon} />
         <HydrationScript />

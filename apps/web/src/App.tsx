@@ -4,7 +4,6 @@ import { Loading } from "solid-js";
 
 import { PLATFORM_NAME } from "~/shared/branding";
 
-import "./browser/bootstrap";
 import { AppErrorBoundary } from "./components/feedback/error/boundary";
 import { SnackBarProvider } from "./components/feedback/snack-bar-manager/snack-bar-provider";
 import { ThemeProvider } from "./components/ui/theme/theme-context";
@@ -12,9 +11,8 @@ import { Router } from "./router";
 
 import "./app.css";
 
-// The application tree. The document shell is Document.tsx; the plugin's
-// generated entries render <Document><App /></Document> and hydrate the same
-// tree in the browser.
+// The application tree. Root.tsx wraps it in the document shell, and both
+// entries render Root.
 export default function App() {
   return (
     // `user` rather than motion's own `never` default, because the animation

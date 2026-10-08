@@ -1,3 +1,5 @@
+/// <reference types="@solidjs/vite-plugin/virtual-solid-manifest" />
+
 import type { RequestContext } from "~/server/platform/http/request-context-storage";
 import type { SentryBrowserConfig } from "~/shared/observability/sentry-browser-config";
 
