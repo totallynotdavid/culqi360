@@ -44,34 +44,64 @@ bun run test:engine
 | `GET /ingest-jobs/{job_id}`     | Read an ingest job (ingest only).       |
 | `GET /ingest-sources`           | List source keys (ingest only).         |
 
-Every endpoint except `/health` needs the headers `x-key-id`, `x-timestamp` and
+`GET /health` returns `200` with `status: "ok"`, `build_id`, `built_at` and
+`rows` from the published database. It returns `503` with `status: "degraded"`
+when the database probe fails.
+
+Every other endpoint needs the headers `x-key-id`, `x-timestamp` and
 `x-signature`. The signature is the lowercase hexadecimal HMAC-SHA256 of the
 big-endian unsigned 64-bit timestamp followed by the raw request body. A `GET`
 has an empty body. The blob `PUT` signs the upload id instead of the body.
 Timestamps must be within `ENGINE_HMAC_MAX_SKEW_SECS` of the engine clock.
-Requests are rate-limited per key and endpoint.
+Requests are rate-limited per key and endpoint. Each request costs tokens
+against `ENGINE_RATE_LIMIT_PER_KEY`.
 
 `POST /search` takes `intent` (`people`, `companies` or `mixed`), `query` and an
 optional `limit`. The default limit is 20. The maximum is `ENGINE_MAX_LIMIT`.
+The query shape selects the lookup and its cost:
+
+| Query                                             | Lookup                  | Cost |
+| ------------------------------------------------- | ----------------------- | ---- |
+| `TYPE:NUMBER` (`DNI`, `CE`, `PTP`, `CSR`, `CIRE`) | Document                | 1    |
+| 11 digits                                         | RUC                     | 1    |
+| 8 digits                                          | DNI                     | 1    |
+| 7 to 15 other digits                              | Phone                   | 1    |
+| Text, `people` or `companies`                     | Name                    | 2    |
+| Text, `mixed`                                     | Person and company name | 3    |
+
+Text queries are 2 to 120 characters and need one term of three or more
+alphanumeric characters. [`search/src/domain.rs`](../search/src/domain.rs) plans
+the query.
 
 `POST /records/candidates` takes branch and user IDs, an optional team and
 product ID, an optional amount (default 20) and a `strategy` (`balanced`,
-`freshness` or `conversion`). It returns normalized candidate rows.
+`freshness` or `conversion`). It returns normalized candidate rows. The cost is
+the amount divided by 10, rounded up.
 
 `POST /records/imports` takes a `rows` array. Each row has `ruc`,
 `organization_name`, `dni`, `person_name` and `phone_primary`. `quality_tier`,
-`product_tag` and `branch_tag` are optional. The body is capped at 10 MiB.
+`product_tag` and `branch_tag` are optional. The body is capped at 10 MiB. The
+cost is the row count divided by 100, rounded up.
+
+The request and response shapes come from the JSON contracts. See
+[contracts](../../docs/contracts.md).
 
 The ingest endpoints exist only when `ENGINE_INGEST_ENABLED=true`. The register
 request declares the source key, snapshot label and date, byte size and
 lowercase SHA-256. The blob is streamed to the engine's upload directory, hashed
-and queued for processing.
+and queued for processing. Enabling ingest switches the contacts database to WAL
+journal mode at startup, so no other process may hold a lock on it. The engine
+clears the upload directory at startup and marks jobs that a restart interrupted
+as failed. Job state lives in `ENGINE_INGEST_JOB_DB_PATH` (default
+`crates/engine/data/ingest.sqlite`).
 
 ## Configuration
 
 The engine loads the repository root `.env`. `ENGINE_HMAC_KEYS_JSON` is required
 and must be a non-empty JSON object that maps key ids to secrets, such as
-`{"web":"secret"}`. Defaults from [`src/config.rs`](src/config.rs):
+`{"web":"secret"}`. The web application signs with `ENGINE_HMAC_KEY_ID` and
+`ENGINE_HMAC_SECRET`, so its key ID must be a key here with the same secret.
+Defaults from [`src/config.rs`](src/config.rs):
 
 | Variable                    | Default                              |
 | --------------------------- | ------------------------------------ |

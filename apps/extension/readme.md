@@ -33,11 +33,22 @@ signature in [`src/services/external-auth.ts`](src/services/external-auth.ts),
 then claims a session through the web API. Queued events use the web
 extension-events API, and refresh uses the web session-refresh API.
 
-`CRM_WEB_ORIGIN` configures build-time host permissions in
-[`wxt.config.ts`](wxt.config.ts). The client runtime reads `VITE_CRM_WEB_ORIGIN`
-and defaults to `http://localhost:3000`, where `bun run dev` serves the web
-application. It reads the verification key from
-`VITE_CRM_HANDOFF_PUBLIC_KEY_RAW_BASE64`.
+Three build-time variables configure the extension. Set them in the shell or,
+for the `VITE_` pair, in `apps/extension/.env`. The repository root `.env` is
+not read.
+
+| Variable                                 | Use                                                                                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `CRM_WEB_ORIGIN`                         | Adds the web origin to the manifest host permissions and externally connectable list. `localhost` and `127.0.0.1` are always allowed. |
+| `VITE_CRM_WEB_ORIGIN`                    | Origin the extension accepts handoffs from. Defaults to `http://localhost:3000`.                                                      |
+| `VITE_CRM_HANDOFF_PUBLIC_KEY_RAW_BASE64` | Ed25519 key that verifies handoff tokens. Required.                                                                                   |
+
+The extension needs the raw 32-byte key, which is the last 32 bytes of the SPKI
+value in `EXTENSION_HANDOFF_PUBLIC_KEY_SPKI_BASE64`. Derive it from that value:
+
+```sh
+printf %s "$EXTENSION_HANDOFF_PUBLIC_KEY_SPKI_BASE64" | base64 -d | tail -c 32 | base64 -w0
+```
 
 ## Run and validate
 
