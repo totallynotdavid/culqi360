@@ -16,6 +16,7 @@ import {
   createTime,
   createVelocity,
 } from "../src";
+import { advance, useFakeClock } from "./clock";
 
 function stubBox(
   element: HTMLElement,
@@ -51,9 +52,9 @@ function stubOffset(
   }
 }
 
-async function tick(ms = 80) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
+useFakeClock();
+
+const tick = (ms = 80) => advance(ms);
 
 describe("createScroll", () => {
   afterEach(() => document.body.replaceChildren());

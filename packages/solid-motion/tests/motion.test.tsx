@@ -19,6 +19,9 @@ import {
   type AnimateScope,
 } from "../src";
 import { buildInitialRender } from "../src/initial";
+import { advance, outcomeWithin, settled, useFakeClock } from "./clock";
+
+useFakeClock();
 
 describe("motion", () => {
   afterEach(() => document.body.replaceChildren());
@@ -84,9 +87,9 @@ describe("motion", () => {
     const { container } = render(() => (
       <motion.div initial={false} animate={{ x: [40, 100], opacity: [0, 1] }} />
     ));
-    const settled = container.querySelector("div") as HTMLElement;
-    expect(settled.style.opacity).toBe("1");
-    expect(settled.style.transform).toBe("translateX(100px)");
+    const element = container.querySelector("div") as HTMLElement;
+    expect(element.style.opacity).toBe("1");
+    expect(element.style.transform).toBe("translateX(100px)");
   });
 
   it("renders initial opacity and transform values as inline style", () => {
@@ -169,10 +172,10 @@ describe("AnimatePresenceList", () => {
 
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await advance(20);
     expect(onStart).toHaveBeenCalled();
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await advance(800);
     expect(container.querySelector('[data-id="one"]')).toBeNull();
     expect(onComplete).toHaveBeenCalled();
   });
@@ -229,7 +232,7 @@ describe("AnimatePresenceList", () => {
     const element = container.querySelector('[data-id="one"]') as HTMLElement;
     setItems([{ id: "one", label: "second" }]);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
 
     expect(element.textContent).toBe("second");
     // Same node: new data must not cost a remount.
@@ -262,7 +265,7 @@ describe("AnimatePresenceList", () => {
     // not slide to the end of the list.
     setItems([{ id: "a" }, { id: "c" }]);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
     expect(order()).toEqual(["a", "b", "c"]);
   });
 
@@ -275,7 +278,7 @@ describe("AnimatePresenceList", () => {
     ));
 
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await advance(20);
     expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 });
@@ -307,12 +310,12 @@ describe("AnimatePresence", () => {
     // buys this window.
     setOpen(false);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
     const exiting = container.querySelector(".panel") as HTMLElement;
     expect(exiting).toBeTruthy();
     expect(Number(exiting.style.opacity)).toBeLessThan(1);
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await advance(300);
     expect(container.querySelector(".panel")).toBeNull();
   });
 
@@ -337,15 +340,15 @@ describe("AnimatePresence", () => {
     // exactly what `exit` asks for, so there is nothing to animate and it
     // leaves at once. Motion resolves it against the element's current values
     // and behaves the same way.
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await advance(200);
 
     setPage("b");
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
     expect(container.querySelector(".page-a")).toBeTruthy();
     expect(container.querySelector(".page-b")).toBeTruthy();
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await advance(300);
     expect(container.querySelector(".page-a")).toBeNull();
     expect(container.querySelector(".page-b")).toBeTruthy();
   });
@@ -383,18 +386,18 @@ describe("AnimatePresence", () => {
 
     setOpen(false);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
 
     setOpen(true);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await advance(40);
 
     // Checked here rather than at the end. Building a second subtree beside the
     // one still leaving also settles on a single panel once the first finishes
     // exiting, so only the overlap catches it.
     expect(container.querySelectorAll(".panel")).toHaveLength(1);
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await advance(400);
     expect(container.querySelectorAll(".panel")).toHaveLength(1);
   });
 });
@@ -418,21 +421,21 @@ describe("exit cancellation", () => {
     ));
 
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
 
     // Re-entry supersedes the exit. Motion never settles a cancelled
     // animation's `finished`, so the only thing that can release the boundary's
     // hold is the controller reporting that this pass lost.
     setItems([{ id: "one" }]);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await advance(300);
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
 
     // Exiting a second time is what proves the first hold was released rather
     // than merely ignored: a leaked hold never lets the count reach zero, and
     // this item would stay on screen forever.
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await advance(300);
     expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 
@@ -452,16 +455,16 @@ describe("exit cancellation", () => {
     ));
 
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await advance(20);
 
     // A second exit pass while the item is still leaving. Each pass carries its
     // own hold: release the wrong one and the count touches zero mid-exit and
     // the item is torn out early; release none and it never leaves at all.
     setFade(0.5);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await advance(400);
     expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 
@@ -480,11 +483,11 @@ describe("exit cancellation", () => {
     ));
 
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(container.querySelector('[data-id="one"]')).toBeTruthy();
 
     unmount();
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(container.querySelector('[data-id="one"]')).toBeNull();
   });
 });
@@ -503,7 +506,7 @@ describe("value-level diffing", () => {
     ));
     const element = container.querySelector("div") as HTMLElement;
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await advance(200);
     const midpoint = readTranslateX(element);
     expect(midpoint).toBeGreaterThan(20);
 
@@ -511,7 +514,7 @@ describe("value-level diffing", () => {
     // re-ease it from wherever it happens to be, so it would fall behind.
     setOpacity(0.5);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     expect(readTranslateX(element)).toBeGreaterThan(midpoint + 40);
   });
 
@@ -526,7 +529,7 @@ describe("value-level diffing", () => {
     ));
     const element = container.querySelector("div") as HTMLElement;
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await advance(200);
     expect(readTranslateX(element)).toBe(100);
 
     // This is what makes a gesture releasable: when the layer that contributed
@@ -534,7 +537,7 @@ describe("value-level diffing", () => {
     // where it was left.
     setShifted(false);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(readTranslateX(element)).toBe(0);
   });
 
@@ -549,7 +552,7 @@ describe("value-level diffing", () => {
     ));
     const element = container.querySelector("div") as HTMLElement;
 
-    await new Promise((resolve) => setTimeout(resolve, 220));
+    await advance(220);
     const midpoint = Number(element.style.opacity);
     expect(midpoint).toBeGreaterThan(0.3);
 
@@ -559,7 +562,7 @@ describe("value-level diffing", () => {
     // first keyframe, which is what per-value diffing exists to prevent.
     setX(50);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await advance(40);
     expect(Number(element.style.opacity)).toBeGreaterThan(midpoint);
   });
 });
@@ -592,7 +595,7 @@ function stubNaturalHeight(element: HTMLElement, natural: number) {
 describe("MotionConfig", () => {
   afterEach(() => document.body.replaceChildren());
 
-  const settled = (target: Record<string, unknown>) => (
+  const skipping = (target: Record<string, unknown>) => (
     <MotionConfig skipAnimations>
       <motion.div initial={{ opacity: 0 }} animate={target} />
     </MotionConfig>
@@ -613,7 +616,7 @@ describe("MotionConfig", () => {
       </MotionConfig>
     ));
     const target = render(() =>
-      settled({ opacity: 1, transition: { duration: 2 } }),
+      skipping({ opacity: 1, transition: { duration: 2 } }),
     );
     const variant = render(() => (
       <MotionConfig skipAnimations>
@@ -628,7 +631,7 @@ describe("MotionConfig", () => {
       </MotionConfig>
     ));
 
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    await advance(80);
     for (const { container } of [own, target, variant]) {
       const element = container.querySelector("div") as HTMLElement;
       expect(element.style.opacity).toBe("1");
@@ -655,7 +658,7 @@ describe("measured keyframes", () => {
 
     setOpen(true);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
 
     // Mid-flight it is a number, which is the whole point: `0px` to `auto` is
     // not an interpolation any engine can perform without measuring first.
@@ -665,7 +668,7 @@ describe("measured keyframes", () => {
 
     // And it has to land on `auto`, not on the pixel height it measured, or
     // the element stops responding to its own content.
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await advance(400);
     expect(element.style.height).toBe("auto");
 
     // Measuring strips scale and rotate first so they cannot skew the box, and
@@ -676,7 +679,7 @@ describe("measured keyframes", () => {
 
     setOpen(false);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 450));
+    await advance(450);
     expect(element.style.height).toBe("0px");
   });
 });
@@ -705,7 +708,7 @@ describe("style values", () => {
       />
     ));
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     // Reading the animation back out is the whole point of handing a value in.
     expect(x.get()).toBe(200);
   });
@@ -724,7 +727,7 @@ describe("style values", () => {
     setX(80);
     setBackground("blue");
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
 
     expect(element.style.transform).toBe("translateX(80px)");
     expect(element.style.background).toBe("blue");
@@ -737,14 +740,14 @@ describe("style values", () => {
 
     setTarget(100);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
 
     // Mid-flight: a value that mirrored its source would already read 100.
     const midpoint = Number(x.get());
     expect(midpoint).toBeGreaterThan(0);
     expect(midpoint).toBeLessThan(60);
 
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await advance(700);
     expect(Number(x.get())).toBeCloseTo(100, 0);
   });
 });
@@ -766,7 +769,7 @@ describe("createMotion", () => {
     const element = container.querySelector("span.leaf") as HTMLElement;
     expect(element.style.opacity).toBe("0");
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(element.style.opacity).toBe("1");
     expect(readTranslateX(element)).toBe(100);
   });
@@ -788,7 +791,7 @@ describe("createMotion", () => {
         bubbles: true,
       }),
     );
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     expect(readScale(element)).toBe(1.5);
   });
 });
@@ -811,12 +814,12 @@ describe("createAnimate", () => {
     });
 
     // Mid-flight assertions ensure the call actually animates the DOM.
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     const midpoint = Number(element.style.opacity);
     expect(midpoint).toBeGreaterThan(0);
     expect(midpoint).toBeLessThan(1);
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await advance(350);
     expect(element.style.opacity).toBe("0");
   });
 
@@ -838,12 +841,12 @@ describe("createAnimate", () => {
       transition: { duration: 0.3, ease: "linear" },
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     const midpoint = Number(child.style.opacity);
     expect(midpoint).toBeGreaterThan(0);
     expect(midpoint).toBeLessThan(1);
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await advance(350);
     expect(child.style.opacity).toBe("0");
   });
 
@@ -868,17 +871,17 @@ describe("createAnimate", () => {
     ]);
 
     // If segments ran together, `b` would have started moving by this point.
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    await advance(80);
     expect(b.style.opacity).toBe("0");
 
     // This confirms the first segment finished and the second one started.
-    await new Promise((resolve) => setTimeout(resolve, 240));
+    await advance(240);
     expect(a.style.opacity).toBe("1");
     const midpoint = Number(b.style.opacity);
     expect(midpoint).toBeGreaterThan(0);
     expect(midpoint).toBeLessThan(1);
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(b.style.opacity).toBe("1");
   });
 
@@ -921,7 +924,7 @@ describe("createAnimate", () => {
 
     // Mid-flight, the plain animation should be between values while the
     // skipped animation has already applied its target.
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     const plainElement = plain.container.querySelector("div") as HTMLElement;
     const skippedElement = skipped.container.querySelector(
       "div",
@@ -962,7 +965,7 @@ describe("createAnimate", () => {
     reducedAnimate(reducedScope.current!, definition);
 
     // Mid-flight, only the reduced-motion target should already be complete.
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     const plainElement = plain.container.querySelector("div") as HTMLElement;
     const reducedElement = reduced.container.querySelector(
       "div",
@@ -992,7 +995,7 @@ describe("createAnimate", () => {
     }
 
     expect(() => render(() => <EarlyCall />)).not.toThrow();
-    await expect(earlyResult.finished).resolves.toBeUndefined();
+    await expect(settled(earlyResult.finished)).resolves.toBeUndefined();
   });
 
   it("settles `finished` immediately when a running animation is stopped", async () => {
@@ -1007,18 +1010,13 @@ describe("createAnimate", () => {
       opacity: 0,
       transition: { duration: 5 },
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
     controls.stop();
 
     // motion-dom never settles a stopped animation's own `finished`, so a
     // regression here hangs this assertion until the suite times out rather
     // than failing it outright.
-    await expect(
-      Promise.race([
-        controls.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
-      ]),
-    ).resolves.toBe("settled");
+    expect(await outcomeWithin(controls.finished, 500)).toBe("settled");
   });
 
   it("settles a sequence immediately when stopped mid-segment", async () => {
@@ -1038,15 +1036,10 @@ describe("createAnimate", () => {
       [".a", { opacity: 1, transition: { duration: 5 } }],
       [".b", { opacity: 1, transition: { duration: 5 } }],
     ]);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
     controls.stop();
 
-    await expect(
-      Promise.race([
-        controls.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
-      ]),
-    ).resolves.toBe("settled");
+    expect(await outcomeWithin(controls.finished, 500)).toBe("settled");
   });
 
   it("applies transitionEnd after an instant animation settles, and keeps it", async () => {
@@ -1067,7 +1060,7 @@ describe("createAnimate", () => {
       opacity: 0,
       transitionEnd: { display: "none" },
     });
-    await controls.finished;
+    await settled(controls.finished);
 
     const element = container.querySelector("div") as HTMLElement;
     expect(element.style.opacity).toBe("0");
@@ -1075,7 +1068,7 @@ describe("createAnimate", () => {
 
     // A later frame settling before this promise did would clobber the
     // write above the instant it lands, so give it a chance to run.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
     expect(element.style.display).toBe("none");
   });
 
@@ -1090,7 +1083,7 @@ describe("createAnimate", () => {
     const controls = animate(".missing", { opacity: 0 });
     // Past the point where the buggy version had already built an empty
     // `GroupAnimation` and assigned it as the active animation.
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
 
     expect(() => controls.state).not.toThrow();
     expect(() => controls.time).not.toThrow();
@@ -1137,7 +1130,7 @@ describe("createAnimate", () => {
     }
     render(() => <EarlyCall />);
 
-    await earlyResult.finished;
+    await settled(earlyResult.finished);
     expect(outsideChild.style.opacity).toBe("1");
   });
 
@@ -1161,7 +1154,7 @@ describe("createAnimate", () => {
         );
       }
       expect(() => render(() => <EarlyCall />)).not.toThrow();
-      await earlyResult.finished;
+      await settled(earlyResult.finished);
     } finally {
       document.querySelectorAll = original;
     }
@@ -1179,7 +1172,7 @@ describe("createAnimate", () => {
       opacity: 0,
       transition: { duration: 5 },
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
     const second = animate(scope.current!, {
       opacity: 1,
       transition: { duration: 0.05 },
@@ -1189,14 +1182,9 @@ describe("createAnimate", () => {
     // property without settling its own `finished` (verified against
     // motion-dom 13.1.1), so a regression here hangs this assertion until
     // the suite times out rather than failing it outright.
-    await expect(
-      Promise.race([
-        first.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
-      ]),
-    ).resolves.toBe("settled");
+    expect(await outcomeWithin(first.finished, 500)).toBe("settled");
 
-    await second.finished;
+    await settled(second.finished);
   });
 
   it("keeps a multi-key call's finished pending on its other keys after only one is reclaimed", async () => {
@@ -1214,7 +1202,7 @@ describe("createAnimate", () => {
       transition: { opacity: { duration: 5 }, x: { duration: 0.3 } },
       transitionEnd: { display: "none" },
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     // A second, unrelated call reclaims only `opacity`. `x` is still
     // animating under `first`'s own `active`, which this call never touches.
@@ -1222,33 +1210,23 @@ describe("createAnimate", () => {
       opacity: 1,
       transition: { duration: 0.05 },
     });
-    await second.finished;
+    await settled(second.finished);
 
     // A regression here settles the whole call's `finished`, and applies
     // `transitionEnd`, the moment `opacity` alone was reclaimed, well before
     // `x` has had anywhere near its 0.3s to finish on its own.
-    await expect(
-      Promise.race([
-        first.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("pending"), 100)),
-      ]),
-    ).resolves.toBe("pending");
+    expect(await outcomeWithin(first.finished, 100)).toBe("pending");
     expect(element.style.display).not.toBe("none");
 
     // `x` finishes naturally; only now is every key this call started
     // accounted for one way or another.
-    await expect(
-      Promise.race([
-        first.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
-      ]),
-    ).resolves.toBe("settled");
+    expect(await outcomeWithin(first.finished, 500)).toBe("settled");
     expect(readTranslateX(element)).toBe(50);
 
     // `transitionEnd` is written through a `MotionValue.jump()`, which paints
     // on motion's own next render tick rather than synchronously, so give it
     // one before reading it back.
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(element.style.display).toBe("none");
   });
 
@@ -1266,10 +1244,10 @@ describe("createAnimate", () => {
       x: 50,
       transition: { duration: 5, ease: "linear" },
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     animate(scope.current!, { opacity: 1, transition: { duration: 0.05 } });
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    await advance(80);
 
     // A regression here settles `first.finished` the instant `opacity` was
     // reclaimed, dropping it from the scope's `running` list early, so
@@ -1280,9 +1258,9 @@ describe("createAnimate", () => {
     // `x`'s last write before `stop()` took effect may not have painted yet
     // (motion renders on its own next tick), so give that one write a chance
     // to land before taking the snapshot this test compares against.
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     const xAtUnmount = readTranslateX(element);
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await advance(200);
     expect(readTranslateX(element)).toBe(xAtUnmount);
   });
 
@@ -1319,11 +1297,11 @@ describe("createAnimate", () => {
     // The initial pass settles on mount with nothing to animate (there is no
     // `animate` prop), which calls `onAnimationComplete` once on its own,
     // unrelated to the exit below.
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     onComplete.mockClear();
 
     setItems([]);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     const element = container.querySelector('[data-id="one"]') as HTMLElement;
     expect(element).toBeTruthy();
 
@@ -1344,12 +1322,7 @@ describe("createAnimate", () => {
       transition: { duration: 0.05 },
     });
 
-    await expect(
-      Promise.race([
-        controls.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
-      ]),
-    ).resolves.toBe("settled");
+    expect(await outcomeWithin(controls.finished, 500)).toBe("settled");
 
     // The exit pass's own completion handling has to run exactly as if it
     // had reached its target normally: `onAnimationComplete` only fires from
@@ -1371,7 +1344,7 @@ describe("createAnimate", () => {
       />
     ));
     const element = container.querySelector("div") as HTMLElement;
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     let scope!: AnimateScope;
     let animate!: AnimateFunction;
@@ -1383,8 +1356,9 @@ describe("createAnimate", () => {
     // A second, unrelated call reclaims only `opacity`. `x` is still
     // animating under the reactive pass's own animations, which this call
     // never touches.
-    await animate(element, { opacity: 1, transition: { duration: 0.05 } })
-      .finished;
+    await settled(
+      animate(element, { opacity: 1, transition: { duration: 0.05 } }).finished,
+    );
 
     // A regression here fires the whole pass's completion
     // (`onAnimationComplete` and `transitionEnd`) the moment `opacity` alone
@@ -1395,7 +1369,7 @@ describe("createAnimate", () => {
 
     // `x` finishes naturally; only now is every key this pass started
     // accounted for one way or another.
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await advance(350);
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(element.style.display).toBe("none");
   });
@@ -1423,7 +1397,7 @@ describe("createAnimate", () => {
       opacity: 0,
       transition: { duration: 5 },
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     // Resolves instantly under `skipAnimations`, but `value.start()` still
     // steals `opacity` from the imperative call's own in-flight animation on
@@ -1431,12 +1405,7 @@ describe("createAnimate", () => {
     setReactiveOpacity(0.4);
     flush();
 
-    await expect(
-      Promise.race([
-        controls.finished.then(() => "settled"),
-        new Promise((resolve) => setTimeout(() => resolve("timeout"), 500)),
-      ]),
-    ).resolves.toBe("settled");
+    expect(await outcomeWithin(controls.finished, 500)).toBe("settled");
   });
 
   it("fires a reactive pass's onAnimationComplete when a skipAnimations imperative call reclaims its only animating property", async () => {
@@ -1450,7 +1419,7 @@ describe("createAnimate", () => {
       />
     ));
     const element = container.querySelector("div") as HTMLElement;
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     let animate!: AnimateFunction;
     render(() => (
@@ -1464,7 +1433,7 @@ describe("createAnimate", () => {
     // it, which was this pass's only key.
     animate(element, { opacity: 1 });
 
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -1480,14 +1449,16 @@ describe("createAnimate", () => {
       return <div ref={scope} />;
     });
 
-    await animate(element, { x: 20, transition: { duration: 0.05 } }).finished;
+    await settled(
+      animate(element, { x: 20, transition: { duration: 0.05 } }).finished,
+    );
     expect(readTranslateX(element)).toBe(20);
 
     // If `animate()` had built its own, separate store for this element,
     // motion-dom's per-key style binding would have switched over to it and
     // stopped forwarding `createMotion`'s own writes to the DOM.
     setSource(30);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(readTranslateX(element)).toBe(30);
   });
 
@@ -1508,9 +1479,9 @@ describe("createAnimate", () => {
     controls.pause();
 
     const element = container.querySelector("div") as HTMLElement;
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     const held = element.style.opacity;
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
 
     expect(controls.state).toBe("paused");
     expect(element.style.opacity).toBe(held);
@@ -1547,7 +1518,7 @@ describe("createAnimate", () => {
     plainAnimate(plainScope.current!, { opacity: 0 });
     configuredAnimate(configuredScope.current!, { opacity: 0 });
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await advance(350);
     const plainElement = plain.container.querySelector("div") as HTMLElement;
     const configuredElement = configured.container.querySelector(
       "div",
@@ -1573,16 +1544,16 @@ describe("createWillChange", () => {
     expect(element.style.getPropertyValue("will-change")).toBe("auto");
 
     willChange.add("transform");
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(element.style.getPropertyValue("will-change")).toBe("transform");
 
     // Duplicate names leave the declaration unchanged.
     willChange.add("transform");
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(element.style.getPropertyValue("will-change")).toBe("transform");
 
     willChange.add("opacity");
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await advance(30);
     expect(element.style.getPropertyValue("will-change")).toBe(
       "transform, opacity",
     );
@@ -1612,13 +1583,13 @@ describe("gestures", () => {
     const element = container.querySelector("div") as HTMLElement;
 
     element.dispatchEvent(pointer("pointerenter"));
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     expect(readScale(element)).toBe(1.5);
 
     // Releasing only works because the layer that contributed `scale` stopping
     // contributing sends `scale` back to the value it was bound at.
     element.dispatchEvent(pointer("pointerleave"));
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     expect(readScale(element)).toBe(1);
   });
 
@@ -1633,11 +1604,11 @@ describe("gestures", () => {
     const element = container.querySelector("div") as HTMLElement;
 
     element.dispatchEvent(pointer("pointerenter"));
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     expect(readScale(element)).toBe(1.2);
 
     element.dispatchEvent(pointer("pointerdown"));
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     expect(readScale(element)).toBe(0.8);
   });
 });
@@ -1690,11 +1661,11 @@ describe("variant propagation", () => {
     flush();
 
     // Halfway through the stagger the last child has not been released yet.
-    await new Promise((resolve) => setTimeout(resolve, 320));
+    await advance(320);
     expect(opacityOf(0)).toBe("1");
     expect(opacityOf(2)).toBe("0");
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await advance(300);
     expect(opacityOf(2)).toBe("1");
   });
 
@@ -1717,7 +1688,7 @@ describe("variant propagation", () => {
       </motion.div>
     ));
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await advance(200);
     const opacityOf = (name: string) =>
       (container.querySelector(`[data-i="${name}"]`) as HTMLElement).style
         .opacity;
@@ -1776,14 +1747,14 @@ describe("whileInView", () => {
       />
     ));
     const element = container.querySelector("div") as HTMLElement;
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
 
     observer.report(element, true);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(element.style.opacity).toBe("1");
 
     observer.report(element, false);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(element.style.opacity).toBe("0");
   });
 
@@ -1798,7 +1769,7 @@ describe("whileInView", () => {
       />
     ));
     const element = container.querySelector("div") as HTMLElement;
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
 
     // `viewport` configures the observer; it is not an attribute. Leaving it
     // out of the forwarded set rendered `viewport="[object Object]"` into the
@@ -1807,12 +1778,12 @@ describe("whileInView", () => {
     expect(observer.state.options?.threshold).toBe(1);
 
     observer.report(element, true);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(observer.state.unobserved).toContain(element);
 
     // Leaving the viewport must not take it back: that is what `once` means.
     observer.report(element, false);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(element.style.opacity).toBe("1");
   });
 
@@ -1826,7 +1797,7 @@ describe("whileInView", () => {
       return <div ref={setNode} />;
     });
     const element = container.querySelector("div") as HTMLElement;
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await advance(20);
 
     expect(observer.state.options?.rootMargin).toBe("400px");
     expect(inView()).toBe(false);
@@ -1866,13 +1837,13 @@ describe("whileInView", () => {
 
     // Sampled mid-flight, not at the end: an implementation that jumped
     // straight to the target would satisfy an end-state assertion.
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     const midway = Number(line.getAttribute("x2"));
     expect(midway).toBeGreaterThan(0);
     expect(midway).toBeLessThan(100);
     expect(line.getAttribute("style")).toBe(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await advance(400);
     expect(line.getAttribute("x2")).toBe("100");
   });
 
@@ -1894,7 +1865,7 @@ describe("whileInView", () => {
     expect(path.getAttribute("pathLength")).toBe("1");
     expect(path.getAttribute("stroke-dasharray")).toBe("0 1");
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await advance(500);
     expect(path.getAttribute("stroke-dasharray")).toBe("1 0");
   });
 
@@ -1924,11 +1895,11 @@ describe("whileInView", () => {
 
     // The parent is underway and the child has not started. Asserting the end
     // state would pass either way, since both arrive eventually.
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     expect(Number(parent.style.opacity)).toBeGreaterThan(0.2);
     expect(child.style.opacity).toBe("0");
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await advance(500);
     expect(parent.style.opacity).toBe("1");
     expect(child.style.opacity).toBe("1");
   });
@@ -1956,11 +1927,11 @@ describe("whileInView", () => {
     setShown(false);
     flush();
 
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     expect(Number(child.style.opacity)).toBeLessThan(0.8);
     expect(parent.style.opacity).toBe("1");
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await advance(500);
     expect(parent.style.opacity).toBe("0");
     expect(child.style.opacity).toBe("0");
   });
@@ -1992,7 +1963,7 @@ describe("whileInView", () => {
     setShown(false);
     flush();
 
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
     const [parent, child] = [
       ...container.querySelectorAll("div"),
     ] as HTMLElement[];
@@ -2000,7 +1971,7 @@ describe("whileInView", () => {
     expect(Number(parent.style.opacity)).toBeLessThan(0.9);
     expect(child.style.opacity).toBe("1");
 
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await advance(700);
     expect(container.querySelectorAll("div").length).toBe(0);
   });
 
@@ -2037,16 +2008,16 @@ describe("whileInView", () => {
     // time the second has even started, which a garbled string delay (or one
     // that ignored the function and stayed at 0 for everyone) would not
     // produce.
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await advance(40);
     expect(first.style.opacity).toBe("1");
     expect(second.style.opacity).toBe("0");
     expect(third.style.opacity).toBe("0");
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await advance(100);
     expect(second.style.opacity).toBe("1");
     expect(third.style.opacity).toBe("0");
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await advance(100);
     expect(third.style.opacity).toBe("1");
   });
 
@@ -2078,11 +2049,11 @@ describe("whileInView", () => {
 
     // Sampled well inside the 100ms gap between the two children's delays:
     // the defect reached both by now, since neither was ever delayed at all.
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await advance(40);
     expect(first.style.opacity).toBe("1");
     expect(second.style.opacity).toBe("0");
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await advance(100);
     expect(second.style.opacity).toBe("1");
   });
 
@@ -2120,10 +2091,10 @@ describe("whileInView", () => {
       </motion.div>
     ));
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await advance(5);
     setShowTransient(false);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await advance(5);
     setShowTransient(true);
     flush();
 
@@ -2136,7 +2107,7 @@ describe("whileInView", () => {
     // step. A leaked first instance makes it three children's worth of span,
     // doubling the wait, so this window catches it without pinning the exact
     // extra delay.
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await advance(150);
     expect(transient.style.opacity).toBe("1");
   });
 });

@@ -3,6 +3,9 @@ import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AnimatePresence, MotionConfig, motion } from "../src";
+import { advance, useFakeClock } from "./clock";
+
+useFakeClock();
 
 interface Box {
   left: number;
@@ -65,12 +68,12 @@ async function sample(element: HTMLElement, duration: number): Promise<Box[]> {
   const deadline = Date.now() + duration;
   while (Date.now() < deadline) {
     boxes.push(projectedBox(element));
-    await new Promise((resolve) => setTimeout(resolve, 16));
+    await advance(16);
   }
   return boxes;
 }
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 500));
+const settle = () => advance(500);
 
 const between = (value: number, low: number, high: number) =>
   value > low && value < high;
@@ -94,7 +97,7 @@ describe("layout", () => {
     stubBox(element, () => (wide() ? expanded : collapsed));
 
     // Establish the initial layout baseline.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -135,7 +138,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 300, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -169,7 +172,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 300, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -197,11 +200,11 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 300, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await advance(60);
 
     // An unrelated list must not give this node a fresh destination snapshot.
     setNoise(1);
@@ -246,7 +249,7 @@ describe("layout", () => {
 
     const thumb = container.querySelector(".thumb") as HTMLElement;
     stubBox(thumb, () => (open() ? movedThumbBox : thumbBox));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setOpen(true);
     flush();
@@ -295,16 +298,16 @@ describe("layout", () => {
       height: 100,
     }));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setStep(1);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
 
     // The container's class moves the child again, mid-flight.
     setStep(2);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 32));
+    await advance(32);
 
     // An animation still aimed at the second box overshoots the third one,
     // because the element is laid out there while the transform is not.
@@ -335,11 +338,11 @@ describe("layout", () => {
       return wide() ? away : home;
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await advance(120);
 
     const reached = projectedBox(element);
     // A sibling arrives mid-flight and sends the element back the other way.
@@ -417,7 +420,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 300, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -447,7 +450,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 300, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -487,7 +490,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 300, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -526,7 +529,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 100, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -560,7 +563,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 100, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -599,13 +602,13 @@ describe("layout", () => {
       wide() ? expanded : { left: 0, top: 0, width: 100, height: 100 },
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
 
     // The element's own five second transition would still be moving here.
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await advance(250);
     expect(projectedBox(element)).toEqual(expanded);
   });
 
@@ -623,7 +626,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 100, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
@@ -652,7 +655,7 @@ describe("layout", () => {
     const expanded = { left: 200, top: 0, width: 100, height: 100 };
     stubBox(element, () => (wide() ? expanded : collapsed));
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await advance(50);
 
     setWide(true);
     flush();
