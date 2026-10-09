@@ -1,14 +1,8 @@
 import { isQueueState, type QueueState } from "~/domain/jobs/queue-state";
 
 /**
- * Server-side work a user waits on. Every kind streams the same envelope over
- * one realtime channel; `detail` carries what a given kind's view needs.
- *
- * The split matters: status, progress and error are what the machinery reads
- * (is it done, draw a bar, show a failure), and every kind answers them the same
- * way. Detail is what only one view understands. Sharing the first and not the
- * second is why this is one type rather than either three types or one type with
- * a union of every field any kind ever needed.
+ * Server-side work a user waits on. Every kind shares the envelope. `detail`
+ * carries what one kind's view needs.
  */
 export const JOB_KINDS = {
   gpvSnapshot: "gpv-snapshot",
@@ -46,10 +40,9 @@ export interface JobEvent<Detail = unknown> {
   /**
    * Query keys this event invalidated, applied once by the client subscription.
    *
-   * The server is the only side that knows a GPV snapshot going active makes
-   * eleven dashboards stale, so it says so instead of leaving each screen to
-   * infer it from a state transition it happened to be watching. Absent when the
-   * event changed nothing outside the job itself.
+   * The server is the only side that knows which views a GPV snapshot going
+   * active makes stale. Absent when the event changed nothing outside the job
+   * itself.
    */
   stale?: readonly string[];
 }

@@ -54,14 +54,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Republishes engine ingest jobs onto the job channel.
- *
- * The engine keeps these jobs in its own SQLite and exposes them over HTTP only,
- * so it cannot notify anyone and something has to ask. This is that something:
- * one loop per running job on the instance that started it, rather than one loop
- * per open browser tab with no owner and nothing to cancel it. Every instance's
- * hub picks the result up through pg NOTIFY, so subscribers do not have to be on
- * the instance that polls.
+ * Republishes engine ingest jobs onto the job channel. There is one polling
+ * loop per running job, not one per open browser tab, because a tab-owned loop
+ * has no owner to cancel it.
  */
 export function createIngestJobBridge(deps: {
   db: DatabaseExecutor;
