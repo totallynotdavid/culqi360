@@ -7,8 +7,8 @@ both schemas at startup. The [web application](../../apps/web/readme.md) calls
 it.
 
 The engine does not build the contacts database. The
-[pipeline](../pipeline/readme.md) builds and promotes it. Restart the engine
-after a promotion so new connections read the new file.
+[pipeline](../pipeline/readme.md) builds and promotes it. The engine opens the
+database at startup, so restart it after a promotion.
 
 ## Run
 
@@ -44,21 +44,23 @@ bun run test:engine
 | `GET /ingest-jobs/{job_id}`     | Read an ingest job (ingest only).       |
 | `GET /ingest-sources`           | List source keys (ingest only).         |
 
-`GET /health` returns `200` with `status: "ok"`, `build_id`, `built_at` and
-`rows` from the published database. It returns `503` with `status: "degraded"`
-when the database probe fails.
+`GET /health` returns `200` with `status: "ok"` and `rows` from the published
+database, plus `build_id` and `built_at` when the database records them. It
+returns `503` with `status: "degraded"` when the database probe fails.
 
 Every other endpoint needs the headers `x-key-id`, `x-timestamp` and
 `x-signature`. The signature is the lowercase hexadecimal HMAC-SHA256 of the
 big-endian unsigned 64-bit timestamp followed by the raw request body. A `GET`
 has an empty body. The blob `PUT` signs the upload id instead of the body.
-Timestamps must be within `ENGINE_HMAC_MAX_SKEW_SECS` of the engine clock.
-Requests are rate-limited per key and endpoint. Each request costs tokens
-against `ENGINE_RATE_LIMIT_PER_KEY`.
+Timestamps must be within `ENGINE_HMAC_MAX_SKEW_SECS` of the engine clock. A
+token bucket limits each key per endpoint. It holds `ENGINE_RATE_LIMIT_PER_KEY`
+tokens, refills at that many per minute, and each request spends the cost listed
+below. Failed signatures draw from a separate bucket for the key id, or a shared
+one for unknown key ids.
 
 `POST /search` takes `intent` (`people`, `companies` or `mixed`), `query` and an
-optional `limit`. The default limit is 20. The maximum is `ENGINE_MAX_LIMIT`.
-The query shape selects the lookup and its cost:
+optional `limit`. The default limit is 20. The engine caps it at
+`ENGINE_MAX_LIMIT`. The query shape selects the lookup and its cost:
 
 | Query                                             | Lookup                  | Cost |
 | ------------------------------------------------- | ----------------------- | ---- |
@@ -74,9 +76,9 @@ alphanumeric characters. [`search/src/domain.rs`](../search/src/domain.rs) plans
 the query.
 
 `POST /records/candidates` takes branch and user IDs, an optional team and
-product ID, an optional amount (default 20) and a `strategy` (`balanced`,
-`freshness` or `conversion`). It returns normalized candidate rows. The cost is
-the amount divided by 10, rounded up.
+product ID, an optional amount (default 20, capped at `ENGINE_MAX_LIMIT`) and a
+`strategy` (`balanced`, `freshness` or `conversion`). It returns normalized
+candidate rows. The cost is the requested amount divided by 10, rounded up.
 
 `POST /records/imports` takes a `rows` array. Each row has `ruc`,
 `organization_name`, `dni`, `person_name` and `phone_primary`. `quality_tier`,
@@ -88,12 +90,12 @@ The request and response shapes come from the JSON contracts. See
 
 The ingest endpoints exist only when `ENGINE_INGEST_ENABLED=true`. The register
 request declares the source key, snapshot label and date, byte size and
-lowercase SHA-256. The blob is streamed to the engine's upload directory, hashed
-and queued for processing. Enabling ingest switches the contacts database to WAL
-journal mode at startup, so no other process may hold a lock on it. The engine
-clears the upload directory at startup and marks jobs that a restart interrupted
-as failed. Job state lives in `ENGINE_INGEST_JOB_DB_PATH` (default
-`crates/engine/data/ingest.sqlite`).
+lowercase SHA-256. The blob is streamed to `uploads/` beside the contacts
+database, hashed and queued for processing. Enabling ingest switches the
+contacts database to WAL journal mode at startup, so no other process may hold a
+lock on it. The engine clears the upload directory at startup and marks jobs
+that a restart interrupted as failed. Job state lives in
+`ENGINE_INGEST_JOB_DB_PATH` (default `crates/engine/data/ingest.sqlite`).
 
 ## Configuration
 
@@ -114,9 +116,11 @@ Defaults from [`src/config.rs`](src/config.rs):
 | `ENGINE_RATE_LIMIT_PER_KEY` | `600`                                |
 | `ENGINE_MAX_LIMIT`          | `100`                                |
 
-`local` mode requires a loopback `ENGINE_HOST`. Use `internal` on a private
-container network, and `remote` when the service is deliberately exposed behind
-public network infrastructure.
+The engine checks `ENGINE_CONNECT_MODE` in one place: `local` requires a
+loopback `ENGINE_HOST`, and the other modes accept any host. The web application
+validates `ENGINE_URL` against its own `ENGINE_CONNECT_MODE`: `local` needs
+`http` and a loopback host, `internal` needs `http` and a non-loopback host, and
+`remote` needs `https` and a non-loopback host.
 
 With ingest enabled, the defaults are 4 workers, a batch size of 5,000, a 2 GiB
 upload limit, a 10 million row limit and 8 queued uploads. Override them with
