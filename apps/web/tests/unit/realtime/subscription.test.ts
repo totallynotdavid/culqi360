@@ -14,8 +14,8 @@ interface FakeSink extends RealtimeSink {
   closed: boolean;
 }
 
-// Records what reached the wire and in which order, and reports closure the way
-// h3 does, which is what evicts the peer.
+// Records what reached the wire and in which order, and reports closure through
+// onClosed, which is what evicts the peer.
 function createFakeSink(): FakeSink {
   const listeners: (() => void)[] = [];
 
