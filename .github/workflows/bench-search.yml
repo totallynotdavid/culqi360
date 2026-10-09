@@ -45,7 +45,7 @@ jobs:
       BASELINE_PATH: /srv/crm/bench/baselines/${{ inputs.mode }}.json
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -112,7 +112,7 @@ jobs:
           cp "${{ steps.run_bench.outputs.report_path }}" "target/bench-search-report-${MODE}.json"
 
       - name: upload benchmark report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: bench-search-${{ inputs.mode }}-${{ inputs.operation }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: target/bench-search-report-${{ inputs.mode }}.json
@@ -127,7 +127,7 @@ jobs:
 
       - name: upload promoted baseline
         if: ${{ inputs.operation == 'bootstrap' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: bench-baseline-${{ inputs.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.BASELINE_PATH }}

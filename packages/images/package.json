@@ -11,8 +11,8 @@
     "sharp": "^0.35.5"
   },
   "peerDependencies": {
-    "@solidjs/web": "^2.0.0-rc.9",
-    "solid-js": "^2.0.0-rc.9",
+    "@solidjs/web": "^2.0.0-rc.14",
+    "solid-js": "^2.0.0-rc.14",
     "vite": "^7.3.2 || ^8.0.0"
   }
 }
