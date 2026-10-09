@@ -1,6 +1,6 @@
 // Document identity: validation and normalization rules.
-// No source knowledge lives here, by the time these functions are called,
-// the doc type is already in canonical vocabulary (Stage 2 has applied any
+// No source knowledge lives here. By the time these functions are called, the
+// doc type is already in canonical vocabulary (translate.rs has applied any
 // source-specific translation).
 
 pub fn digits(value: &str) -> String {
@@ -27,17 +27,9 @@ pub fn derive_dni_from_natural_ruc(ruc: &str) -> Option<String> {
 /// Validates and normalizes a `(doc_type, doc_number)` pair from sources that carry
 /// explicit separate columns for type and number.
 ///
-/// Sources: consolidado_ruc_representantes_ok, consolidado_ruc_representantes_bppo,
-///          representantes_enriquecido, claro_post_202508, bitel_post_ms_2025,
-///          movistar_post_202508, mov_me_sal_2025. Enable/disable status lives in
-///          data/mappings/source-manifest.json.
-///
-/// Called from: `build_normalized` in mod.rs via the `rep_doc_type` / `rep_doc_number`
-/// fields of `FieldValues`.
-///
 /// `raw_type` must be in canonical vocabulary (DNI, CE, PTP, CSR, CIRE). Sources that
 /// use different encodings (Bitel "01"/"02", Movistar "C") must be translated via
-/// `SourceMapping::doc_type_map` before reaching this function (Stage 2, translate.rs).
+/// `SourceMapping::doc_type_map` before reaching this function (translate.rs).
 pub fn normalize_doc(raw_type: &str, raw_number: &str) -> Option<(String, String)> {
     let canonical_type = resolve_doc_type(raw_type.trim())?;
     let canonical_number = match canonical_type {
@@ -82,10 +74,6 @@ pub fn collect_valid(
 
 /// Interprets a value from a DNI-only column where the type is always implicit.
 ///
-/// Sources: osiptel_2025 (column 0, `person_dni`), osiptel_scan_sunat (`person_dni`).
-///
-/// Called from: `build_normalized` in mod.rs via the `person_dni` field of `FieldValues`.
-///
 /// Also handles the RENIEC natural-person RUC convention: an 11-digit RUC starting
 /// with "10" encodes the holder's 8-digit DNI in digits 2-9.
 pub fn normalize_person_document_with_natural_ruc(value: &str) -> (Option<String>, Option<String>) {
@@ -101,11 +89,6 @@ pub fn normalize_person_document_with_natural_ruc(value: &str) -> (Option<String
 }
 
 /// Heuristically classifies a single document column with no accompanying type field.
-///
-/// Sources: celulares (column `DOCUMENTO`).
-///
-/// Called from: `build_normalized` in mod.rs via the `person_or_company_doc` field of
-/// `FieldValues`.
 ///
 /// Disambiguation rules (applied in order):
 /// - 8 digits -> DNI
