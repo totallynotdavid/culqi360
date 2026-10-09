@@ -55,7 +55,7 @@
     "@solidjs/meta": "^1.0.0-next.2",
     "@solidjs/router": "^2.0.0-next.30",
     "@solidjs/web": "^2.0.0-rc.9",
-    "@totallynotdavid/solid-motion": "github:totallynotdavid/solid-motion#3c7014c9512a37e9f00488217cdb370c0a065c9c",
+    "@totallynotdavid/solid-motion": "0.1.0",
     "arctic": "^3.7.0",
     "clsx": "^2.1.1",
     "eventsource-parser": "^4.1.1",
