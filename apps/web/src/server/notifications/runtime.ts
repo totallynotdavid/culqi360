@@ -207,8 +207,7 @@ export function createNotificationsRuntime(
 
   if (Object.values(config.routes).includes("log")) {
     // `log` route: write the composed email to the log instead of sending it,
-    // for dev and e2e. Invite links no longer depend on capturing this output;
-    // they are retrievable from the invite record and its copy-link.
+    // for dev and e2e.
     providers.push(
       createLogProvider((mail) => {
         logger.info("email.logged", {

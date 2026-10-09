@@ -75,7 +75,7 @@ interface SseStream {
 }
 
 /**
- * A `text/event-stream` body over web streams, replacing H3's `createEventStream`.
+ * A `text/event-stream` body over web streams.
  *
  * The consumer cancelling the stream is what a client disconnect looks like
  * here, so `cancel` is the close signal the hub needs to drop the peer. Writes

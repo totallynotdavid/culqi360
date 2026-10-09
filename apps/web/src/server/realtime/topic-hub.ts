@@ -1,6 +1,6 @@
 import type { RealtimeMessage } from "~/contracts/realtime/channel";
 
-// send() never reports broken connections; h3 reports them through onClosed.
+// `send()` never reports broken connections. The sink's `onClosed` does.
 export interface RealtimePeer {
   send: (message: RealtimeMessage) => void;
   ping: () => void;

@@ -1,7 +1,6 @@
 // The production server. `vite build` emits browser assets to dist/client and
 // a web-standard request handler to dist/server/server.js; this serves the
-// first and delegates everything else to the second. There is no Solid-specific
-// adapter in between, which is why Nitro is gone.
+// first and delegates everything else to the second.
 import { handleRequest } from "./dist/server/server.js";
 
 const port = Number(process.env.PORT ?? 3000);

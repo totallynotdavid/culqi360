@@ -5,11 +5,8 @@ import { realtimeStatus } from "./realtime-status";
 import styles from "./realtime-status-banner.module.css";
 
 /**
- * The one place a lost live feed is reported.
- *
- * Every subscriber used to render its own copy of these two sentences, which
- * made an infrastructure fact look like a property of whichever card happened to
- * notice it first.
+ * The one place a lost live feed is reported. A lost feed is an infrastructure
+ * fact, not a property of whichever card noticed it first.
  */
 export function RealtimeStatusBanner() {
   return (

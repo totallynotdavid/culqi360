@@ -3,8 +3,8 @@ import { revalidate } from "@solidjs/router";
 import { leadDetailQuery } from "~/rpc/workflow/lead-detail";
 import { leadListQuery } from "~/rpc/workflow/lead-list";
 
-// Router 2's revalidate marks the query stale and returns; the refetch lands
-// through the reactive graph, so callers no longer wait on it.
+// `revalidate` marks the query stale and returns. The refetch lands through the
+// reactive graph, so callers do not wait on it.
 
 export function revalidateWorkflowLeadList(): void {
   revalidate(leadListQuery.key);

@@ -3,7 +3,7 @@
 export const DEFAULT_DEV_PORT = 3000;
 
 /**
- * Plain Vite does not read PORT/HOST the way the removed Nitro dev server did.
+ * Plain Vite does not read PORT or HOST, so this maps them to Vite options.
  * The port is always strict: walking to the next free port would serve the app
  * where none of the configured origins point, and nothing reports it.
  */
