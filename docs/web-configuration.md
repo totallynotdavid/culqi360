@@ -2,9 +2,9 @@
 
 The web server and the maintenance worker read their settings from environment
 variables. The development scripts load the repository-root `.env`, the test
-scripts load `.env.test`, and `bun run build` loads `.env.production`. The
-production scripts (`start`, `migrate:prod`, `provision:prod`,
-`worker:maintenance:prod`) read the process environment.
+scripts load `.env.test`, and `bun run build` loads `.env.production`, which you
+create when you build outside a container. The production scripts (`start`,
+`provision:prod`, `worker:maintenance:prod`) read the process environment.
 
 [`env.ts`](../apps/web/src/server/platform/config/env.ts) is the canonical
 server configuration. [`vite.config.ts`](../apps/web/vite.config.ts) and
@@ -32,6 +32,8 @@ WhatsApp disabled. Then no notification provider credentials are needed.
 | `WEB_DB_URL`            | Production        | Local `crm` database       | Connects the web server and worker to PostgreSQL.                                  |
 | `WEB_UPLOADS_ROOT`      | Optional          | `.local-storage/documents` | Stores uploaded and generated files.                                               |
 | `INSTALLATION_PASSWORD` | Installation seed | None                       | Sets the initial installation password and must contain at least eight characters. |
+
+`bun run dev`, `db:reset` and `provision:prod` run the installation seed.
 
 `APP_PUBLIC_ORIGIN` must be an HTTP or HTTPS origin with no path, query, or
 fragment. Its default, `http://localhost:3000`, is where the development server
@@ -103,11 +105,12 @@ webhook rejects every Kapso request while it is empty.
 
 The server reads `SENTRY_DSN` and the `SENTRY_BROWSER_*` rates at runtime and
 sends the browser values to each page in a `sentry-browser-config` meta tag, so
-one image serves any DSN. A browser rate outside 0 to 1 is a configuration
-error. `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` are read at Vite
-build time to upload source maps. The container build must receive them as
-Docker build args. `compose.app.yml` passes them through `build.args`;
-`environment:` or `env_file:` alone does not reach the build stage.
+one image serves any DSN. When `SENTRY_DSN` is set, a browser rate outside 0 to
+1 is a configuration error. `SENTRY_ORG`, `SENTRY_PROJECT` and
+`SENTRY_AUTH_TOKEN` are read at Vite build time to upload source maps. The
+container build must receive them as Docker build args. `compose.app.yml` passes
+them through `build.args`; `environment:` or `env_file:` alone does not reach
+the build stage.
 
 The `DEBUG_DIAGNOSTICS*` variables are described in
 [Diagnostics](diagnostics.md).

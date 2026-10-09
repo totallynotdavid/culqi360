@@ -65,6 +65,19 @@ reconnect policy are in
 [`browser/realtime/`](../apps/web/src/browser/realtime/).
 [Realtime](realtime.md) describes the protocol.
 
+Each operation reads the clock once, at the edge where it enters the system. The
+edges are an HTTP request ([`middleware.ts`](../apps/web/src/middleware.ts)), a
+claimed job batch
+([`job-queue.ts`](../apps/web/src/server/platform/jobs/job-queue.ts)) and a
+scheduled tick
+([`maintenance-worker.ts`](../apps/web/src/server/entrypoints/worker/maintenance-worker.ts)).
+That instant is `operationAt` on the context the layer already passes.
+Everything the operation writes uses it, so one operation never records two
+times. A function takes a bare `Date` only to compare, calculate or store it,
+and names it for that use (`activeAsOf`, `expiresBefore`). Durations use
+`performance.now()`, because a wall-clock adjustment can make a subtraction
+negative.
+
 The engine client, request signing, response decoding and ingest contracts are
 in [`server/integrations/engine/`](../apps/web/src/server/integrations/engine/).
 Search is assembled in [`server/search/`](../apps/web/src/server/search/) and
@@ -117,16 +130,11 @@ that the applications import:
 
 - [`contracts`](../packages/contracts/): extension bridge types.
 - `email-composer`: email templates. `bun run generate:templates` compiles them
-  into ignored modules.
+  into `src/templates/compiled/`, which git ignores.
 - `fetch-refs`: `bun run refs:fetch` downloads third-party reference
   documentation (OWASP, SolidJS, Twenty) for local reading.
 - `images`: the responsive image component and its Vite plugin.
 - `message-channels`: the email and WhatsApp delivery providers.
-
-Animation primitives come from
-[`@totallynotdavid/solid-motion`](https://github.com/totallynotdavid/solid-motion),
-a separate repository. `apps/web` depends on it by commit, so a change to the
-animation package reaches this repository only when that pin moves.
 
 [`tools/codegen/`](../tools/codegen/) generates the contract artifacts.
 [`tools/data-conversion/`](../tools/data-conversion/) holds scripts that convert

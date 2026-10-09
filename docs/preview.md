@@ -18,7 +18,8 @@ bun run preview stop                 # stop the preview server
 ```
 
 The output gives the base URL, the session cookie name and value, and the
-`agent-browser` commands that set the cookie and open `/home`.
+`agent-browser` commands that open `/login`, set the cookie, open `/home` and
+take a screenshot.
 
 ## What it creates
 
@@ -34,6 +35,6 @@ The server runs with `NOTIFICATION_ROUTES=email:log`, so no message leaves the
 machine. Uploads go to `apps/web/.preview-storage/documents`.
 
 The database is rebuilt and reseeded when it does not exist, when `--fresh` is
-passed, or when a file under `src/server/platform/database/schema` or
-`src/server/platform/database/seeds` changed since the last build. The first
-start can take minutes while Vite pre-bundles dependencies.
+passed, or when a file under `apps/web/src/server/platform/database/schema` or
+`apps/web/src/server/platform/database/seeds` changed since the last build. The
+first start can take minutes while Vite pre-bundles dependencies.

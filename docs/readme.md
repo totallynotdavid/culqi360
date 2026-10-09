@@ -16,7 +16,7 @@ covers setup. Each guide below owns one subject.
 
 - [Web configuration](web-configuration.md): environment variables and which are
   required.
-- [Database development](database.md): initialize, reset and change the
+- [Database development](database.md): initialize, reset and change the current
   disposable schema.
 - [Preview](preview.md): an authenticated local session for checking the UI.
 - [Action runtime](action-runtime.md): how a server action parses,

@@ -19,9 +19,9 @@ The stack runs four services. `postgres` uses the `postgres:18-bookworm` image.
 `prepare`, `web`, and `worker` share the application image.
 
 - `postgres` holds its data under `$APP_DATA_PATH/postgres`.
-- `prepare` runs once: `bun run migrate:prod`, then `bun run provision:prod`.
-  The first applies the schema. The second creates the installation without demo
-  data. The `web` and `worker` services wait for it to complete.
+- `prepare` runs once. It initializes the current schema, then runs
+  `bun run provision:prod`, which creates the installation without demo data.
+  The `web` and `worker` services wait for it to complete.
 - `web` serves the application with `bun run start` on port 3000. Traefik routes
   `APP_DOMAIN` to it. Uploads live under `$APP_DATA_PATH/uploads`.
 - `worker` runs the maintenance worker (`bun run worker:maintenance:prod`).

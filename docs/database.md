@@ -1,8 +1,7 @@
 # Database development
 
 Culqi360 stores application state in PostgreSQL. Development databases are
-disposable: a schema change rebuilds the database instead of applying a chain of
-incremental migrations.
+disposable: a schema change rebuilds the database from the current schema.
 
 ## Initialize PostgreSQL
 
@@ -22,9 +21,9 @@ Start development with:
 bun run dev
 ```
 
-The `dev` script of `apps/web` waits for PostgreSQL, runs `migrate` (creates the
-schema when the database is empty), runs `seed` (provisions the installation and
-loads development data, and skips if already initialized), then starts Vite.
+The `dev` script of `apps/web` waits for PostgreSQL, initializes the current
+schema, runs the installation seed (which loads development data and skips if
+already initialized), then starts Vite.
 
 ## Reset the development database
 
@@ -35,9 +34,10 @@ bun run db:reset
 ```
 
 It drops the database named in `WEB_DB_URL` (default `crm`), disconnecting its
-clients, creates it empty, then runs `migrate` and `seed`. Restart the web
-server and the worker afterwards. The command refuses to run with
-`NODE_ENV=production`. It never recreates the `postgres` maintenance database.
+clients, creates it empty, then initializes the current schema and runs the
+seed. Restart the web server and the worker afterwards. The command refuses to
+run with `NODE_ENV=production`. It never recreates the `postgres` maintenance
+database.
 
 To discard the whole local cluster instead, stop PostgreSQL, run
 `bun run clean:db` (it removes `.pgdata` only) and repeat
@@ -60,22 +60,12 @@ After you change a schema module:
 4. Run the focused tests for the changed domain.
 5. Run `bun run check` for contract, generation, or cross-subsystem changes.
 
-[`migrate.ts`](../apps/web/src/server/platform/database/migrate.ts) hashes the
-schema and reference-data modules and stores the hash in the database. Startup
-returns when the stored hash matches. It stops with an error that points at
-`bun run db:reset` when a database holds a different hash.
+The application checks that the stored schema matches the current code. It stops
+with an error that points at `bun run db:reset` when they differ.
 
-## Run database commands directly
-
-From `apps/web`:
-
-```sh
-bun run migrate
-bun run seed
-```
-
-Production uses `migrate:prod` and `provision:prod`. Both read their
-configuration from the process environment.
+Production runs the same current-schema initialization before
+`bun run provision:prod`. Both read their configuration from the process
+environment.
 
 ## End-to-end databases
 

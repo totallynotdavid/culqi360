@@ -9,7 +9,7 @@ assignment, record imports and data-source ingestion.
 
 The [root readme](../../readme.md#get-started) owns the setup and start
 sequence. `bun run dev` serves the web server at <http://localhost:3000>. The
-[database guide](../../docs/database.md) covers migrate, seed and reset.
+[database guide](../../docs/database.md) covers initialization, seed and reset.
 
 To run the web server alone, use `bun run dev:web` and `bun run dev:worker`.
 Both need PostgreSQL.

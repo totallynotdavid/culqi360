@@ -168,7 +168,8 @@ Keep comments:
 Avoid comments that:
 
 - Repeat obvious code structure (`Header`, `Info`, `Poster`).
-- Repeat cross-module rationale already documented here.
+- Repeat subsystem rationale that a document under `docs/` or a component readme
+  already owns. Link to it from the document instead.
 - Use meta narrative about the writing process.
 
 Style constraints:
@@ -192,23 +193,16 @@ Style constraints:
 5. Prefer explicit object construction at domain boundaries. When calling
    workflow/domain commands, explicit payloads are safer and easier to audit
    than blindly spreading large objects.
-
 6. Use spreads only when the input shape is intentionally the command shape.
 7. Remove dead or unused fields/imports. If x is present in an input type but
    unused, question whether it belongs there.
-8. Simplify callbacks when they are pure pass-throughs. Prefer:
-
-```ts
-(input) => querySomething(input);
-```
-
-over unnecessary `async` blocks with `return`.
-
-12. Let formatting improve scanability. Add blank lines between parse, error
-    handling, mutation, revalidation, and cleanup. This often beats adding
-    abstractions.
-13. Do not fight the type system with invented local types.
-14. In UI code, extract repeated markup only when it reduces visual noise. For
+8. Simplify callbacks when they are pure pass-throughs. Write
+   `(input) => querySomething(input)`, not an `async` block with `return`.
+9. Let formatting improve scanability. Add blank lines between parse, error
+   handling, mutation, revalidation, and cleanup. This often beats adding
+   abstractions.
+10. Do not fight the type system with invented local types.
+11. In UI code, extract repeated markup only when it reduces visual noise. For
     example, a `TextFieldRow` is useful if it removes many repeated rows. Do not
     extract every label, radio, or button into a component automatically.
 
@@ -223,7 +217,7 @@ over unnecessary `async` blocks with `return`.
 7. Is `...input` safe here, or could it leak extra fields across a boundary?
 8. Is duplicated code accidental duplication or a meaningful repeated concept?
 9. Would extracting this make future changes safer, or just add indirection?
-10. Are TypeScript types coming from the domain, or am I guessing them?\*\*
+10. Are TypeScript types coming from the domain, or am I guessing them?
 11. Would a reader understand this flow top-to-bottom without jumping around?
 12. Is the current code already fine?
 

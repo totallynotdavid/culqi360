@@ -31,16 +31,18 @@ authentication.
 Every failure leaves the runtime as a `WireError` through `projectFault` in
 `run.ts`:
 
-- `internal` and `external` domain errors are logged and sent to Sentry. The
-  wire error then has kind `internal` and a generic message.
+- `internal` and `external` domain errors are logged and sent to Sentry. Both
+  reach the client as wire kind `internal`. Unless the error names a catalog
+  code, the message is generic.
 - A `rate_limit` error sets the `Retry-After` response header.
 - [`domain-error.ts`](../apps/web/src/server/platform/action/domain-error.ts)
   maps the domain error kind to the wire kind and picks the message.
 
-A `WireError` holds `kind`, `code`, `message`, and, for `rate_limit` only,
-`retryAfterSeconds` ([`errors.ts`](../apps/web/src/contracts/errors.ts)). It
-carries no internal detail. The server writes the user-facing message. Clients
-render `message` and branch on `kind` or `code`.
+A `WireError` holds `kind`, a `code` that may be null, `message`, and, for
+`rate_limit` only, `retryAfterSeconds`
+([`errors.ts`](../apps/web/src/contracts/errors.ts)). It carries no internal
+detail. The server writes the user-facing message. Clients render `message` and
+branch on `kind` or `code`.
 
 `executeSessionServerFunctionResult` returns the `Result`.
 `executeSessionServerFunction` throws an `ActionError` that carries the

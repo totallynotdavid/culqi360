@@ -9,8 +9,10 @@ connection.
 A writer publishes with PostgreSQL `NOTIFY`. Each process holds one `LISTEN`
 connection that covers every channel assembled in
 [`application.ts`](../apps/web/src/server/composition/application.ts).
-[`runtime.ts`](../apps/web/src/server/realtime/runtime.ts) starts it lazily, so
-a process that never serves streams opens no connection.
+[`runtime.ts`](../apps/web/src/server/realtime/runtime.ts) owns it. The web
+server starts it on boot from
+[`runtime-lifecycle.ts`](../apps/web/src/server/entrypoints/runtime-lifecycle.ts)
+and stops it on `SIGINT` or `SIGTERM`.
 
 [`defineRealtimeChannel`](../apps/web/src/server/realtime/channel.ts) defines a
 channel. It maps a payload to a topic, optionally extracts a cursor from the
@@ -28,9 +30,17 @@ closes.
 Browsers subscribe at `/api/realtime/:channel/:id/stream`. The response is
 server-sent events with the content type `text/event-stream`.
 
-An expired session gets a 401 on this path from
-[`request-auth.ts`](../apps/web/src/server/platform/http/request-auth.ts)
-instead of a redirect to the login page.
+The route answers:
+
+| Status | Cause                                                                |
+| ------ | -------------------------------------------------------------------- |
+| 401    | The request has no app session                                       |
+| 404    | The channel is unknown, the id is malformed, or `open` returned null |
+| 503    | The `LISTEN` connection is down                                      |
+
+A request without a session gets the 401 from
+[`request-auth.ts`](../apps/web/src/server/platform/http/request-auth.ts), as
+every `/api/` path does, instead of a redirect to the login page.
 
 [`read-realtime-stream.ts`](../apps/web/src/browser/realtime/read-realtime-stream.ts)
 reads the stream with `fetch` and `eventsource-parser`. It reports one of three
@@ -38,7 +48,7 @@ outcomes:
 
 | Response                                                         | Outcome  | Client behavior                            |
 | ---------------------------------------------------------------- | -------- | ------------------------------------------ |
-| Clean end of stream                                              | `closed` | Reopens, without reporting an outage       |
+| Clean end of stream                                              | `closed` | Reopens, without reporting `offline`       |
 | 401 or 404                                                       | `denied` | Stops permanently                          |
 | Any other non-OK status, a network error, or an error mid-stream | `failed` | Reopens with backoff and reports `offline` |
 
@@ -56,6 +66,30 @@ which owns the connection state, or through
 which accumulates a capped list of records. Both return the connection state
 with the data, so a view can show `offline` or `denied` instead of stale data
 that looks current.
+
+## Job events
+
+Every kind of tracked work streams over one channel, built by
+[`createJobsChannel`](../apps/web/src/server/jobs/channel.ts) on the PostgreSQL
+channel `job-progress`. The kinds are in
+[`job-event.ts`](../apps/web/src/contracts/jobs/job-event.ts): `gpv-snapshot`,
+`record-import`, `data-source-ingest` and `client-enrichment`. A subscription id
+is `kind:subjectId`. Adding a kind needs a projector and a producer, not another
+channel.
+
+A `JobEvent` has two parts. The envelope (`state`, `progress`, `errorMessage`)
+is the same for every kind, so the client can draw a bar or a failure without
+knowing the kind. `detail` holds what only one view reads. `subjectId` names the
+entity, such as a snapshot, not the attempt that is running, so a subscription
+survives a retry. `stale` lists the query keys the event invalidated. Only the
+server knows which views an activated snapshot makes stale, so it says so.
+
+The engine keeps ingest jobs in its own SQLite and exposes them over HTTP only,
+so it cannot notify the web server.
+[`job-bridge.ts`](../apps/web/src/server/data-source-uploads/job-bridge.ts)
+polls each running job every 2 seconds, for at most 30 minutes, on the instance
+that started it. It publishes each state as a job event. The other instances
+receive it through `NOTIFY`.
 
 ## Cursors and recovery
 
