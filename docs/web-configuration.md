@@ -25,13 +25,13 @@ WhatsApp disabled. Then no notification provider credentials are needed.
 
 ## Application and storage
 
-| Variable                | Required when     | Default                    | Purpose                                                                            |
-| ----------------------- | ----------------- | -------------------------- | ---------------------------------------------------------------------------------- |
-| `APP_PUBLIC_ORIGIN`     | Optional          | `http://localhost:3000`    | Builds links in invitations and notifications.                                     |
-| `TRUSTED_PROXY`         | Optional          | `false`                    | Trusts forwarded origin headers when set to `true`.                                |
-| `WEB_DB_URL`            | Production        | Local `crm` database       | Connects the web server and worker to PostgreSQL.                                  |
-| `WEB_UPLOADS_ROOT`      | Optional          | `.local-storage/documents` | Stores uploaded and generated files.                                               |
-| `INSTALLATION_PASSWORD` | Installation seed | None                       | Sets the initial installation password and must contain at least eight characters. |
+| Variable                | Required when     | Default                    | Purpose                                                                                                  |
+| ----------------------- | ----------------- | -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `APP_PUBLIC_ORIGIN`     | Optional          | `http://localhost:3000`    | Builds links in invitations and notifications.                                                           |
+| `TRUSTED_PROXY`         | Optional          | `false`                    | Trusts forwarded origin and client-IP headers when set to `true`.                                        |
+| `WEB_DB_URL`            | Production        | Local `crm` database       | Connects the web server and worker to PostgreSQL.                                                        |
+| `WEB_UPLOADS_ROOT`      | Optional          | `.local-storage/documents` | Stores uploaded and generated files.                                                                     |
+| `INSTALLATION_PASSWORD` | Installation seed | None                       | Sets the password of every user the seed creates. It must have at least eight characters after trimming. |
 
 `bun run dev`, `db:reset` and `provision:prod` run the installation seed.
 
@@ -42,9 +42,13 @@ development server fails instead of choosing another port when `PORT` is taken.
 If you change `PORT`, change `APP_PUBLIC_ORIGIN` and the other origin variables
 to match.
 
-Passkey registration and verification derive the relying-party ID and origin
-from each request. Set `TRUSTED_PROXY=true` only behind a trusted proxy that
-supplies the forwarded origin headers.
+Each request gets a public origin, which the CSRF origin check and passkey
+registration and verification use, and a client IP, which login throttling and
+authentication audit records use. With `TRUSTED_PROXY=true` the origin comes
+from the forwarded origin headers and the IP from `cf-connecting-ip`,
+`x-forwarded-for` or `x-real-ip`. Otherwise the origin is the request URL and
+every client IP is `127.0.0.1`. Set `TRUSTED_PROXY=true` only behind a trusted
+proxy that supplies these headers.
 
 ## Authentication and integrations
 
@@ -87,8 +91,9 @@ While it is empty, the web app reports that the extension is not configured.
 
 Provider credentials are required only when `NOTIFICATION_ROUTES` selects the
 provider. `WHATSAPP_WEBHOOK_VERIFY_TOKEN` is always required and must pass the
-secret-entropy check. Startup does not check `KAPSO_WEBHOOK_SECRET`, but the
-webhook rejects every Kapso request while it is empty.
+secret-entropy check. Startup does not check `KAPSO_WEBHOOK_SECRET`, but while
+it is empty the webhook rejects every `POST` delivery: 413 for a body over 256
+KiB, 403 for any other. The `GET` verification handshake still works.
 
 ## Observability
 

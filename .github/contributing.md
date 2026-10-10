@@ -2,20 +2,10 @@
 
 ## Set up
 
-You need [mise](https://mise.jdx.dev), which installs the pinned Rust, Bun and
-PostgreSQL versions. From the repository root:
-
-```sh
-mise install
-bun install
-cp .env.example .env
-bun run generate
-```
-
-`generate` writes the checked-in contracts and the ignored email template
-modules. The [README](../readme.md#get-started) continues with the database and
-the dev servers. The [documentation index](../docs/readme.md) lists the guides
-for each component.
+Follow [Get started](../readme.md#get-started) in the README. `mise install`
+installs the pinned Rust, Bun and PostgreSQL versions from
+[`mise.toml`](../mise.toml). The [documentation index](../docs/readme.md) lists
+the guides for each component.
 
 ## Check your change
 

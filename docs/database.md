@@ -60,12 +60,16 @@ After you change a schema module:
 4. Run the focused tests for the changed domain.
 5. Run `bun run check` for contract, generation, or cross-subsystem changes.
 
-The application checks that the stored schema matches the current code. It stops
-with an error that points at `bun run db:reset` when they differ.
+Schema initialization (the `migrate` script of `apps/web`, which `dev` and
+`db:reset` run) builds an empty database and records a hash of the schema
+modules. On a database that is already built it compares that hash with the
+current code and stops with an error that points at `bun run db:reset` when they
+differ. The running web server and worker do not check.
 
-Production runs the same current-schema initialization before
-`bun run provision:prod`. Both read their configuration from the process
-environment.
+In production the `prepare` service runs the same initialization
+([Deployment](deployment.md#application-stack)). A deployment that changes the
+schema therefore stops at `prepare`, because there are no migrations and
+`db:reset` refuses production.
 
 ## End-to-end databases
 

@@ -31,8 +31,10 @@ and activation are in
 A snapshot is a complete cut of the report. The validator never rewrites an
 earlier cut. It records blocking differences, such as a missing placement, a
 changed RUC, or a changed sale month, and a person resolves them before
-activation. Warnings, such as a RUC or owner missing from CRM, stay visible and
-do not block activation.
+activation. Data-quality gaps (no owner, no target, no desk, a serial mismatch)
+are quality queues, not snapshot issues, and do not block activation. Activation
+creates a CRM organization, without an owner, for each RUC in the snapshot that
+CRM does not have yet.
 
 One snapshot is active. Activation locks the dataset row, supersedes the
 previous active snapshot, and freezes uncredited merchant months against the
@@ -68,13 +70,13 @@ returns a download token.
 
 ## Access
 
-| Permission            | Access                                                           |
-| --------------------- | ---------------------------------------------------------------- |
-| `dashboards:read`     | Team dashboards and GPV quality views.                           |
-| `dashboards:read:own` | The caller's currently owned RUCs and progress.                  |
-| `dashboards:manage`   | Imports, issue resolution, targets, credits, and quality review. |
-| `commission:read`     | The commission manager dashboard.                                |
-| `commission:manage`   | Reading and setting a commission scheme version.                 |
+| Permission            | Access                                                         |
+| --------------------- | -------------------------------------------------------------- |
+| `dashboards:read`     | Team dashboards and the GPV quality summary.                   |
+| `dashboards:read:own` | The caller's currently owned RUCs and progress.                |
+| `dashboards:manage`   | Imports, issue resolution, targets, credits, and quality rows. |
+| `commission:read`     | The commission manager dashboard.                              |
+| `commission:manage`   | Reading and setting a commission scheme version.               |
 
 ## Realtime and storage
 

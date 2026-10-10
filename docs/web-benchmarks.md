@@ -7,9 +7,9 @@ The web application has CPU benchmarks under
 bun run test:perf
 ```
 
-The command runs `vitest bench` with
-[`vitest.bench.config.ts`](../apps/web/vitest.bench.config.ts), which loads
-`.env.test` and the CodSpeed plugin. For search benchmarks of the engine, see
+The command loads `.env.test`, runs `vitest bench` once with
+[`vitest.bench.config.ts`](../apps/web/vitest.bench.config.ts), and enables the
+CodSpeed plugin. For search benchmarks of the engine, see
 [`ops/bench`](../ops/bench/readme.md).
 
 Each directory under `tests/bench/` holds one domain, and each file in it

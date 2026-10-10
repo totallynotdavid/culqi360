@@ -23,6 +23,7 @@ Use `serializeCookie` and `parseCookieHeader` directly when no request scope
 exists or when the code handles header strings itself:
 
 - [`ui-preference-cookie.ts`](../apps/web/src/browser/ui/ui-preference-cookie.ts)
-  reads and writes `document.cookie` in the browser.
+  reads and writes `document.cookie` in the browser. During server rendering it
+  reads the same cookie from the request `cookie` header and never writes.
 - [`google-oauth-cookies.ts`](../apps/web/src/server/auth/google/google-oauth-cookies.ts)
   builds `Set-Cookie` header strings for the OAuth redirect and callback.

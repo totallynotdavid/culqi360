@@ -10,10 +10,12 @@ covers setup. Each guide below owns one subject.
 - [Contracts](contracts.md): the JSON contracts and the files generated from
   them.
 - [Deployment](deployment.md): the application and engine Compose stacks.
-- [Contributing](../.github/contributing.md): setup, checks and review.
+- [Contributing](../.github/contributing.md): checks and documentation
+  ownership.
 
 ## Web application
 
+- [Web application](../apps/web/readme.md): how to run it and where the code is.
 - [Web configuration](web-configuration.md): environment variables and which are
   required.
 - [Database development](database.md): initialize, reset and change the current

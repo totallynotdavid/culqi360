@@ -33,9 +33,9 @@ template database, and writes the worker manifest. Global teardown drops the
 template and every worker database.
 
 Each Playwright worker clones the template database and starts its own built
-server on port 41100 plus the worker index. An automatic fixture resets that
-worker database before every test. Workers do not share database state. The
-suite runs 4 workers, or 2 when `CI` is set.
+server on port 41100 plus its Playwright parallel index. An automatic fixture
+resets that worker database before every test. Workers do not share database
+state. The suite runs 4 workers, or 2 when `CI` is set.
 
 Each worker server also gets its own `WEB_UPLOADS_ROOT`, a temporary directory
 that is removed when the worker stops.

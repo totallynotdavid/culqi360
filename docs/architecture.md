@@ -71,10 +71,12 @@ claimed job batch
 ([`job-queue.ts`](../apps/web/src/server/platform/jobs/job-queue.ts)) and a
 scheduled tick
 ([`maintenance-worker.ts`](../apps/web/src/server/entrypoints/worker/maintenance-worker.ts)).
-That instant is `operationAt` on the context the layer already passes.
-Everything the operation writes uses it, so one operation never records two
-times. A function takes a bare `Date` only to compare, calculate or store it,
-and names it for that use (`activeAsOf`, `expiresBefore`). Durations use
+That instant is `operationAt` on the context the layer already passes, and
+everything the operation writes uses it. Events outside the inbound operation,
+such as job settlement, a lease heartbeat or an engine response, read the clock
+at the event boundary. A `clock-boundary` comment marks each read whose instant
+is recorded. A function takes a bare `Date` only to compare, calculate or store
+it, and names it for that use (`activeAsOf`, `expiresBefore`). Durations use
 `performance.now()`, because a wall-clock adjustment can make a subtraction
 negative.
 

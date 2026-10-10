@@ -20,7 +20,8 @@ cp .env.example .env
 bun run generate
 ```
 
-Edit `.env` and fill the empty values. Set `ENGINE_HMAC_KEYS_JSON` to
+`generate` writes the checked-in contracts and the ignored email template
+modules. Edit `.env` and fill the empty values. Set `ENGINE_HMAC_KEYS_JSON` to
 `{"web":"<ENGINE_HMAC_SECRET>"}` with the same secret you chose for
 `ENGINE_HMAC_SECRET`. The [web configuration guide](docs/web-configuration.md)
 says which values are required and how to generate each secret. Then create the
@@ -33,8 +34,8 @@ bun run dev
 
 `dev` runs PostgreSQL, the engine, the web application and the maintenance
 worker. It uses PostgreSQL on port 5432. The web application initializes the
-current schema and seeds the database, then serves <http://localhost:3000>,
-which redirects to `/login`.
+current schema and seeds the database, then starts the Vite dev server on
+<http://localhost:3000>.
 
 The engine exits at startup because a clean checkout has no contacts database.
 The other three processes keep running, and search and candidate assignment stay
@@ -52,6 +53,16 @@ bun run pipeline:fixture           # writes crates/engine/data/contacts.sqlite
 bun run dev:engine                 # or restart `bun run dev`
 ```
 
+The engine health endpoint needs no signature and reports the fixture's 11 rows:
+
+```sh
+curl http://127.0.0.1:3001/health
+```
+
+```text
+{"status":"ok","build_id":"build-…","built_at":…,"rows":11}
+```
+
 The real data comes from the raw source snapshots listed in
 [`source-manifest.json`](crates/pipeline/data/mappings/source-manifest.json).
 The repository does not hold them. Ask a maintainer for the snapshots. With them
@@ -59,16 +70,6 @@ in [`crates/pipeline/data/raw/`](crates/pipeline/data/raw/) under the names in
 the manifest, run `bun run pipeline:refresh:10k`, which samples 10,000 rows per
 source. `--raw-dir` points the pipeline at another directory. The
 [pipeline guide](crates/pipeline/readme.md#source-files) lists the other slices.
-
-To check the setup:
-
-```sh
-bun run check:contracts
-```
-
-```text
-all contracts are up to date
-```
 
 ## What is here
 
