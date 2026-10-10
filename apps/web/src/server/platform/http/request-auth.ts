@@ -169,6 +169,12 @@ export async function enforceAuthRequest(
       : { kind: "redirect_login" };
   }
 
+  // A session that has not finished sign-in has no API access. `fetch` follows
+  // a redirect to the onboarding page and hands the client HTML as its answer.
+  if (session.sessionClass !== "app" && isApiPath(url.pathname)) {
+    return reject(401, "Unauthorized");
+  }
+
   if (session.sessionClass === "pre_auth") {
     return url.pathname === "/onboarding"
       ? { kind: "allow" }
