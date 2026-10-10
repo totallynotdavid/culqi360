@@ -137,6 +137,8 @@ that the applications import:
   documentation (OWASP, SolidJS, Twenty) for local reading.
 - `images`: the responsive image component and its Vite plugin.
 - `message-channels`: the email and WhatsApp delivery providers.
+- [`tsconfig`](../packages/tsconfig/readme.md): the base TypeScript
+  configurations that every package and tool extends.
 
 [`tools/codegen/`](../tools/codegen/) generates the contract artifacts.
 [`tools/data-conversion/`](../tools/data-conversion/) holds scripts that convert

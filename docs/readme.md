@@ -45,3 +45,5 @@ covers setup. Each guide below owns one subject.
 - [Browser extension](../apps/extension/readme.md): call state, web handoff and
   sync.
 - [Search benchmarks](../ops/bench/readme.md): smoke and full engine benchmarks.
+- [TypeScript configuration](../packages/tsconfig/readme.md): the shared base
+  configurations and the `typecheck` command.

@@ -64,7 +64,7 @@ bun run zip
 Run the type check and browser integration suite:
 
 ```sh
-bun run check
+bun run typecheck
 bun run test:integration
 ```
 
