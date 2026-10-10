@@ -6,9 +6,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@crm/tsconfig": "workspace:*",
     "vitest": "^4.1.11"
   }
 }

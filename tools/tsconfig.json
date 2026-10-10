@@ -1,0 +1,7 @@
+{
+  "extends": "@crm/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["review", "data-conversion"]
+}

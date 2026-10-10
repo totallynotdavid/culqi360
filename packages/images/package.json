@@ -7,8 +7,14 @@
     ".": "./src/index.ts",
     "./vite": "./src/vite-plugin.ts"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@crm/tsconfig": "workspace:*"
   },
   "peerDependencies": {
     "@solidjs/web": "^2.0.0-rc.14",

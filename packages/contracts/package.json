@@ -4,5 +4,11 @@
   "type": "module",
   "exports": {
     "./extension": "./src/extension.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@crm/tsconfig": "workspace:*"
   }
 }

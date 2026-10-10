@@ -1,17 +1,7 @@
 {
+  "extends": "@crm/tsconfig/solid.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "jsx": "preserve",
-    "jsxImportSource": "@solidjs/web",
-    "allowJs": true,
-    "noEmit": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "isolatedModules": true
+    "jsxImportSource": "@solidjs/web"
   },
   "include": ["src"]
 }

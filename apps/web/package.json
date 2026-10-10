@@ -15,9 +15,7 @@
     "worker:maintenance:prod": "bun src/workers/maintenance-runner.ts",
     "lint": "bun run --cwd ../.. generate:templates && bun run lint:raw",
     "lint:raw": "oxlint -c .oxlintrc.json --type-aware --tsconfig tsconfig.json --deny-warnings src tests",
-    "check:types": "bun run --cwd ../.. generate:templates && bun run check:types:raw",
-    "check:types:raw": "bun x tsc --noEmit",
-    "check": "bun run --cwd ../.. generate:templates && bun run check:types:raw && bun run lint:raw",
+    "typecheck": "tsc --noEmit",
     "test": "bun --bun --env-file=../../.env.test vitest run --project unit --project client --project contract --project integration --project journey",
     "test:unit": "bun --bun --env-file=../../.env.test vitest run --project unit",
     "test:client": "bun --bun --env-file=../../.env.test vitest run --project client",
@@ -69,6 +67,7 @@
   },
   "devDependencies": {
     "@codspeed/vitest-plugin": "^5.7.1",
+    "@crm/tsconfig": "workspace:*",
     "@mdx-js/rollup": "^3.1.1",
     "@playwright/test": "^1.64.0",
     "@sentry/vite-plugin": "^5.4.1",
@@ -83,7 +82,6 @@
     "rolldown": "^1.2.13",
     "rollup-plugin-visualizer": "^7.1.1",
     "seroval": "^1.6.9",
-    "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vitest": "^4.1.11"
   }

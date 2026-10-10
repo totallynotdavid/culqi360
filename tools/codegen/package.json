@@ -5,9 +5,11 @@
   "scripts": {
     "generate": "bun run bin/generate.ts",
     "check": "bun run bin/generate.ts --check && bun run bin/check-search-contract.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@crm/tsconfig": "workspace:*",
     "@types/bun": "^1.4.2"
   }
 }

@@ -1,20 +1,7 @@
 {
+  "extends": "@crm/tsconfig/base.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "lib": ["ESNext"],
-    "types": ["bun"],
-    "outDir": "dist",
-    "rootDir": "src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "downlevelIteration": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true
+    "types": ["bun"]
   },
-  "include": ["src/**/*"]
+  "include": ["src"]
 }

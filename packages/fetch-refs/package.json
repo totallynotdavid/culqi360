@@ -5,6 +5,10 @@
   "type": "module",
   "main": "./src/cli.ts",
   "scripts": {
-    "fetch": "bun run src/cli.ts"
+    "fetch": "bun run src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@crm/tsconfig": "workspace:*"
   }
 }

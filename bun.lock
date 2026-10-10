@@ -5,6 +5,7 @@
     "": {
       "name": "one-workspace",
       "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
         "@types/bun": "^1.4.2",
         "@types/node": "^26.6.5",
         "agent-browser": "^0.39.0",
@@ -12,6 +13,7 @@
         "oxlint": "^1.87.0",
         "oxlint-tsgolint": "^7.0.2003",
         "shx": "^0.4.0",
+        "typescript": "^7.0.2",
       },
     },
     "apps/extension": {
@@ -22,10 +24,10 @@
         "solid-js": "^1.9.17",
       },
       "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
         "@playwright/test": "^1.64.0",
         "@types/chrome": "^0.3.5",
         "@wxt-dev/module-solid": "^1.1.4",
-        "typescript": "^7.0.2",
         "wxt": "^0.21.4",
       },
     },
@@ -64,6 +66,7 @@
       },
       "devDependencies": {
         "@codspeed/vitest-plugin": "^5.7.1",
+        "@crm/tsconfig": "workspace:*",
         "@mdx-js/rollup": "^3.1.1",
         "@playwright/test": "^1.64.0",
         "@sentry/vite-plugin": "^5.4.1",
@@ -78,7 +81,6 @@
         "rolldown": "^1.2.13",
         "rollup-plugin-visualizer": "^7.1.1",
         "seroval": "^1.6.9",
-        "typescript": "^7.0.2",
         "vite": "^8.3.4",
         "vitest": "^4.1.11",
       },
@@ -86,11 +88,15 @@
     "packages/contracts": {
       "name": "@crm/contracts",
       "version": "0.0.1",
+      "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
+      },
     },
     "packages/email-composer": {
       "name": "@crm/email-composer",
       "version": "0.0.1",
       "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
         "@types/mjml": "^5.0.0",
         "mjml": "^5.4.1",
         "vitest": "^4.1.11",
@@ -99,12 +105,18 @@
     "packages/fetch-refs": {
       "name": "@crm/fetch-refs",
       "version": "0.0.1",
+      "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
+      },
     },
     "packages/images": {
       "name": "@crm/images",
       "version": "0.0.1",
       "dependencies": {
         "sharp": "^0.35.5",
+      },
+      "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
       },
       "peerDependencies": {
         "@solidjs/web": "^2.0.0-rc.14",
@@ -116,13 +128,19 @@
       "name": "@crm/message-channels",
       "version": "0.0.1",
       "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
         "vitest": "^4.1.11",
       },
+    },
+    "packages/tsconfig": {
+      "name": "@crm/tsconfig",
+      "version": "0.0.0",
     },
     "tools/codegen": {
       "name": "@repo/codegen",
       "version": "0.1.0",
       "devDependencies": {
+        "@crm/tsconfig": "workspace:*",
         "@types/bun": "^1.4.2",
       },
     },
@@ -195,6 +213,8 @@
     "@crm/images": ["@crm/images@workspace:packages/images"],
 
     "@crm/message-channels": ["@crm/message-channels@workspace:packages/message-channels"],
+
+    "@crm/tsconfig": ["@crm/tsconfig@workspace:packages/tsconfig"],
 
     "@crm/web": ["@crm/web@workspace:apps/web"],
 
@@ -2029,14 +2049,6 @@
     "@solidjs/web/solid-js": ["solid-js@2.0.0-rc.14", "", { "dependencies": { "@solidjs/signals": "^2.0.0-rc.14", "csstype": "^3.1.0", "seroval": "~1.6.7", "seroval-plugins": "~1.6.7" } }, "sha512-fmaqUHgbITf18Hedur6gPnaPE4GrdPgkTbLujHqM5Vl5jxWf9rxwFh6hZMXQs+Kg1pu8KYuOMfqnuSizFQ9I6Q=="],
 
     "@totallynotdavid/solid-motion/solid-js": ["solid-js@2.0.0-rc.14", "", { "dependencies": { "@solidjs/signals": "^2.0.0-rc.14", "csstype": "^3.1.0", "seroval": "~1.6.7", "seroval-plugins": "~1.6.7" } }, "sha512-fmaqUHgbITf18Hedur6gPnaPE4GrdPgkTbLujHqM5Vl5jxWf9rxwFh6hZMXQs+Kg1pu8KYuOMfqnuSizFQ9I6Q=="],
-
-    "@typescript-eslint/project-service/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
-
-    "@typescript-eslint/tsconfig-utils/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
-
-    "@typescript-eslint/typescript-estree/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
-
-    "@typescript-eslint/utils/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "cheerio-select/boolbase": ["boolbase@1.0.0", "", {}, "sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww=="],
 

@@ -7,9 +7,11 @@
   },
   "scripts": {
     "build:emails": "bun run scripts/build-emails.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@crm/tsconfig": "workspace:*",
     "@types/mjml": "^5.0.0",
     "mjml": "^5.4.1",
     "vitest": "^4.1.11"

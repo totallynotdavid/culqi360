@@ -11,7 +11,7 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test:integration": "bun run build && playwright test",
     "test:integration:headed": "bun run build && playwright test --headed",
     "postinstall": "wxt prepare"
@@ -21,10 +21,10 @@
     "solid-js": "^1.9.17"
   },
   "devDependencies": {
+    "@crm/tsconfig": "workspace:*",
     "@playwright/test": "^1.64.0",
     "@types/chrome": "^0.3.5",
     "@wxt-dev/module-solid": "^1.1.4",
-    "typescript": "^7.0.2",
     "wxt": "^0.21.4"
   }
 }
