@@ -14,9 +14,9 @@ import { getWorkspaceRoot } from "./utils/workspace.ts";
 async function main(): Promise<void> {
   process.chdir(getWorkspaceRoot());
 
-  const args = process.argv.slice(2);
+  const [sourceList] = process.argv.slice(2);
   const sources =
-    args.length === 0 ? getAllSourceConfigs() : parseSources(args[0]);
+    sourceList === undefined ? getAllSourceConfigs() : parseSources(sourceList);
 
   if (sources.length === 0) {
     console.error("No valid sources specified");

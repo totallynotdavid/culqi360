@@ -42,7 +42,9 @@ function toDdMmYyyy(date: Date): string {
 }
 
 function pick<T>(list: readonly T[]): T {
-  return list[Math.floor(Math.random() * list.length)];
+  const item = list[Math.floor(Math.random() * list.length)];
+  if (item === undefined) throw new Error("Cannot pick from an empty list");
+  return item;
 }
 
 function loadExportRows(inputPath: string): ExportRow[] {
@@ -53,7 +55,8 @@ function loadExportRows(inputPath: string): ExportRow[] {
     throw new Error("Export CSV must have header + at least 1 row");
   }
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
+  const [headerLine = "", ...dataLines] = lines;
+  const headers = parseCsvLine(headerLine).map((h) => h.trim().toLowerCase());
   const rucIndex = headers.indexOf("ruc");
 
   if (rucIndex === -1) {
@@ -63,8 +66,8 @@ function loadExportRows(inputPath: string): ExportRow[] {
   const seen = new Set<string>();
   const rows: ExportRow[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const cols = parseCsvLine(lines[i]);
+  for (const line of dataLines) {
+    const cols = parseCsvLine(line);
     const ruc = (cols[rucIndex] ?? "").trim();
     if (!/^\d{11}$/.test(ruc)) continue;
     if (seen.has(ruc)) continue;

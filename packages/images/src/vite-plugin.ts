@@ -68,7 +68,7 @@ export function responsiveImagesPlugin(): Plugin {
     async transform(_code, id) {
       if (!id.includes("?responsive")) return null;
 
-      const cleanId = id.split("?")[0];
+      const cleanId = id.split("?")[0] ?? id;
       const isDev = config.command === "serve";
 
       if (isDev) {

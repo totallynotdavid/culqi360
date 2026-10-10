@@ -54,14 +54,13 @@ const companyResult = checkSearchContract(
   loaded,
 );
 
-const errors: string[] = [];
-if (!docResult.ok) {
-  errors.push(...docResult.errors.map((e) => `[doc] ${e}`));
-}
-if (!companyResult.ok) {
-  errors.push(...companyResult.errors.map((e) => `[company] ${e}`));
-}
-if (errors.length > 0) {
+if (!docResult.ok || !companyResult.ok) {
+  const errors = [
+    ...(docResult.ok ? [] : docResult.errors.map((e) => `[doc] ${e}`)),
+    ...(companyResult.ok
+      ? []
+      : companyResult.errors.map((e) => `[company] ${e}`)),
+  ];
   console.error(errors.join("\n"));
   process.exit(1);
 }
