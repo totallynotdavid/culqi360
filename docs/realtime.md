@@ -31,18 +31,17 @@ server-sent events with the content type `text/event-stream`.
 
 A subscription request gets:
 
-| Status | Cause                                                                |
-| ------ | -------------------------------------------------------------------- |
-| 302    | The session is in the `pre_auth` or `recovery_setup` class           |
-| 401    | The request has no session                                           |
-| 404    | The channel is unknown, the id is malformed, or `open` returned null |
-| 503    | The `LISTEN` connection is down                                      |
+| Status | Cause                                                                      |
+| ------ | -------------------------------------------------------------------------- |
+| 401    | The request has no session, or its class is `pre_auth` or `recovery_setup` |
+| 404    | The channel is unknown, the id is malformed, or `open` returned null       |
+| 503    | The `LISTEN` connection is down                                            |
 
 [`request-auth.ts`](../apps/web/src/server/platform/http/request-auth.ts) sends
-the 302 and the 401 before the route runs. It redirects a `pre_auth` session to
-`/onboarding` and a `recovery_setup` session to `/recovery-codes`, on `/api/`
-paths as on pages. `fetch` follows the 302, so the reader receives that page
-instead of a status.
+the 401 before the route runs. Pages redirect a `pre_auth` session to
+`/onboarding` and a `recovery_setup` session to `/recovery-codes`, but `/api/`
+paths answer 401, because `fetch` follows a redirect and the reader would
+receive that page instead of a status.
 
 [`read-realtime-stream.ts`](../apps/web/src/browser/realtime/read-realtime-stream.ts)
 reads the stream with `fetch` and `eventsource-parser`. It reports one of three
