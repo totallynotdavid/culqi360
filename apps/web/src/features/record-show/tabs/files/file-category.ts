@@ -106,7 +106,7 @@ export function getFileCategoryFromExtension(
 }
 
 export function getFileCategoryFromMime(mime: string): FileCategory {
-  const normalized = mime.toLowerCase().split(";", 1)[0].trim();
+  const normalized = mime.toLowerCase().split(";", 1)[0]?.trim() ?? "";
 
   if (normalized.startsWith("image/")) {
     return "image";

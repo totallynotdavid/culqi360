@@ -52,7 +52,9 @@ export const APP_MONTH_NAMES: readonly string[] = Array.from(
 );
 
 export function formatCalendarMonthName(month: CalendarMonth): string {
-  return APP_MONTH_NAMES[calendarMonthParts(month).month - 1];
+  return APP_MONTH_NAME_FORMAT.format(
+    Date.UTC(2000, calendarMonthParts(month).month - 1, 1),
+  );
 }
 
 export function appCalendarDateAt(instant: Date | number): CalendarDate {

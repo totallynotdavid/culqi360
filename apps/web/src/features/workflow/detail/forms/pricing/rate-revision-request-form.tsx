@@ -76,10 +76,11 @@ export function RateRevisionRequestForm(props: {
         }
       }
 
-      if (failures.length > 0) {
+      const [firstFailure] = failures;
+      if (firstFailure !== undefined) {
         setErrorMessage(
           failures.length === 1
-            ? failures[0]
+            ? firstFailure
             : "Algunos archivos no se pudieron subir",
         );
       }

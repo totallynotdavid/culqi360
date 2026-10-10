@@ -35,7 +35,7 @@ function getFrontmatterValue(
 function getSlug(path: string): string {
   const match = path.match(/\/([^/]+)\.mdx?$/);
 
-  return match ? match[1] : path;
+  return match?.[1] ?? path;
 }
 
 function isIsoDate(value: unknown): value is string {
@@ -43,7 +43,7 @@ function isIsoDate(value: unknown): value is string {
     return false;
   }
 
-  const [year, month, day] = value.split("-").map(Number);
+  const [year = 0, month = 0, day = 0] = value.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
 
   return (

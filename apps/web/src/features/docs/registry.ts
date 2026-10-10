@@ -21,13 +21,13 @@ const docModules = import.meta.glob<DocModule>("../../../content/docs/*.mdx", {
 });
 
 function getDocSlug(path: string): string {
-  const match = path.match(/\/([^/]+)\.mdx$/);
+  const slug = path.match(/\/([^/]+)\.mdx$/)?.[1];
 
-  if (!match) {
+  if (!slug) {
     throw new Error(`Invalid docs content path: ${path}`);
   }
 
-  return match[1];
+  return slug;
 }
 
 function isDocFrontmatter(value: unknown): value is DocFrontmatter {

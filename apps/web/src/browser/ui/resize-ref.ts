@@ -19,7 +19,10 @@ export function createResizeRef(
       }
 
       const observer = new ResizeObserver((entries) => {
-        onResize(entries[entries.length - 1]);
+        const latest = entries.at(-1);
+        if (latest) {
+          onResize(latest);
+        }
       });
 
       observer.observe(target);
@@ -38,5 +41,9 @@ export function borderBoxSize(entry: ResizeObserverEntry): {
   height: number;
 } {
   const [box] = entry.borderBoxSize;
+  if (!box) {
+    return { width: entry.contentRect.width, height: entry.contentRect.height };
+  }
+
   return { width: box.inlineSize, height: box.blockSize };
 }

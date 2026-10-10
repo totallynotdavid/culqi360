@@ -26,8 +26,10 @@ export function EventList(props: EventListProps) {
 
             const showYear =
               index() === 0 ||
-              calendarMonthParts(props.groups[index() - 1].month).year !==
-                calendarMonthParts(group.month).year;
+              calendarMonthParts(group.month).year !==
+                calendarMonthParts(
+                  props.groups[index() - 1]?.month ?? group.month,
+                ).year;
 
             return (
               <EventGroup

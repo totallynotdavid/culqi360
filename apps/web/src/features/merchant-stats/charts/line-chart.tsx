@@ -47,17 +47,16 @@ export function LineChart(props: LineChartProps) {
         (c, i) => `${i === 0 ? "M" : "L"}${c.x.toFixed(1)},${c.y.toFixed(1)}`,
       )
       .join(" ");
+    const first = coords[0];
+    const last = coords.at(-1);
+    const baseline = (PAD.top + innerH).toFixed(1);
     const area =
-      coords.length > 0
-        ? `${line} L${coords[coords.length - 1].x.toFixed(1)},${(
-            PAD.top + innerH
-          ).toFixed(1)} L${coords[0].x.toFixed(1)},${(PAD.top + innerH).toFixed(
-            1,
-          )} Z`
+      first && last
+        ? `${line} L${last.x.toFixed(1)},${baseline} L${first.x.toFixed(1)},${baseline} Z`
         : "";
 
     const maxIndex = coords.reduce(
-      (best, c, i) => (c.value > coords[best].value ? i : best),
+      (best, c, i) => (c.value > (coords[best]?.value ?? -Infinity) ? i : best),
       0,
     );
     const targetY =

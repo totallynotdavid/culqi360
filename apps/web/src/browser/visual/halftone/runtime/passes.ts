@@ -8,7 +8,6 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
-  ShaderMaterial,
   Vector2,
   WebGLRenderer,
 } from "three";
@@ -18,6 +17,7 @@ import { createHalftoneMaterial } from "../materials/material";
 import type { HalftoneStudioSettings } from "../state";
 import { createRenderTarget, type SceneResources } from "./core";
 import type { HalftoneImageFit } from "./types";
+import { UniformMaterial } from "./uniform-material";
 
 const passThroughVertexShader = `
   varying vec2 vUv;
@@ -316,7 +316,7 @@ export async function createRuntimePasses({
   const fullScreenGeometry = new PlaneGeometry(2, 2);
   const orthographicCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-  const blurHorizontalMaterial = new ShaderMaterial({
+  const blurHorizontalMaterial = new UniformMaterial({
     uniforms: {
       tInput: { value: null },
       dir: { value: new Vector2(1, 0) },
@@ -325,7 +325,7 @@ export async function createRuntimePasses({
     vertexShader: passThroughVertexShader,
     fragmentShader: blurFragmentShader,
   });
-  const blurVerticalMaterial = new ShaderMaterial({
+  const blurVerticalMaterial = new UniformMaterial({
     uniforms: {
       tInput: { value: null },
       dir: { value: new Vector2(0, 1) },
@@ -334,7 +334,7 @@ export async function createRuntimePasses({
     vertexShader: passThroughVertexShader,
     fragmentShader: blurFragmentShader,
   });
-  const halftoneMaterial = new ShaderMaterial({
+  const halftoneMaterial = new UniformMaterial({
     transparent: true,
     uniforms: {
       tScene: { value: sceneTarget.texture },
@@ -382,7 +382,7 @@ export async function createRuntimePasses({
   const postScene = new Scene();
   postScene.add(new Mesh(fullScreenGeometry, halftoneMaterial));
 
-  const imageMaterial = new ShaderMaterial({
+  const imageMaterial = new UniformMaterial({
     uniforms: {
       tImage: { value: null },
       imageSize: { value: new Vector2(1, 1) },

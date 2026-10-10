@@ -60,13 +60,10 @@ export function resolveWorkspaceContext(
       throw new Error("User hierarchy misconfigured: team branch mismatch");
     }
 
-    const supervisor =
-      input.branchSupervisors.length > 0
-        ? {
-            id: input.branchSupervisors[0].user_id,
-            names: input.branchSupervisors[0].names,
-          }
-        : null;
+    const [firstSupervisor] = input.branchSupervisors;
+    const supervisor = firstSupervisor
+      ? { id: firstSupervisor.user_id, names: firstSupervisor.names }
+      : null;
 
     return {
       scopeType,

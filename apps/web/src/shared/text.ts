@@ -6,5 +6,7 @@ export function capitalize(value: string): string {
   }
 
   const normalized = value.toLocaleLowerCase(APP_LOCALE);
-  return normalized[0].toLocaleUpperCase(APP_LOCALE) + normalized.slice(1);
+  return (
+    normalized.charAt(0).toLocaleUpperCase(APP_LOCALE) + normalized.slice(1)
+  );
 }

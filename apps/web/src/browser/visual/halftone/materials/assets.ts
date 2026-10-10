@@ -3,7 +3,7 @@ import {
   CanvasTexture,
   ClampToEdgeWrapping,
   Color,
-  ColorSpace,
+  type ColorSpace,
   EquirectangularReflectionMapping,
   LinearFilter,
   LinearMipmapLinearFilter,

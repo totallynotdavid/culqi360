@@ -119,11 +119,11 @@ function createVisualMountScheduler(
   };
 
   const scheduleDrain = () => {
-    if (cancelScheduledDrain !== null || queue.length === 0) {
+    const nextJob = queue[0];
+    if (cancelScheduledDrain !== null || !nextJob) {
       return;
     }
 
-    const nextJob = queue[0];
     const runNextJob = () => {
       cancelScheduledDrain = null;
 

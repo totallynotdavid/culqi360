@@ -130,8 +130,16 @@ export function resolveActiveRecordTabId(
   );
 
   const match = available.find((tab) => tab.id === tabId);
+  if (match) {
+    return match.id;
+  }
 
-  return match ? match.id : available[0].id;
+  const [fallback] = available;
+  if (!fallback) {
+    throw new Error(`No record tab is visible for kind "${kind}"`);
+  }
+
+  return fallback.id;
 }
 
 export function recordTabDisplayLabel(tabId: RecordTabId): string {

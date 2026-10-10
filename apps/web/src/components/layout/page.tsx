@@ -6,7 +6,7 @@ import styles from "./page.module.css";
 
 type PageWidth = "narrow" | "medium" | "wide";
 
-const WIDTH_CLASS: Record<PageWidth, string> = {
+const WIDTH_CLASS: Record<PageWidth, string | undefined> = {
   narrow: styles.pageNarrow,
   medium: styles.pageMedium,
   wide: styles.pageWide,

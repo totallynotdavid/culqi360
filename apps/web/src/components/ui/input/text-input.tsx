@@ -17,7 +17,7 @@ export type TextInputProps = Omit<
   inheritFontStyles?: boolean;
 };
 
-const SIZE_CLASS: Record<TextInputSize, string> = {
+const SIZE_CLASS: Record<TextInputSize, string | undefined> = {
   xs: styles.sizeXs,
   sm: styles.sizeSm,
   md: styles.sizeMd,

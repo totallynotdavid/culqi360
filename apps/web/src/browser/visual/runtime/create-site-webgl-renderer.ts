@@ -1,4 +1,4 @@
-import { WebGLRenderer, WebGLRendererParameters } from "three";
+import { WebGLRenderer, type WebGLRendererParameters } from "three";
 
 type SiteWebGlRendererParameters = WebGLRendererParameters & {
   onContextLost?: (event: Event) => void;

@@ -17,10 +17,8 @@ export function parseCombo(combo: HotkeyCombo): ParsedCombo {
   let alt = false;
   let meta = false;
 
-  for (let i = 0; i < parts.length - 1; i++) {
-    const modifier = parts[i].toLowerCase();
-
-    switch (modifier) {
+  for (const part of parts.slice(0, -1)) {
+    switch (part.toLowerCase()) {
       case "mod":
         if (isMac()) {
           meta = true;

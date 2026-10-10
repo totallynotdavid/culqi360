@@ -18,7 +18,7 @@ const variantStyles = {
   info: styles.info,
   warning: styles.warning,
   default: styles.default,
-} satisfies Record<SnackBarVariant, string>;
+} satisfies Record<SnackBarVariant, string | undefined>;
 
 const iconByVariant = {
   success: (): JSX.Element => <CircleCheckBig size={16} />,

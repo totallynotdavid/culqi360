@@ -1,5 +1,8 @@
 import type { Mesa } from "~/contracts/merchant-stats/commission-views";
-import type { CalendarMonth } from "~/domain/time/calendar-date";
+import {
+  calendarMonthParts,
+  type CalendarMonth,
+} from "~/domain/time/calendar-date";
 
 const SOLES = new Intl.NumberFormat("es-PE", {
   style: "currency",
@@ -47,7 +50,7 @@ export function formatInteger(value: number): string {
 }
 
 export function formatMonth(value: CalendarMonth): string {
-  const [year, month] = value.split("-").map(Number);
+  const { year, month } = calendarMonthParts(value);
 
   return `${MONTHS_ES[month - 1]} ${String(year).slice(2)}`;
 }

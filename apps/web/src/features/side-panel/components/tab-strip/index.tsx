@@ -69,8 +69,7 @@ export function TabStrip<TId extends string>(props: TabStripProps<TId>) {
 
     let totalWidth = 0;
 
-    for (let index = 0; index < tabs.length; index++) {
-      const tab = tabs[index];
+    for (const [index, tab] of tabs.entries()) {
       const tabWidth = tabWidths[tab.id];
 
       if (tabWidth === undefined) {

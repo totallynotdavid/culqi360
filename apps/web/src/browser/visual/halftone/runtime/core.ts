@@ -10,7 +10,6 @@ import {
   PlaneGeometry,
   RGBAFormat,
   Scene,
-  ShaderMaterial,
   SRGBColorSpace,
   Texture,
   WebGLRenderTarget,
@@ -22,6 +21,7 @@ import { type HalftoneTransmissionMaterial } from "../materials/material";
 import { applyHalftoneMaterialSettings } from "../materials/render";
 import type { HalftoneStudioSettings } from "../state";
 import type { HalftonePointerSettings } from "./types";
+import type { UniformMaterial } from "./uniform-material";
 
 const IMAGE_POINTER_FOLLOW = 0.38;
 const IMAGE_POINTER_VELOCITY_DAMPING = 0.82;
@@ -35,20 +35,56 @@ const DEFAULT_IMAGE_INTERACTION_SETTINGS: HalftonePointerSettings = {
   pointerVelocityDamping: IMAGE_POINTER_VELOCITY_DAMPING,
 };
 
+type BlurMaterial = UniformMaterial<"tInput" | "dir" | "res">;
+
+type HalftoneShaderMaterial = UniformMaterial<
+  | "tScene"
+  | "tGlow"
+  | "effectResolution"
+  | "logicalResolution"
+  | "tile"
+  | "s_3"
+  | "s_4"
+  | "applyToDarkAreas"
+  | "dashColor"
+  | "hoverDashColor"
+  | "time"
+  | "waveAmount"
+  | "waveSpeed"
+  | "footprintScale"
+  | "interactionUv"
+  | "interactionVelocity"
+  | "dragOffset"
+  | "hoverHalftoneActive"
+  | "hoverHalftonePowerShift"
+  | "hoverHalftoneRadius"
+  | "hoverHalftoneWidthShift"
+  | "hoverLightStrength"
+  | "hoverLightRadius"
+  | "hoverFlowStrength"
+  | "hoverFlowRadius"
+  | "dragFlowStrength"
+  | "cropToBounds"
+>;
+
+type ImageShaderMaterial = UniformMaterial<
+  "tImage" | "imageSize" | "viewportSize" | "zoom" | "contrast" | "imageFit"
+>;
+
 export type SceneResources = {
   ambientLight: AmbientLight;
-  blurHorizontalMaterial: ShaderMaterial;
+  blurHorizontalMaterial: BlurMaterial;
   blurHorizontalScene: Scene;
   blurTargetA: WebGLRenderTarget;
   blurTargetB: WebGLRenderTarget;
-  blurVerticalMaterial: ShaderMaterial;
+  blurVerticalMaterial: BlurMaterial;
   blurVerticalScene: Scene;
   camera: PerspectiveCamera;
   canvas: HTMLCanvasElement;
   fillLight: DirectionalLight;
   fullScreenGeometry: PlaneGeometry;
-  halftoneMaterial: ShaderMaterial;
-  imageMaterial: ShaderMaterial;
+  halftoneMaterial: HalftoneShaderMaterial;
+  imageMaterial: ImageShaderMaterial;
   imageScene: Scene;
   imageTexture: Texture | null;
   materialAssets: HalftoneMaterialAssets;
