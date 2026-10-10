@@ -61,7 +61,7 @@ async function runAfterEachHooks(suite: Suite): Promise<void> {
 }
 
 export default class BenchRunner extends BenchmarkRunner {
-  async runSuite(suite: Suite): Promise<void> {
+  override async runSuite(suite: Suite): Promise<void> {
     await runBeforeAllHooks(suite);
     await runBeforeEachHooks(suite);
     try {

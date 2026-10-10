@@ -60,9 +60,13 @@ export function createSecurityTestKit(ctx: TestDbContext) {
         ctx.fixtures.users.superUser.id,
       ];
       for (let index = 0; index < sourceIpLimit; index += 1) {
+        const userId = userIds[index % userIds.length];
+        if (!userId) {
+          throw new Error("No fixture users to spread the rate limit over");
+        }
         await checkActionRateLimit(
           actionName,
-          userIds[index % userIds.length],
+          userId,
           ctx,
           operationAt(now),
           ipAddress,

@@ -165,7 +165,7 @@ describe("request rate revision command", () => {
       round: 1,
       justification: "Need better rate",
     });
-    expect(detail.rateRevisions[0].files.map((file) => file.fileId)).toEqual([
+    expect(detail.rateRevisions[0]?.files.map((file) => file.fileId)).toEqual([
       fileId,
     ]);
   });

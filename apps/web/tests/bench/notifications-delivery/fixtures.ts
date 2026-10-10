@@ -134,8 +134,11 @@ function createAudiencePool(
     return Array.from(
       { length: recipientsPerIntent },
       (_innerIndex, recipientIndex) => {
-        const index = (start + recipientIndex) % userIds.length;
-        return userIds[index];
+        const userId = userIds[(start + recipientIndex) % userIds.length];
+        if (!userId) {
+          throw new Error("Audience pool needs at least one user");
+        }
+        return userId;
       },
     );
   });
@@ -269,7 +272,7 @@ export async function seedExpandIntent(
 export async function seedDispatchRecipient(
   ctx: TestDbContext,
 ): Promise<UserId> {
-  const [userId] = createUserIds(1);
+  const userId = UserId.trust(randomUUIDv7());
   await seedUsersAndAddresses(ctx, [userId], "dispatch");
   return userId;
 }

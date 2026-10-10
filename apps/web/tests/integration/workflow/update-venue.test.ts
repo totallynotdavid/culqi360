@@ -8,7 +8,15 @@ import {
   createTestRuntime,
   type TestRuntime,
 } from "@tests/support/runtime/app";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import { WorkflowVenueId } from "~/domain/ids";
 
@@ -62,7 +70,9 @@ describe("update venue", () => {
         operationAt(runtime.now.get()),
       ),
     );
-    const venueId = WorkflowVenueId.trust(seeded.venues[0].id);
+    const [seededVenue] = seeded.venues;
+    assert(seededVenue, "the lead has one venue");
+    const venueId = WorkflowVenueId.trust(seededVenue.id);
 
     const result = await runtime.workflow.commands.updateVenue(
       {
@@ -106,6 +116,7 @@ describe("update venue", () => {
       organization: { key: "venue-update-live" },
     });
     const venueId = lead.venueIds[0];
+    assert(venueId, "the lead has a venue");
 
     const detail = expectOk(
       await runtime.workflow.queries.getLeadDetail(
@@ -119,7 +130,8 @@ describe("update venue", () => {
     );
     expect(detail.lead.stage).toBe("LIVE");
     expect(detail.availableActions).not.toContain("update-venue");
-    const originalTradeName = detail.venues[0].tradeName;
+    const originalTradeName = detail.venues[0]?.tradeName;
+    assert(originalTradeName, "the venue has a trade name");
 
     const result = await runtime.workflow.commands.updateVenue(
       {
@@ -150,6 +162,6 @@ describe("update venue", () => {
         operationAt(runtime.now.get()),
       ),
     );
-    expect(after.venues[0].tradeName).toBe(originalTradeName);
+    expect(after.venues[0]?.tradeName).toBe(originalTradeName);
   });
 });

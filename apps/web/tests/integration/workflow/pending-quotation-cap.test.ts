@@ -9,7 +9,15 @@ import {
   createTestRuntime,
   type TestRuntime,
 } from "@tests/support/runtime/app";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import type { BranchId, WorkflowLeadId } from "~/domain/ids";
 
@@ -106,11 +114,12 @@ describe("pending quotation registration cap", () => {
     const exec = actorBy("execOne");
     await setBranchCap(runtime, exec.branchId, BRANCH_CAP);
 
-    const leadIds = await fillPendingQuotations(runtime, BRANCH_CAP);
+    const [leadId] = await fillPendingQuotations(runtime, BRANCH_CAP);
+    assert(leadId, "the cap is filled with pending quotations");
 
     // Closing one quotation as lost moves it out of PRICING, freeing a slot.
     const closed = await runtime.workflow.commands.closeLead(
-      { actor: exec, leadId: leadIds[0], reason: "RATE", note: null },
+      { actor: exec, leadId, reason: "RATE", note: null },
       operationAt(runtime.now.get()),
     );
     expect(closed.ok).toBe(true);

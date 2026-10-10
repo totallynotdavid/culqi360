@@ -8,7 +8,15 @@ import {
   createTestRuntime,
   type TestRuntime,
 } from "@tests/support/runtime/app";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import { WorkflowVenueId } from "~/domain/ids";
 
@@ -158,7 +166,9 @@ describe("lead detail setup pipeline", () => {
       ),
     );
     expect(withVenue.venues).toHaveLength(1);
-    expect(withVenue.venues[0]).toMatchObject({
+    const [venue] = withVenue.venues;
+    assert(venue, "the lead has one venue");
+    expect(venue).toMatchObject({
       tradeName: "Local Miraflores",
       linkUrl: "https://pay.example/local-miraflores",
       onlineUrl: "https://shop.example/local-miraflores",
@@ -171,7 +181,7 @@ describe("lead detail setup pipeline", () => {
         {
           actor,
           leadId: lead.id,
-          venueId: WorkflowVenueId.trust(withVenue.venues[0].id),
+          venueId: WorkflowVenueId.trust(venue.id),
           solesAccount: {
             currency: "PEN",
             banco: "BCP",
@@ -193,7 +203,7 @@ describe("lead detail setup pipeline", () => {
     );
     expect(completed.lead.stage).toBe("FULFILLMENT");
     expect(completed.blockingFields).toEqual([]);
-    expect(completed.venues[0].solesAccount).toMatchObject({
+    expect(completed.venues[0]?.solesAccount).toMatchObject({
       currency: "PEN",
       banco: "BCP",
       tipoCuenta: "AHORROS",

@@ -137,7 +137,7 @@ describe("runDirectSearch", () => {
         range,
       );
     expect(reservations).toHaveLength(1);
-    expect(reservations[0].status).toBe("cancelled");
+    expect(reservations[0]?.status).toBe("cancelled");
   });
 
   it("returns exhausted immediately without calling the engine once the monthly limit is committed", async () => {

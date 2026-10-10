@@ -203,7 +203,7 @@ describe("assignContacts", () => {
     });
 
     expect(commits).toHaveLength(1);
-    expect(commits[0].amount).toBe(2);
+    expect(commits[0]?.amount).toBe(2);
   });
 
   it("commits the full amount when every candidate is assigned", async () => {
@@ -252,7 +252,7 @@ describe("assignContacts", () => {
       );
 
     expect(reservations).toHaveLength(1);
-    expect(reservations[0].status).toBe("cancelled");
+    expect(reservations[0]?.status).toBe("cancelled");
   });
 
   it("cancels the reservation and rethrows when a downstream step throws", async () => {
@@ -267,6 +267,6 @@ describe("assignContacts", () => {
       );
 
     expect(reservations).toHaveLength(1);
-    expect(reservations[0].status).toBe("cancelled");
+    expect(reservations[0]?.status).toBe("cancelled");
   });
 });

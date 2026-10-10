@@ -7,7 +7,15 @@ import {
   createTestRuntime,
   type TestRuntime,
 } from "@tests/support/runtime/app";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import { WorkflowVenueId } from "~/domain/ids";
 
@@ -123,12 +131,14 @@ describe("lead lifecycle journey", () => {
         operationAt(runtime.now.get()),
       ),
     );
+    const [venue] = setup.venues;
+    assert(venue, "the lead has one venue");
     expectOk(
       await runtime.workflow.commands.addVenueAccounts(
         {
           actor: executive,
           leadId: lead.id,
-          venueId: WorkflowVenueId.trust(setup.venues[0].id),
+          venueId: WorkflowVenueId.trust(venue.id),
           solesAccount: {
             currency: "PEN",
             banco: "BCP",

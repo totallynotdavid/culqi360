@@ -66,6 +66,6 @@ describe("schema baseline", () => {
       SELECT migrations_hash FROM schema_integrity
     `.execute(ctx.db);
     expect(integrity.rows.length).toBe(1);
-    expect(integrity.rows[0].migrations_hash).toBeDefined();
+    expect(integrity.rows[0]?.migrations_hash).toBeDefined();
   });
 });

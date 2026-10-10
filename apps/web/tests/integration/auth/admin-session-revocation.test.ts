@@ -209,7 +209,7 @@ describe("admin session revocation", () => {
       type: "all_sessions_revoked",
       actor_user_id: ADMIN.userId,
     });
-    expect(events[0].payload_json).toEqual({
+    expect(events[0]?.payload_json).toEqual({
       revokedBy: ADMIN.userId,
     });
   });

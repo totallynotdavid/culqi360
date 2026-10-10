@@ -70,8 +70,8 @@ describe("createResizeRef", () => {
     flush();
 
     expect(FakeResizeObserver.instances).toHaveLength(1);
-    expect(FakeResizeObserver.instances[0].observed).toHaveLength(1);
-    expect(FakeResizeObserver.instances[0].observed[0]).toBe(element);
+    expect(FakeResizeObserver.instances[0]?.observed).toHaveLength(1);
+    expect(FakeResizeObserver.instances[0]?.observed[0]).toBe(element);
     dispose();
   });
 
@@ -89,11 +89,11 @@ describe("createResizeRef", () => {
     ref(fakeElement());
     flush();
 
-    expect(FakeResizeObserver.instances[0].disconnected).toBe(false);
+    expect(FakeResizeObserver.instances[0]?.disconnected).toBe(false);
 
     dispose();
 
-    expect(FakeResizeObserver.instances[0].disconnected).toBe(true);
+    expect(FakeResizeObserver.instances[0]?.disconnected).toBe(true);
   });
 
   it("reports the latest entry of a batch", () => {
@@ -104,7 +104,7 @@ describe("createResizeRef", () => {
     ref(fakeElement());
     flush();
 
-    FakeResizeObserver.instances[0].report(10, 20);
+    FakeResizeObserver.instances[0]?.report(10, 20);
 
     expect(widths).toEqual([20]);
     dispose();
