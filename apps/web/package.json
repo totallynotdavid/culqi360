@@ -61,7 +61,7 @@
     "kysely": "^0.29.6",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
-    "solid-js": "^2.0.0-rc.14",
+    "solid-js": "^2.0.0-rc.13",
     "three": "^0.186.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
