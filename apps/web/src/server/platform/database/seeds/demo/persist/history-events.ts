@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 
 import {
+  nextStep,
   stepDefinition,
   stepsForProduct,
 } from "~/server/workflow/lead/fulfillment/steps";
@@ -130,11 +131,11 @@ function buildLeadEvents(
     );
   }
 
-  (spec.proposals ?? []).forEach((proposal, index) => {
+  lead.proposals.forEach(({ spec: proposal, id, revisionId }) => {
     push(
       "rate_proposed",
       {
-        proposalId: lead.rateProposalIds[index],
+        proposalId: id,
         round: proposal.round,
         currency: proposal.currency,
       },
@@ -147,7 +148,7 @@ function buildLeadEvents(
     ) {
       push(
         "rate_accepted",
-        { proposalId: lead.rateProposalIds[index] },
+        { proposalId: id },
         at(proposal.decidedOffsetDays),
         { actor: proposal.acceptedBy ?? spec.executiveId },
       );
@@ -159,7 +160,7 @@ function buildLeadEvents(
       push(
         "rate_revision_requested",
         {
-          revisionId: lead.rateRevisionIds[index],
+          revisionId,
           round: proposal.round,
           justification: "El comercio solicita una tarifa más competitiva",
         },
@@ -302,10 +303,9 @@ function pushFulfillmentEvents(
     { actor: spec.executiveId },
   );
 
-  for (let index = 1; index < targetIndex; index += 1) {
-    const from = sequence[index];
-    const to = sequence[index + 1];
-    const atMs = stepAtMs(index + 1);
+  for (const [offset, from] of sequence.slice(1, targetIndex).entries()) {
+    const to = nextStep(fulfillment.productKind, from);
+    const atMs = stepAtMs(offset + 2);
     const actor =
       stepDefinition(from).owner === "back_office"
         ? (spec.review?.by ?? spec.executiveId)

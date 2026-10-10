@@ -28,11 +28,10 @@ async function insertRateRevisions(
   leads: readonly CompiledLead[],
 ): Promise<void> {
   const rows = leads.flatMap((lead) =>
-    (lead.spec.proposals ?? []).flatMap((proposal, index) => {
+    lead.proposals.flatMap(({ spec: proposal, id, revisionId }) => {
       if (proposal.outcome !== "revision_requested") {
         return [];
       }
-      const revisionId = lead.rateRevisionIds[index];
       if (revisionId === null || proposal.decidedOffsetDays === undefined) {
         throw new Error(`missing_compiled_rate_revision:${lead.spec.key}`);
       }
@@ -41,7 +40,7 @@ async function insertRateRevisions(
         {
           id: revisionId,
           lead_id: lead.leadId,
-          proposal_id: lead.rateProposalIds[index],
+          proposal_id: id,
           round: proposal.round,
           justification: "El comercio solicita una tarifa más competitiva",
           requested_by: lead.spec.executiveId,
@@ -63,8 +62,8 @@ async function insertRateProposals(
   leads: readonly CompiledLead[],
 ): Promise<void> {
   const rows = leads.flatMap((lead) =>
-    (lead.spec.proposals ?? []).map((proposal, index) => ({
-      id: lead.rateProposalIds[index],
+    lead.proposals.map(({ spec: proposal, id }) => ({
+      id,
       lead_id: lead.leadId,
       round: proposal.round,
       payback_pricing: proposal.paybackPricing,

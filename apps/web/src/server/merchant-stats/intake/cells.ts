@@ -83,7 +83,7 @@ function isoDate(date: Date): CalendarDate {
 function parseFlexibleDate(text: string): CalendarDate | null {
   const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (iso) {
-    return buildDate(iso[1], Number(iso[2]), Number(iso[3]));
+    return buildDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
   }
 
   const parts = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
@@ -96,19 +96,19 @@ function parseFlexibleDate(text: string): CalendarDate | null {
         : second > 12
           ? [first, second]
           : [second, first];
-    return buildDate(parts[3], month, day);
+    return buildDate(Number(parts[3]), month, day);
   }
 
   return null;
 }
 
 function buildDate(
-  year: string,
+  year: number,
   month: number,
   day: number,
 ): CalendarDate | null {
   try {
-    return calendarDateFromParts({ year: Number(year), month, day });
+    return calendarDateFromParts({ year, month, day });
   } catch {
     return null;
   }

@@ -19,13 +19,13 @@ export function parseImportFile(
   const validRows = [];
   const invalidRows = [];
 
-  for (let i = 0; i < rows.length; i++) {
+  for (const [i, cells] of rows.entries()) {
     const rowNumber = i + 1;
     const result = mapRecordImportRow({
       rowNumber,
       importType,
       headers,
-      cells: rows[i],
+      cells,
     });
 
     if (result.ok) {

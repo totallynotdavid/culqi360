@@ -73,6 +73,10 @@ async function appendEvents(
     }
 
     const event = events[index];
+    if (!event) {
+      throw new Error(`Event row ${row.id} has no source event`);
+    }
+
     const intent = NOTIFICATION_EVENT_POLICIES[row.type]?.buildIntent({
       eventId: EventId.trust(row.id),
       entityId: row.entity_id,

@@ -7,6 +7,7 @@ import type { Database } from "~/server/platform/database/types";
 import { createInquiryRepo } from "~/server/workflow/inquiry/repo";
 import { reviewLead } from "~/server/workflow/lead/domain/decide";
 import { commitTransition } from "~/server/workflow/lead/write/commit";
+import { pairCommittedEvents } from "~/server/workflow/lead/write/transition";
 import { createWorkflowRepos } from "~/server/workflow/repos";
 
 import type { ImportRowInput, LeadMutationResult } from "./types";
@@ -185,10 +186,10 @@ export async function applyLeadMutation(input: {
       row: input.row.row,
       ok: true,
     },
-    committed: transition.value.events.map((event, index) => ({
-      event,
-      id: committed.value.eventIds[index],
-    })),
+    committed: pairCommittedEvents(
+      transition.value.events,
+      committed.value.eventIds,
+    ),
     newlyAnsweredInquiries: newlyAnswered,
   };
 }

@@ -13,7 +13,14 @@ import {
   LEAD_SPECS,
   SUPERVISORS,
   type LeadSpec,
+  type RateProposalSpec,
 } from "./scenario";
+
+export interface CompiledRateProposal {
+  spec: RateProposalSpec;
+  id: WorkflowRateProposalId;
+  revisionId: WorkflowRateRevisionId | null;
+}
 
 export interface CompiledLead {
   spec: LeadSpec;
@@ -25,8 +32,7 @@ export interface CompiledLead {
   };
   leadId: WorkflowLeadId;
   assignmentId: string;
-  rateProposalIds: WorkflowRateProposalId[];
-  rateRevisionIds: Array<WorkflowRateRevisionId | null>;
+  proposals: CompiledRateProposal[];
   venueId: WorkflowVenueId | null;
   venueAccountIds: string[];
   fulfillmentOrderId: FulfillmentOrderId | null;
@@ -72,18 +78,18 @@ function compileLead(spec: LeadSpec): CompiledLead {
     projection: deriveProjection(spec),
     leadId: WorkflowLeadId.trust(stableSeedId(`lead:${spec.key}`)),
     assignmentId: stableSeedId(`lead-assignment:${spec.key}`),
-    rateProposalIds: (spec.proposals ?? []).map((proposal) =>
-      WorkflowRateProposalId.trust(
+    proposals: (spec.proposals ?? []).map((proposal) => ({
+      spec: proposal,
+      id: WorkflowRateProposalId.trust(
         stableSeedId(`rate-proposal:${spec.key}:${proposal.round}`),
       ),
-    ),
-    rateRevisionIds: (spec.proposals ?? []).map((proposal) =>
-      proposal.outcome === "revision_requested"
-        ? WorkflowRateRevisionId.trust(
-            stableSeedId(`rate-revision:${spec.key}:${proposal.round}`),
-          )
-        : null,
-    ),
+      revisionId:
+        proposal.outcome === "revision_requested"
+          ? WorkflowRateRevisionId.trust(
+              stableSeedId(`rate-revision:${spec.key}:${proposal.round}`),
+            )
+          : null,
+    })),
     venueId: spec.venue
       ? WorkflowVenueId.trust(stableSeedId(`venue:${spec.key}`))
       : null,

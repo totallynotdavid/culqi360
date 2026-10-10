@@ -134,8 +134,8 @@ function toCells(
   cells: readonly GpvCellValue[],
 ): Cells {
   const record: Cells = {};
-  for (let index = 0; index < headers.length; index++) {
-    record[headers[index]] = cells[index];
+  for (const [index, header] of headers.entries()) {
+    record[header] = cells[index];
   }
   return record;
 }
@@ -145,8 +145,8 @@ function toRawRecord(
   cells: readonly GpvCellValue[],
 ): GpvRawRecord {
   const record: GpvRawRecord = {};
-  for (let index = 0; index < headers.length; index++) {
-    record[headers[index]] = cellText(cells[index]);
+  for (const [index, header] of headers.entries()) {
+    record[header] = cellText(cells[index]);
   }
   return record;
 }

@@ -44,7 +44,7 @@ function scanCsvRows(
   };
 
   for (let i = 0; i < content.length; i++) {
-    const ch = content[i];
+    const ch = content.charAt(i);
 
     if (ch === '"') {
       if (inQuotes && content[i + 1] === '"') {

@@ -121,12 +121,17 @@ export async function verifyExtensionToken<T extends ExtensionTokenClaims>(
   token: string,
   isClaims: (value: unknown) => value is T,
 ): Promise<T> {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
+  const [encodedHeader, encodedPayload, encodedSignature, ...extraParts] =
+    token.split(".");
+  if (
+    encodedHeader === undefined ||
+    encodedPayload === undefined ||
+    encodedSignature === undefined ||
+    extraParts.length > 0
+  ) {
     throw new ExtensionTokenVerificationError("invalid token format");
   }
 
-  const [encodedHeader, encodedPayload, encodedSignature] = parts;
   const header = decodeJsonPart(encodedHeader);
   if (
     typeof header !== "object" ||

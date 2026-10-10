@@ -46,7 +46,9 @@ function detectImportType(normalized: string[]): RecordImportType | null {
 
 export function fromXlsx(buffer: ArrayBuffer): ExtractedRows {
   const wb = read(buffer, { type: "array" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
+  const firstSheetName = wb.SheetNames[0];
+  const ws =
+    firstSheetName === undefined ? undefined : wb.Sheets[firstSheetName];
   if (!ws) {
     throw new Error("Workbook has no sheets");
   }
@@ -57,8 +59,8 @@ export function fromXlsx(buffer: ArrayBuffer): ExtractedRows {
     defval: "",
   });
 
-  for (let i = 0; i < allRows.length; i++) {
-    const normalized = allRows[i].map((c) => normalizeHeader(c.trim()));
+  for (const [i, headerRow] of allRows.entries()) {
+    const normalized = headerRow.map((c) => normalizeHeader(c.trim()));
     const importType = detectImportType(normalized);
 
     if (importType !== null) {

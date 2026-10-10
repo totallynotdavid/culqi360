@@ -151,8 +151,9 @@ function buildOrderPlan(
   // Steps strictly before targetIndex are already resolved; targetIndex
   // itself is the current, still-pending step (or, when it's COMPLETED, every
   // real step has already been resolved -- COMPLETED itself needs no action).
-  for (let index = 1; index < targetIndex; index += 1) {
-    const def = stepDefinition(sequence[index]);
+  for (const [offset, step] of sequence.slice(1, targetIndex).entries()) {
+    const index = offset + 1;
+    const def = stepDefinition(step);
     const atMs = stepAtMs(index);
 
     switch (def.kind) {

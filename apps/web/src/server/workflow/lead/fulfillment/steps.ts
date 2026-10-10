@@ -169,10 +169,10 @@ export function nextStep(
 ): FulfillmentStep {
   const sequence = STEP_SEQUENCE[productKind];
   const index = sequence.indexOf(current);
-  if (index < 0 || index + 1 >= sequence.length) {
+  if (index < 0) {
     return "COMPLETED";
   }
-  return sequence[index + 1];
+  return sequence[index + 1] ?? "COMPLETED";
 }
 
 export function stepsForProduct(productKind: ProductKind): FulfillmentStep[] {

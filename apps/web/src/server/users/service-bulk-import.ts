@@ -153,8 +153,8 @@ function resolveBulkImportLayout(
 
     const columnIndex: Record<string, number> = {};
 
-    for (let index = 0; index < header.length; index++) {
-      columnIndex[header[index]] = index;
+    for (const [index, column] of header.entries()) {
+      columnIndex[column] = index;
     }
 
     return {

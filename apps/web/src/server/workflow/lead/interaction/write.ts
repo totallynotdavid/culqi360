@@ -35,6 +35,11 @@ export async function addLeadNote(
       return appended;
     }
 
-    return Ok({ interactionId: appended.value.eventIds[0] });
+    const [interactionId] = appended.value.eventIds;
+    if (interactionId === undefined) {
+      throw new Error("Lead note was appended without an event id");
+    }
+
+    return Ok({ interactionId });
   });
 }

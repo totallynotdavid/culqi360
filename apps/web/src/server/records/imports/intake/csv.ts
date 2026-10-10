@@ -49,8 +49,7 @@ export function fromCsv(buffer: ArrayBuffer): ExtractedRows {
   for (const delimiter of [",", ";"] as const) {
     const parsed = parseCsvRows(text, delimiter);
 
-    for (let i = 0; i < parsed.length; i++) {
-      const row = parsed[i];
+    for (const [i, row] of parsed.entries()) {
       const normalized = row.cells.map((c) => normalizeHeader(c));
       const importType = detectImportType(normalized);
 

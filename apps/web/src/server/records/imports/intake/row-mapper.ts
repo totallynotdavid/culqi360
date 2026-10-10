@@ -18,8 +18,8 @@ function readRecord(
 ): Record<string, string> {
   const record: Record<string, string> = {};
 
-  for (let index = 0; index < headers.length; index++) {
-    record[headers[index]] = (cells[index] ?? "").trim();
+  for (const [index, header] of headers.entries()) {
+    record[header] = (cells[index] ?? "").trim();
   }
 
   return record;

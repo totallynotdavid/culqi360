@@ -102,8 +102,8 @@ function extractSheet(worksheet: WorkSheet): ExtractedSheet | null {
     blankrows: false,
   });
 
-  for (let index = 0; index < grid.length; index++) {
-    const headers = grid[index].map((cell) =>
+  for (const [index, headerRow] of grid.entries()) {
+    const headers = headerRow.map((cell) =>
       normalizeGpvHeader(String(cell ?? "")),
     );
 

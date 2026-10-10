@@ -39,11 +39,18 @@ class LeadTransactionRollback {
   constructor(readonly error: DomainError) {}
 }
 
-function zip(
+export function pairCommittedEvents(
   events: LeadHistoryEventDraft[],
   ids: string[],
 ): CommittedLeadEvent[] {
-  return events.map((event, index) => ({ event, id: ids[index] }));
+  return events.map((event, index) => {
+    const id = ids[index];
+    if (id === undefined) {
+      throw new Error(`Lead event ${index} was committed without an id`);
+    }
+
+    return { event, id };
+  });
 }
 
 export function runLeadTransaction<O>(
@@ -68,14 +75,18 @@ export function runLeadTransaction<O>(
         commitTransition: async (transition, assignment) => {
           const outcome = await commitTransition(tx, transition, assignment);
           if (outcome.ok) {
-            committed.push(...zip(transition.events, outcome.value.eventIds));
+            committed.push(
+              ...pairCommittedEvents(transition.events, outcome.value.eventIds),
+            );
           }
           return outcome;
         },
         appendFacts: async (events) => {
           const outcome = await appendFacts(tx, scope.operationAt, events);
           if (outcome.ok) {
-            committed.push(...zip(events, outcome.value.eventIds));
+            committed.push(
+              ...pairCommittedEvents(events, outcome.value.eventIds),
+            );
           }
           return outcome;
         },

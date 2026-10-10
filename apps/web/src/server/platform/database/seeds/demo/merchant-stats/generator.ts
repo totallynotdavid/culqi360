@@ -145,6 +145,7 @@ function buildMerchant(
   const saleMonth = index < 4 ? requiredCaseMonth : pickMonth(rng, saleMonths);
   const soldAt = dayWithin(rng, saleMonth);
   const series = buildSeries(rng);
+  const [firstMonth = { gpv: 0, trx: 0 }] = series;
   const trade = `${pick(rng, TRADE_HEADS)} ${pick(rng, TRADE_TAILS)}`;
   const activated = index !== 3 && chance(rng, PROFILE.activationRate);
   const anchorDate = calendarDateFromInstant(input.context.anchorDate);
@@ -178,8 +179,8 @@ function buildMerchant(
     lastTransactionAt: activatedAt
       ? dateBetween(rng, activatedAt, anchorDate)
       : null,
-    m0Plus15dGpv: round2(series[0].gpv * (0.2 + rng() * 0.4)),
-    m0Plus15dTrx: Math.round(series[0].trx * (0.2 + rng() * 0.4)),
+    m0Plus15dGpv: round2(firstMonth.gpv * (0.2 + rng() * 0.4)),
+    m0Plus15dTrx: Math.round(firstMonth.trx * (0.2 + rng() * 0.4)),
     series,
     ...culqiUser(rng, index),
     projectedGpv:
@@ -213,7 +214,7 @@ function culqiUser(
   const slot = Math.floor(rng() * CULQI_USERS.length);
   return {
     culqiUserCode: `V${(100 + slot).toString()}`,
-    culqiUserName: CULQI_USERS[slot],
+    culqiUserName: CULQI_USERS[slot] ?? null,
   };
 }
 
@@ -223,7 +224,7 @@ function buildSeries(rng: () => number): Array<{ gpv: number; trx: number }> {
   const scale = tailedScale(rng);
   const decay = [1, 0.9 + rng() * 0.3, 0.6 + rng() * 0.3, 0.3 + rng() * 0.3];
   return decay.map((factor, offset) => {
-    const alive = chance(rng, PROFILE.monthlyNonZeroRates[offset]);
+    const alive = chance(rng, PROFILE.monthlyNonZeroRates[offset] ?? 0);
     if (!alive) {
       return { gpv: 0, trx: 0 };
     }
@@ -312,7 +313,7 @@ function buildRawRecord(merchant: MerchantSpec): Record<string, string> {
     anomes_vta: merchant.saleMonth.slice(0, 7).replace("-", ""),
     nbr_comercial: merchant.tradeName,
     nbr_razon_social: merchant.legalName,
-    gpv_m0: merchant.series[0].gpv.toString(),
+    gpv_m0: (merchant.series[0]?.gpv ?? 0).toString(),
   };
 }
 
@@ -327,7 +328,8 @@ function syntheticRuc(rng: () => number, index: number): string {
   const sum = base
     .split("")
     .reduce(
-      (total, digit, position) => total + Number(digit) * weights[position],
+      (total, digit, position) =>
+        total + Number(digit) * (weights[position] ?? 0),
       0,
     );
   const remainder = 11 - (sum % 11);
@@ -369,7 +371,11 @@ function weightedPick<T extends { weight: number }>(
       return item;
     }
   }
-  return items[0];
+  const [first] = items;
+  if (first === undefined) {
+    throw new Error("Cannot pick from an empty list");
+  }
+  return first;
 }
 
 function pickMonth(
@@ -378,9 +384,12 @@ function pickMonth(
 ): CalendarMonth {
   // Bias toward recent cohorts: square the roll so low indices are rarer.
   const skewed = 1 - rng() * rng();
-  return months[
-    Math.min(months.length - 1, Math.floor(skewed * months.length))
-  ];
+  const month =
+    months[Math.min(months.length - 1, Math.floor(skewed * months.length))];
+  if (month === undefined) {
+    throw new Error("Cannot pick from an empty list of months");
+  }
+  return month;
 }
 
 function cohortMonths(anchorDate: Date): CalendarMonth[] {
@@ -427,7 +436,11 @@ function calendarDateFromInstant(instant: Date): CalendarDate {
 }
 
 function pick<T>(rng: () => number, items: readonly T[]): T {
-  return items[Math.floor(rng() * items.length)];
+  const item = items[Math.floor(rng() * items.length)];
+  if (item === undefined) {
+    throw new Error("Cannot pick from an empty list");
+  }
+  return item;
 }
 
 function chance(rng: () => number, probability: number): boolean {

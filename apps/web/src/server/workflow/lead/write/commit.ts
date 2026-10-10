@@ -75,17 +75,19 @@ export async function appendFacts(
   operationAt: Date,
   events: LeadHistoryEventDraft[],
 ): Promise<Result<{ eventIds: string[] }, DomainError>> {
-  const leadId = events[0]?.leadId;
+  const [firstEvent] = events;
 
-  if (!leadId) {
+  if (!firstEvent) {
     return Ok({ eventIds: [] });
   }
+
+  const leadId = firstEvent.leadId;
 
   const updateResult = await tx
     .updateTable("workflow_leads")
     .set({
       updated_at: operationAt,
-      updated_by: events[0].actorUserId,
+      updated_by: firstEvent.actorUserId,
     })
     .where("id", "=", leadId)
     .where("deleted_at", "is", null)

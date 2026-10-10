@@ -17,6 +17,15 @@ export interface AuthThrottleServiceDeps {
 }
 
 export function createAuthThrottleService(deps: AuthThrottleServiceDeps) {
+  function findScopeRows(keyMap: ReturnType<typeof buildThrottleKeys>) {
+    return Promise.all(
+      AUTH_THROTTLE_SCOPES.map(async (scope) => ({
+        scope,
+        row: await deps.authThrottle.findByScopeAndKey(scope, keyMap[scope]),
+      })),
+    );
+  }
+
   async function checkThrottle(
     endpoint: AuthThrottleEndpoint,
     identifier: string,
@@ -24,15 +33,9 @@ export function createAuthThrottleService(deps: AuthThrottleServiceDeps) {
     attemptedAt: Date,
   ): Promise<CheckResult> {
     const keyMap = buildThrottleKeys(endpoint, identifier, ipAddress);
+    const scopeRows = await findScopeRows(keyMap);
 
-    const rows = await Promise.all(
-      AUTH_THROTTLE_SCOPES.map((scope) =>
-        deps.authThrottle.findByScopeAndKey(scope, keyMap[scope]),
-      ),
-    );
-
-    for (const [index, row] of rows.entries()) {
-      const scope = AUTH_THROTTLE_SCOPES[index];
+    for (const { scope, row } of scopeRows) {
       if (
         !row ||
         isThrottleWindowExpired(
@@ -63,14 +66,9 @@ export function createAuthThrottleService(deps: AuthThrottleServiceDeps) {
   ): Promise<void> {
     const keyMap = buildThrottleKeys(endpoint, identifier, ipAddress);
 
-    const rows = await Promise.all(
-      AUTH_THROTTLE_SCOPES.map((scope) =>
-        deps.authThrottle.findByScopeAndKey(scope, keyMap[scope]),
-      ),
-    );
+    const scopeRows = await findScopeRows(keyMap);
     await Promise.all(
-      rows.map((row, index) => {
-        const scope = AUTH_THROTTLE_SCOPES[index];
+      scopeRows.map(({ scope, row }) => {
         const reset =
           !row ||
           isThrottleWindowExpired(
