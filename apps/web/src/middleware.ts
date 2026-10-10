@@ -1,6 +1,7 @@
 import "~/instrument.server";
 import "~/server/entrypoints/runtime-lifecycle";
-import { getRequestEvent, redirect, type RequestEvent } from "@solidjs/web";
+import type { StartMiddleware } from "@solidjs/vite-plugin";
+import { redirect } from "@solidjs/web";
 import { createAPIHandler } from "filesystem-routing/api";
 import routes from "virtual:file-routes";
 
@@ -15,23 +16,7 @@ import {
 import { generateRequestId, generateTraceId } from "./shared/observability/ids";
 import { isProduction } from "./shared/observability/runtime-env";
 
-type Middleware = (
-  request: Request,
-  next: (request?: Request) => Response | Promise<Response>,
-) => Response | Promise<Response>;
-
-function requestEventOrThrow(): RequestEvent {
-  const event = getRequestEvent();
-
-  if (!event) {
-    throw new Error("Middleware ran outside a request scope");
-  }
-
-  return event;
-}
-
-const identifyRequest: Middleware = (request, next) => {
-  const event = requestEventOrThrow();
+const identifyRequest: StartMiddleware = (event, next) => {
   const { trustedProxy } = middlewareConfig();
 
   // The serving layer mints the nonce because it also has to reach the client
@@ -42,7 +27,7 @@ const identifyRequest: Middleware = (request, next) => {
   event.locals.sentryBrowserConfig = sentryConfig().browser;
 
   event.locals.requestContext = buildAnonymousRequestContext(
-    request,
+    event.request,
     {
       traceId: generateTraceId(),
       requestId: generateRequestId(),
@@ -56,8 +41,7 @@ const identifyRequest: Middleware = (request, next) => {
   return next();
 };
 
-const applySecurityResponseState: Middleware = (_request, next) => {
-  const event = requestEventOrThrow();
+const applySecurityResponseState: StartMiddleware = (event, next) => {
   const { sentryIngestHost } = sentryConfig();
   const nonce = event.locals.requestContext.nonce;
 
@@ -106,13 +90,12 @@ const applySecurityResponseState: Middleware = (_request, next) => {
   return next();
 };
 
-const resolveSession: Middleware = async (request, next) => {
-  const event = requestEventOrThrow();
+const resolveSession: StartMiddleware = async (event, next) => {
   const current = event.locals.requestContext;
   const { trustedProxy } = middlewareConfig();
 
   event.locals.requestContext = await buildRequestContext(
-    request,
+    event.request,
     {
       traceId: current.traceId,
       requestId: current.requestId,
@@ -127,8 +110,8 @@ const resolveSession: Middleware = async (request, next) => {
   return next();
 };
 
-const enforceNavigationPolicy: Middleware = async (_request, next) => {
-  const decision = await enforceAuthRequest(requestEventOrThrow());
+const enforceNavigationPolicy: StartMiddleware = async (event, next) => {
+  const decision = await enforceAuthRequest(event);
 
   switch (decision.kind) {
     case "allow":
@@ -154,8 +137,8 @@ const enforceNavigationPolicy: Middleware = async (_request, next) => {
   }
 };
 
-const recordRequestTiming: Middleware = async (_request, next) => {
-  const { startedTicks } = requestEventOrThrow().locals.requestContext;
+const recordRequestTiming: StartMiddleware = async (event, next) => {
+  const { startedTicks } = event.locals.requestContext;
   const response = await next();
   const duration = Math.round(performance.now() - startedTicks);
 
@@ -164,6 +147,14 @@ const recordRequestTiming: Middleware = async (_request, next) => {
   return response;
 };
 
+// API routes are the GET/POST/... exports of modules under src/routes.
+// `createAPIHandler` is fetch-style (request first) while the plugin hands every
+// middleware the request event, so the event's request is passed through.
+const handleApiRoutes = createAPIHandler(routes);
+
+const serveApiRoutes: StartMiddleware = (event, next) =>
+  handleApiRoutes(event.request, next);
+
 export default [
   identifyRequest,
   applySecurityResponseState,
@@ -171,8 +162,7 @@ export default [
   enforceNavigationPolicy,
   recordRequestTiming,
 
-  // API routes are the GET/POST/... exports of modules under src/routes.
-  // They run last so every request above has already been identified,
-  // secured, session-resolved, and authorized.
-  createAPIHandler(routes),
-] satisfies Middleware[];
+  // Last, so every request above has already been identified, secured,
+  // session-resolved, and authorized.
+  serveApiRoutes,
+] satisfies StartMiddleware[];
