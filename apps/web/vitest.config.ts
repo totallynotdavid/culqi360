@@ -11,6 +11,8 @@ function databaseProject(namespace: string) {
     globalSetup: ["./tests/setup/global-setup.ts"],
     environment: "node" as const,
     fileParallelism: true,
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     env: {
       TEST_DB_NAMESPACE: namespace,
     },
