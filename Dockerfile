@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS production-deps
+FROM oven/bun:1.4.3 AS production-deps
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY tools/codegen/package.json ./tools/codegen/package.json
 
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
-FROM oven/bun:1.4.2 AS build
+FROM oven/bun:1.4.3 AS build
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ ENV SENTRY_ORG=$SENTRY_ORG \
 
 RUN bun run --cwd apps/web build:container
 
-FROM oven/bun:1.4.2 AS runtime
+FROM oven/bun:1.4.3 AS runtime
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
