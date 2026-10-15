@@ -38,8 +38,8 @@ test.describe("extension runtime integration", () => {
 
       const callStarted = await sendRuntimeMessage(page, {
         type: "call.start",
-        assignmentId: 10,
-        contactId: 20,
+        assignmentId: "0192f3a0-1111-7a10-8a10-00000000a010",
+        contactId: "0192f3a0-1111-7a20-8a20-00000000c020",
         phone: "+51933333333",
       });
       expect(callStarted.ok).toBe(true);
@@ -67,8 +67,8 @@ test.describe("extension runtime integration", () => {
 
       const callStarted = await sendRuntimeMessage(page, {
         type: "call.start",
-        assignmentId: "assignment-10",
-        contactId: "contact-20",
+        assignmentId: "0192f3a0-1111-7a10-8a10-00000000a010",
+        contactId: "0192f3a0-1111-7a20-8a20-00000000c020",
         phone: "+51933333333",
       });
       expect(callStarted.ok).toBe(true);
@@ -114,8 +114,8 @@ test.describe("extension runtime integration", () => {
 
       await sendRuntimeMessage(page, {
         type: "call.start",
-        assignmentId: "assignment-101",
-        contactId: "contact-202",
+        assignmentId: "0192f3a0-2222-7a10-8a10-00000000a101",
+        contactId: "0192f3a0-2222-7a20-8a20-00000000c202",
         phone: "+51911111111",
       });
       await sendRuntimeMessage(page, { type: "call.connected" });
@@ -185,8 +185,8 @@ test.describe("extension runtime integration", () => {
       );
       const startResponse = await sendRuntimeMessage(firstPage, {
         type: "call.start",
-        assignmentId: "assignment-777",
-        contactId: "contact-888",
+        assignmentId: "0192f3a0-3333-7a10-8a10-00000000a777",
+        contactId: "0192f3a0-3333-7a20-8a20-00000000c888",
         phone: "+51922222222",
       });
       expect(startResponse.ok).toBe(true);
@@ -212,7 +212,7 @@ test.describe("extension runtime integration", () => {
       }
 
       expect(stateResponse.state.currentCall?.assignmentId).toBe(
-        "assignment-777",
+        "0192f3a0-3333-7a10-8a10-00000000a777",
       );
       expect(stateResponse.state.currentCall?.phase).toBe("dialing");
 

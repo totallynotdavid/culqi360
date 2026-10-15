@@ -215,8 +215,8 @@ function acknowledgeStoredSegment(
 
 /**
  * Deletes the blob unless a committed row points at it (a lost acknowledgement
- * or an identical concurrent upload). If the lookup fails the blob stays: an
- * unreferenced blob is harmless, a missing one is lost audio.
+ * or an identical concurrent upload). If the lookup or the delete fails the blob
+ * stays. An unreferenced blob is harmless, a missing one is lost audio.
  */
 async function discardUnreferencedBlob(
   context: SegmentContext,
@@ -234,7 +234,7 @@ async function discardUnreferencedBlob(
     }
     await context.storage.delete(storageKey);
   } catch {
-    // Left in place on purpose, see above.
+    // Swallowed on purpose, see the doc comment.
   }
 }
 
