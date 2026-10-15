@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 export async function createTables<T>(db: Kysely<T>): Promise<void> {
   await db.schema
@@ -11,6 +11,9 @@ export async function createTables<T>(db: Kysely<T>): Promise<void> {
     .addColumn("auth_session_id", "text", (col) => col.notNull())
     .addColumn("assignment_id", "uuid", (col) =>
       col.notNull().references("contact_assignments.id"),
+    )
+    .addColumn("contact_id", "uuid", (col) =>
+      col.notNull().references("organization_people.id"),
     )
     .addColumn("origin", "text", (col) => col.notNull())
     .addColumn("installation_id", "uuid")
@@ -109,5 +112,73 @@ export async function createTables<T>(db: Kysely<T>): Promise<void> {
     .createIndex("idx_extension_executive_statuses_branch_status")
     .on("extension_executive_statuses")
     .columns(["branch_id", "presence_status", "presence_updated_at"])
+    .execute();
+
+  await db.schema
+    .createTable("extension_calls")
+    .addColumn("id", "uuid", (col) => col.primaryKey().defaultTo(sql`uuidv7()`))
+    .addColumn("handoff_jti", "text", (col) =>
+      col.notNull().unique().references("extension_handoffs.jti"),
+    )
+    .addColumn("installation_id", "uuid", (col) => col.notNull())
+    .addColumn("user_id", "uuid", (col) => col.notNull().references("users.id"))
+    .addColumn("branch_id", "uuid", (col) =>
+      col.notNull().references("branches.id"),
+    )
+    .addColumn("assignment_id", "uuid", (col) =>
+      col.notNull().references("contact_assignments.id"),
+    )
+    .addColumn("contact_id", "uuid", (col) =>
+      col.notNull().references("organization_people.id"),
+    )
+    .addColumn("started_at", "timestamptz", (col) => col.notNull())
+    .addColumn("ended_at", "timestamptz")
+    .execute();
+
+  await db.schema
+    .createTable("extension_recordings")
+    .addColumn("id", "uuid", (col) => col.primaryKey().defaultTo(sql`uuidv7()`))
+    .addColumn("call_id", "uuid", (col) =>
+      col.notNull().unique().references("extension_calls.id"),
+    )
+    .addColumn("created_at", "timestamptz", (col) => col.notNull())
+    .addColumn("last_activity_at", "timestamptz", (col) => col.notNull())
+    .addColumn("status", "text", (col) =>
+      col
+        .notNull()
+        .defaultTo("open")
+        .check(sql`status in ('open', 'interrupted', 'complete')`),
+    )
+    .addColumn("closed_at", "timestamptz")
+    .addColumn("reported_interrupted", "boolean", (col) =>
+      col.notNull().defaultTo(false),
+    )
+    .addColumn("expected_segments", "integer")
+    .addColumn("expected_bytes", "bigint")
+    .execute();
+
+  await db.schema
+    .createIndex("idx_extension_recordings_status_activity")
+    .on("extension_recordings")
+    .columns(["status", "last_activity_at"])
+    .execute();
+
+  await db.schema
+    .createTable("extension_recording_segments")
+    .addColumn("recording_id", "uuid", (col) =>
+      col.notNull().references("extension_recordings.id").onDelete("cascade"),
+    )
+    .addColumn("seq", "integer", (col) => col.notNull())
+    .addColumn("storage_key", "text", (col) => col.notNull())
+    .addColumn("content_type", "text", (col) => col.notNull())
+    .addColumn("channels", "text", (col) => col.notNull())
+    .addColumn("started_at", "timestamptz", (col) => col.notNull())
+    .addColumn("size_bytes", "integer", (col) => col.notNull())
+    .addColumn("sha256_hex", "text", (col) => col.notNull())
+    .addColumn("received_at", "timestamptz", (col) => col.notNull())
+    .addPrimaryKeyConstraint("pk_extension_recording_segments", [
+      "recording_id",
+      "seq",
+    ])
     .execute();
 }

@@ -1,7 +1,12 @@
+import type { Generated } from "kysely";
+
 import type { Json } from "~/contracts/json";
 import type {
   BranchId,
   ContactAssignmentId,
+  ExtensionCallId,
+  ExtensionRecordingId,
+  GeneratedId,
   IdColumn,
   InstallationId,
   NullableIdColumn,
@@ -15,6 +20,7 @@ export interface ExtensionHandoffsTable {
   branch_id: IdColumn<BranchId>;
   auth_session_id: string;
   assignment_id: IdColumn<ContactAssignmentId>;
+  contact_id: IdColumn<OrganizationPersonId>;
   origin: string;
   installation_id: NullableIdColumn<InstallationId>;
   installation_session_jti: string | null;
@@ -76,4 +82,42 @@ export interface ExtensionExecutiveStatusesTable {
   sync_updated_at: Date | null;
   source_event_id: string | null;
   source_event_sequence: number | null;
+}
+
+export interface ExtensionCallsTable {
+  id: GeneratedId<ExtensionCallId>;
+  handoff_jti: string;
+  installation_id: IdColumn<InstallationId>;
+  user_id: IdColumn<UserId>;
+  branch_id: IdColumn<BranchId>;
+  assignment_id: IdColumn<ContactAssignmentId>;
+  contact_id: IdColumn<OrganizationPersonId>;
+  started_at: Date;
+  ended_at: Date | null;
+}
+
+export type ExtensionRecordingStatus = "open" | "interrupted" | "complete";
+
+export interface ExtensionRecordingsTable {
+  id: GeneratedId<ExtensionRecordingId>;
+  call_id: IdColumn<ExtensionCallId>;
+  created_at: Date;
+  last_activity_at: Date;
+  status: Generated<ExtensionRecordingStatus>;
+  closed_at: Date | null;
+  reported_interrupted: Generated<boolean>;
+  expected_segments: number | null;
+  expected_bytes: number | null;
+}
+
+export interface ExtensionRecordingSegmentsTable {
+  recording_id: IdColumn<ExtensionRecordingId>;
+  seq: number;
+  storage_key: string;
+  content_type: string;
+  channels: string;
+  started_at: Date;
+  size_bytes: number;
+  sha256_hex: string;
+  received_at: Date;
 }

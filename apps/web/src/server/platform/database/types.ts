@@ -87,6 +87,9 @@ export interface Database {
   extension_installation_sessions: extensions.ExtensionInstallationSessionsTable;
   extension_runtime_events: extensions.ExtensionRuntimeEventsTable;
   extension_executive_statuses: extensions.ExtensionExecutiveStatusesTable;
+  extension_calls: extensions.ExtensionCallsTable;
+  extension_recordings: extensions.ExtensionRecordingsTable;
+  extension_recording_segments: extensions.ExtensionRecordingSegmentsTable;
   company_registry_record: search.CompanyRegistryRecordTable;
   events: platform.EventsTable;
   audit_action_policies: platform.AuditActionPoliciesTable;

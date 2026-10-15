@@ -122,6 +122,12 @@ export const RecoveryCodeId = uuidId("RecoveryCodeId");
 export type InstallationId = BrandedId<"InstallationId">;
 export const InstallationId = uuidId("InstallationId");
 
+export type ExtensionCallId = BrandedId<"ExtensionCallId">;
+export const ExtensionCallId = uuidId("ExtensionCallId");
+
+export type ExtensionRecordingId = BrandedId<"ExtensionRecordingId">;
+export const ExtensionRecordingId = uuidId("ExtensionRecordingId");
+
 // Derive deterministic idempotency keys from (sourceEventId, discriminator)
 // instead of generating UUIDs.
 export type NotificationIntentId = BrandedId<"NotificationIntentId">;
