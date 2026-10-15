@@ -46,6 +46,7 @@ export function createExtensionRuntimeRepo(db: Kysely<Database>) {
       branch_id: BranchId;
       auth_session_id: string;
       assignment_id: ContactAssignmentId;
+      contact_id: OrganizationPersonId;
       origin: string;
       issued_at: Date;
       expires_at: Date;

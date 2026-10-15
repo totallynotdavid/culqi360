@@ -445,6 +445,26 @@ export const ERROR_CATALOG = {
     message:
       "Tu verificación adicional expiró. Vuelve a verificar tu identidad.",
   },
+  call_not_found: {
+    kind: "not_found",
+    message: "No se encontró la llamada.",
+  },
+  recording_not_found: {
+    kind: "not_found",
+    message: "No se encontró la grabación.",
+  },
+  recording_closed: {
+    kind: "conflict",
+    message: "La grabación ya está completa y no acepta más segmentos.",
+  },
+  segment_conflict: {
+    kind: "conflict",
+    message: "El segmento ya existe con un contenido distinto.",
+  },
+  recording_manifest_mismatch: {
+    kind: "conflict",
+    message: "El tamaño total no coincide con los segmentos guardados.",
+  },
   handoff_invalid: {
     kind: "forbidden",
     message: "El enlace de la extensión es inválido o expiró.",

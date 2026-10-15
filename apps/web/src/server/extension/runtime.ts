@@ -3,6 +3,10 @@ import {
   type ContactAssignmentsRepo,
 } from "~/server/contact-assignments/infrastructure/assignment-repo";
 import {
+  createExtensionRecordingsRepo,
+  type ExtensionRecordingsRepo,
+} from "~/server/extension/recordings-repo";
+import {
   createExtensionRuntimeRepo,
   type ExtensionRuntimeRepo,
 } from "~/server/extension/repos";
@@ -12,6 +16,7 @@ import {
   type OrganizationRepository,
 } from "~/server/organization/organization-repo";
 import { createExecutorUow } from "~/server/platform/database/uow";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { ServerInfrastructure } from "~/server/platform/infrastructure";
 import {
   createSessionRepository,
@@ -21,6 +26,7 @@ import { createUsersRepo, type UsersRepo } from "~/server/users/repos-users";
 
 type ExtensionRuntimeRepos = {
   contactAssignments: ContactAssignmentsRepo;
+  extensionRecordings: ExtensionRecordingsRepo;
   extensionRuntime: ExtensionRuntimeRepo;
   organization: OrganizationRepository;
   sessions: SessionRepository;
@@ -30,6 +36,7 @@ type ExtensionRuntimeRepos = {
 function buildRepos(db: ServerInfrastructure["db"]): ExtensionRuntimeRepos {
   return {
     contactAssignments: createContactAssignmentsRepo(db),
+    extensionRecordings: createExtensionRecordingsRepo(db),
     extensionRuntime: createExtensionRuntimeRepo(db),
     organization: createOrganizationRepo(db),
     sessions: createSessionRepository(db),
@@ -39,13 +46,10 @@ function buildRepos(db: ServerInfrastructure["db"]): ExtensionRuntimeRepos {
 
 export function createExtensionRuntime(
   serverInfrastructure: ServerInfrastructure,
+  storage: BlobStore,
 ) {
-  const extensionService = createExtensionService(
-    buildRepos(serverInfrastructure.db),
-    {
-      uow: createExecutorUow(serverInfrastructure.db, buildRepos),
-    },
-  );
-
-  return extensionService;
+  return createExtensionService(buildRepos(serverInfrastructure.db), {
+    uow: createExecutorUow(serverInfrastructure.db, buildRepos),
+    storage,
+  });
 }

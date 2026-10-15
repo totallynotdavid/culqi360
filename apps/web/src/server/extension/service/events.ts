@@ -1,5 +1,5 @@
 import type { Role } from "~/domain/auth/access/rbac";
-import { external, fail, type DomainError } from "~/domain/errors";
+import { external, type DomainError } from "~/domain/errors";
 import {
   ContactAssignmentId,
   OrganizationPersonId,
@@ -15,20 +15,13 @@ import {
   type ExtensionRuntimeEventEnvelope,
   type TeamExecutiveStatusView,
 } from "../contracts";
-import { verifyExtensionToken } from "../crypto";
+import { authenticateInstallationSession } from "./authenticate";
 import {
   mapLifecycleStatus,
   upsertSyncHealth,
   withDerivedProjectionStatuses,
 } from "./presence";
-import { type ExtensionRepos, hasActiveAuthSession } from "./shared";
-import {
-  isCryptoMisconfiguration,
-  isExtensionInstallationSessionClaims,
-  isInvalidExtensionToken,
-  isTokenExpired,
-  parseSubjectUserId,
-} from "./validators";
+import type { ExtensionRepos } from "./shared";
 
 interface EventsWriteContext extends OperationContext {
   repos: ExtensionRepos;
@@ -69,13 +62,15 @@ export async function ingestRuntimeEvent(
   const { uow } = context;
 
   try {
-    const sessionClaims = await verifyExtensionToken(
+    const authenticated = await authenticateInstallationSession(
+      context.repos,
       input.sessionToken,
-      isExtensionInstallationSessionClaims,
+      context.operationAt,
     );
-    if (isTokenExpired(sessionClaims.exp, context.operationAt)) {
-      return Err(fail("extension_session_invalid"));
+    if (isErr(authenticated)) {
+      return authenticated;
     }
+    const session = authenticated.value;
 
     const eventAssignmentId = readAssignmentId(input.event.payload);
     if (isErr(eventAssignmentId)) {
@@ -96,46 +91,6 @@ export async function ingestRuntimeEvent(
     const eventCreatedAt = dateFromEpochMilliseconds(input.event.createdAt);
 
     return await uow.run(async (txRepos) => {
-      const subjectUserId = parseSubjectUserId(sessionClaims.sub);
-      const session =
-        await txRepos.extensionRuntime.findValidInstallationSession(
-          sessionClaims.jti,
-          context.operationAt,
-        );
-      if (
-        !session ||
-        !subjectUserId ||
-        session.user_id !== subjectUserId ||
-        session.branch_id !== sessionClaims.branchId ||
-        session.auth_session_id !== sessionClaims.authSessionId ||
-        session.installation_id !== sessionClaims.installationId
-      ) {
-        return Err(fail("extension_session_invalid"));
-      }
-
-      const authSessionActive = await hasActiveAuthSession(
-        txRepos,
-        session.auth_session_id,
-        context.operationAt,
-      );
-      if (!authSessionActive) {
-        await txRepos.extensionRuntime.revokeInstallationSession(
-          session.jti,
-          context.operationAt,
-        );
-        await txRepos.extensionRuntime.updateExecutiveSyncHealthByUser({
-          user_id: session.user_id,
-          sync_health: "reauth_required",
-          sync_updated_at: context.operationAt,
-        });
-        return Err(fail("extension_session_invalid"));
-      }
-
-      await txRepos.extensionRuntime.touchInstallationSession(
-        session.jti,
-        context.operationAt,
-      );
-
       const inserted =
         await txRepos.extensionRuntime.insertRuntimeEventIfAbsent({
           id: input.event.id,
@@ -198,17 +153,6 @@ export async function ingestRuntimeEvent(
       return Ok(undefined);
     });
   } catch (error: unknown) {
-    if (isCryptoMisconfiguration(error)) {
-      return Err(
-        external("Extension token keys are not configured", {
-          code: "misconfigured",
-        }),
-      );
-    }
-    if (isInvalidExtensionToken(error)) {
-      return Err(fail("extension_session_invalid"));
-    }
-
     return Err(
       external(
         error instanceof Error

@@ -1,13 +1,16 @@
 import type { ContactAssignmentsRepo } from "~/server/contact-assignments/infrastructure/assignment-repo";
 import type { OrganizationRepository } from "~/server/organization/organization-repo";
 import type { AppUow } from "~/server/platform/database/uow";
+import type { BlobStore } from "~/server/platform/files/blob-store";
 import type { SessionRepository } from "~/server/sessions/repos-sessions";
 import type { UsersRepo } from "~/server/users/repos-users";
 
+import type { ExtensionRecordingsRepo } from "../recordings-repo";
 import type { ExtensionRuntimeRepo } from "../repos";
 
 export type ExtensionRepos = {
   contactAssignments: ContactAssignmentsRepo;
+  extensionRecordings: ExtensionRecordingsRepo;
   extensionRuntime: ExtensionRuntimeRepo;
   organization: OrganizationRepository;
   sessions: SessionRepository;
@@ -16,6 +19,7 @@ export type ExtensionRepos = {
 
 export interface ExtensionServiceDeps {
   uow: AppUow<ExtensionRepos>;
+  storage: BlobStore;
 }
 
 export async function hasActiveAuthSession(

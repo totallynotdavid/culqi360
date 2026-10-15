@@ -2,23 +2,11 @@ import type { APIEvent } from "filesystem-routing/api";
 
 import { getApplication } from "~/server/composition/application";
 import { isExtensionRuntimeEventEnvelope } from "~/server/extension/contracts";
-import { toWire } from "~/server/platform/action/domain-error";
 import { getRequestOperation } from "~/server/platform/http/request-context-storage";
 import { isErr } from "~/shared/result";
 
 import { readJsonBody } from "./json-body";
-
-function getBearerToken(request: Request): string | null {
-  const header = request.headers.get("authorization");
-
-  if (!header?.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const token = header.slice("Bearer ".length).trim();
-
-  return token === "" ? null : token;
-}
+import { extensionErrorResponse, getBearerToken } from "./response";
 
 export async function POST(event: APIEvent): Promise<Response> {
   try {
@@ -50,14 +38,7 @@ export async function POST(event: APIEvent): Promise<Response> {
     );
 
     if (isErr(result)) {
-      const status =
-        result.error.code === "extension_session_invalid"
-          ? 401
-          : result.error.code === "misconfigured"
-            ? 503
-            : 500;
-
-      return Response.json({ error: toWire(result.error).message }, { status });
+      return extensionErrorResponse(result.error);
     }
 
     return Response.json({ ok: true });

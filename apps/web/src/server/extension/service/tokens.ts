@@ -1,13 +1,12 @@
+import { EXTENSION_HANDOFF_TOKEN_ISSUER } from "@crm/contracts/extension";
+
 import {
   addMilliseconds,
   epochMilliseconds,
   epochSeconds,
 } from "~/domain/time/clock";
 
-import {
-  EXTENSION_HANDOFF_TOKEN_ISSUER,
-  EXTENSION_SESSION_TOKEN_AUDIENCE,
-} from "../contracts";
+import { EXTENSION_SESSION_TOKEN_AUDIENCE } from "../contracts";
 import { hashExtensionSecretToken, signExtensionToken } from "../crypto";
 import type { ExtensionRuntimeRepo } from "../repos";
 

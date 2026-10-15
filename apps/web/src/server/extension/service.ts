@@ -8,6 +8,12 @@ import {
   claimInstallationSession,
   createHandoffToken,
 } from "./service/handoff";
+import {
+  closeRecording,
+  createRecording,
+  putSegment,
+  sweepIdleRecordings,
+} from "./service/recordings";
 import { refreshInstallationSession } from "./service/session";
 import type { ExtensionRepos, ExtensionServiceDeps } from "./service/shared";
 
@@ -19,6 +25,9 @@ type RefreshInstallationSessionInput = Parameters<
   typeof refreshInstallationSession
 >[1];
 type IngestRuntimeEventInput = Parameters<typeof ingestRuntimeEvent>[1];
+type CreateRecordingInput = Parameters<typeof createRecording>[1];
+type PutSegmentInput = Parameters<typeof putSegment>[1];
+type CloseRecordingInput = Parameters<typeof closeRecording>[1];
 type ListTeamExecutiveStatusesInput = Parameters<
   typeof listTeamExecutiveStatuses
 >[1];
@@ -80,6 +89,28 @@ export function createExtensionService(
         },
         input,
       ),
+
+    createRecording: (
+      input: CreateRecordingInput,
+      operation: OperationContext,
+    ) => createRecording({ repos, operationAt: operation.operationAt }, input),
+
+    putSegment: (input: PutSegmentInput, operation: OperationContext) =>
+      putSegment(
+        {
+          repos,
+          uow,
+          storage: deps.storage,
+          operationAt: operation.operationAt,
+        },
+        input,
+      ),
+
+    closeRecording: (input: CloseRecordingInput, operation: OperationContext) =>
+      closeRecording({ repos, uow, operationAt: operation.operationAt }, input),
+
+    sweepIdleRecordings: (operation: OperationContext) =>
+      sweepIdleRecordings({ uow, operationAt: operation.operationAt }),
 
     listTeamExecutiveStatuses: (
       input: ListTeamExecutiveStatusesInput,

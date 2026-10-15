@@ -1,8 +1,8 @@
+import type { EXTENSION_HANDOFF_TOKEN_ISSUER } from "@crm/contracts/extension";
+
 import type { InstallationId } from "~/domain/ids";
 import { isPlainRecord } from "~/shared/type-guards";
 
-export const EXTENSION_HANDOFF_TOKEN_ISSUER = "web" as const;
-export const EXTENSION_HANDOFF_TOKEN_AUDIENCE = "crm-extension" as const;
 export const EXTENSION_SESSION_TOKEN_AUDIENCE =
   "crm-extension-session" as const;
 
@@ -34,24 +34,6 @@ const EXTENSION_RUNTIME_EVENT_TYPES = [
 export type ExtensionRuntimeEventType =
   (typeof EXTENSION_RUNTIME_EVENT_TYPES)[number];
 
-export interface ExtensionHandoffClaims {
-  iss: typeof EXTENSION_HANDOFF_TOKEN_ISSUER;
-  aud: typeof EXTENSION_HANDOFF_TOKEN_AUDIENCE;
-  sub: `user:${string}`;
-  authSessionId: string;
-  branchId: string;
-  assignmentId: string;
-  contactId: string;
-  phone: string;
-  clientName: string | null;
-  organizationLabel: string | null;
-  action: "start_call";
-  origin: string;
-  jti: string;
-  iat: number;
-  exp: number;
-}
-
 export interface ExtensionInstallationSessionClaims {
   iss: typeof EXTENSION_HANDOFF_TOKEN_ISSUER;
   aud: typeof EXTENSION_SESSION_TOKEN_AUDIENCE;
@@ -76,12 +58,6 @@ export interface CreateExtensionHandoffTokenResponse {
 export interface ClaimExtensionSessionRequest {
   handoffToken: string;
   installationId: string;
-}
-
-export interface ClaimExtensionSessionResponse {
-  sessionToken: string;
-  refreshToken: string;
-  expiresAt: number;
 }
 
 export interface RefreshExtensionSessionRequest {

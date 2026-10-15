@@ -1,3 +1,10 @@
+import {
+  EXTENSION_HANDOFF_TOKEN_AUDIENCE,
+  EXTENSION_HANDOFF_TOKEN_ISSUER,
+  isExtensionHandoffClaims,
+  type ClaimExtensionSessionResponse,
+} from "@crm/contracts/extension";
+
 import { external, fail, invalid, type DomainError } from "~/domain/errors";
 import { InstallationId } from "~/domain/ids";
 import type { BranchId, ContactAssignmentId, UserId } from "~/domain/ids";
@@ -11,12 +18,7 @@ import type { AppUow } from "~/server/platform/database/uow";
 import type { OperationContext } from "~/server/platform/operation/context";
 import { Err, Ok, isErr, type Result } from "~/shared/result";
 
-import {
-  EXTENSION_HANDOFF_TOKEN_AUDIENCE,
-  EXTENSION_HANDOFF_TOKEN_ISSUER,
-  type ClaimExtensionSessionResponse,
-  type CreateExtensionHandoffTokenResponse,
-} from "../contracts";
+import { type CreateExtensionHandoffTokenResponse } from "../contracts";
 import { signExtensionToken, verifyExtensionToken } from "../crypto";
 import { upsertSyncHealth } from "./presence";
 import { type ExtensionRepos, hasActiveAuthSession } from "./shared";
@@ -28,7 +30,6 @@ import {
 } from "./tokens";
 import {
   isCryptoMisconfiguration,
-  isExtensionHandoffClaims,
   isInvalidExtensionToken,
   isTokenExpired,
   parseSubjectUserId,
@@ -131,6 +132,7 @@ export async function createHandoffToken(
       branch_id: input.branchId,
       auth_session_id: input.authSessionId,
       assignment_id: assignmentId,
+      contact_id: contact.id,
       issued_at: issuedAt,
       expires_at: handoffExpiresAt,
       origin: input.origin,
@@ -203,7 +205,8 @@ export async function claimInstallationSession(
         handoff.user_id !== userId ||
         handoff.branch_id !== handoffClaims.branchId ||
         handoff.auth_session_id !== handoffClaims.authSessionId ||
-        handoff.assignment_id !== handoffClaims.assignmentId
+        handoff.assignment_id !== handoffClaims.assignmentId ||
+        handoff.contact_id !== handoffClaims.contactId
       ) {
         return Err(fail("handoff_invalid"));
       }
@@ -344,7 +347,28 @@ export async function claimInstallationSession(
         updatedAt: claimedAt,
       });
 
-      return Ok(sessionCredentials);
+      await txRepos.extensionRecordings.insertCallIfAbsent({
+        handoff_jti: handoff.jti,
+        installation_id: session.installation_id,
+        user_id: handoff.user_id,
+        branch_id: handoff.branch_id,
+        assignment_id: handoff.assignment_id,
+        contact_id: handoff.contact_id,
+        started_at: claimedAt,
+      });
+      const call = await txRepos.extensionRecordings.findCallByHandoffJti(
+        handoff.jti,
+      );
+      if (!call) {
+        throw new Error("extension call missing after insert");
+      }
+
+      return Ok({
+        sessionToken: sessionCredentials.sessionToken,
+        refreshToken: sessionCredentials.refreshToken,
+        expiresAt: sessionCredentials.expiresAt,
+        callId: call.id,
+      });
     });
 
     return claimResult;

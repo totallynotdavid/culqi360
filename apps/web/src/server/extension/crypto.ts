@@ -1,9 +1,8 @@
+import type { ExtensionHandoffClaims } from "@crm/contracts/extension";
+
 import { extensionConfig } from "~/server/platform/config/env";
 
-import type {
-  ExtensionHandoffClaims,
-  ExtensionInstallationSessionClaims,
-} from "./contracts";
+import type { ExtensionInstallationSessionClaims } from "./contracts";
 
 type ExtensionTokenClaims =
   | ExtensionHandoffClaims
