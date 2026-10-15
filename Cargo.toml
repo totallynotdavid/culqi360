@@ -11,10 +11,10 @@ resolver = "3"
 [workspace.dependencies]
 axum               = { version = "=0.8.9", features = ["macros"] }
 tokio              = { version = "=1.53.2", features = ["full"] }
-tokio-util         = { version = "=0.7.19", features = ["io"] }
+tokio-util         = { version = "=0.7.20", features = ["io"] }
 futures-util       = { version = "=0.3.34", default-features = false, features = ["std"] }
 serde              = { version = "=1.0.229", features = ["derive"] }
-serde_json         = "=1.0.151"
+serde_json         = "=1.0.154"
 rusqlite           = { version = "=0.40.2", features = ["bundled"] }
 r2d2               = "=0.8.10"
 r2d2_sqlite        = "=0.35.0"
@@ -26,8 +26,8 @@ dashmap            = "=6.2.1"
 tracing            = "=0.1.44"
 tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
 dotenvy            = "=0.15.7"
-uuid               = { version = "=1.27.0", features = ["v4"] }
-proptest           = "=1.11.0"
+uuid               = { version = "=1.28.0", features = ["v4"] }
+proptest           = "=1.12.0"
 tempfile           = "=3.27.0"
 axum-test          = "=21.1.0"
 csv                = "=1.4.0"
