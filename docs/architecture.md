@@ -120,6 +120,51 @@ verifies the handoff in
 [`external-auth.ts`](../apps/extension/src/services/external-auth.ts) before it
 claims a session.
 
+### Call recordings
+
+The extension uploads a call as 1 s audio segments. The server mints every id:
+`claim` returns the `callId`, and `POST /api/extension/recordings` returns the
+`recordingId`. A recording belongs to the user and installation that claimed its
+call, not to the session, so a re-login does not strand audio the extension
+still holds. Another user's or installation's ids answer 404. The routes are in
+[`routes/api/extension/recordings/`](../apps/web/src/routes/api/extension/recordings/),
+the lifecycle in
+[`service/recordings.ts`](../apps/web/src/server/extension/service/recordings.ts)
+and the wire contract in
+[`packages/contracts/src/extension.ts`](../packages/contracts/src/extension.ts).
+
+A recording has one status, and three actors move it:
+
+| Status        | Set by                                          | Segment `PUT`          | Close                                                   |
+| ------------- | ----------------------------------------------- | ---------------------- | ------------------------------------------------------- |
+| `open`        | recording creation                              | stored                 | `complete`, or `missing: [...]` and stays `open`        |
+| `interrupted` | sweeper, after 10 minutes with no segment       | stored                 | `complete`, or `missing: [...]` and stays `interrupted` |
+| `complete`    | extension close with segments 0..n-1 all stored | 409 `recording_closed` | same manifest answers `complete`, another is 409        |
+
+- The extension's segment `PUT` never changes the status. Its close is the only
+  way to `complete`, and the server answers `complete` only when segments 0..n-1
+  are stored and add up to the manifest's bytes. That answer is the only one
+  that lets the extension delete its local audio.
+- A complete close overwrites `interrupted`. `complete` is final.
+- The sweeper moves only `open` recordings to `interrupted`. It never touches an
+  `interrupted` or a `complete` one, so a sweep cannot overwrite a close.
+- A segment, a close and the sweeper's status change are serialized per
+  recording (a row lock, and a status condition on the sweep), so no segment is
+  stored after `complete`.
+- Only a stored segment or an identical repeat of one refreshes the recording's
+  last activity. A conflicting upload (409) and a close that reports missing
+  segments do not, so a client that keeps retrying cannot hold a recording open.
+- A call ends at the first of: a complete close, the sweep of its recording, or
+  the sweeper finding no recording for the call 10 minutes after the claim.
+- A segment is idempotent per `(recording, seq)`: the same bytes answer 200 with
+  the stored size, other bytes answer 409. The blob is written first under a key
+  that carries the content hash, then the row. A failed insert deletes the blob
+  unless a row references it. A crash between the two leaves an unreferenced
+  blob, never a row that points at a missing one.
+- The route checks `Content-Length` against the segment limit, then the service
+  authenticates the session and checks the recording, and only then reads the
+  body.
+
 ## Deployment
 
 The application and the engine deploy as two Compose stacks. The
