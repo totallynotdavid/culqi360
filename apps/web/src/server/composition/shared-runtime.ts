@@ -1,6 +1,7 @@
 import { createAccessSecurityContext } from "~/server/auth/infrastructure/session-revocation-context";
 import { runSessionCleanupTick } from "~/server/auth/session/cleanup";
 import { createClientSearchRuntime } from "~/server/client-search/runtime";
+import { createExtensionRuntime } from "~/server/extension/runtime";
 import { createFilesRuntime } from "~/server/files/runtime";
 import { createDefaultEngineClient } from "~/server/integrations/engine/client";
 import { createIntegrationRuntime } from "~/server/integrations/infrastructure/runtime";
@@ -26,6 +27,7 @@ import { createLeadReservationMaintenance } from "~/server/workflow/maintenance/
 export function createSharedRuntime(infrastructure: ServerInfrastructure) {
   const applicationConfig = appConfig();
   const files = createFilesRuntime(infrastructure, uploadsConfig());
+  const extension = createExtensionRuntime(infrastructure, files.storage);
   const notifications = createNotificationsRuntime(
     infrastructure,
     notificationsConfig(),
@@ -67,6 +69,7 @@ export function createSharedRuntime(infrastructure: ServerInfrastructure) {
 
   return {
     applicationConfig,
+    extension,
     files,
     notifications,
     engine,
@@ -79,6 +82,7 @@ export function createSharedRuntime(infrastructure: ServerInfrastructure) {
       cleanupSessions: (context: OperationContext) =>
         runSessionCleanupTick(infrastructure.db, context),
       leadReservation,
+      sweepExtensionRecordings: extension.sweepIdleRecordings,
       createRecordsImportQueue: recordImports.createQueue,
     },
   };

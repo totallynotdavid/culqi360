@@ -19,6 +19,9 @@ const POLL_FLOOR_MS = 1_000;
 const ACCOUNT_EXPIRY_INTERVAL_MS = 60_000;
 const EXPIRY_NOTIFICATION_INTERVAL_MS = 24 * 60 * 60_000;
 const RESERVATION_SWEEP_INTERVAL_MS = 60_000;
+// Worst-case lateness of finalizing an idle recording, on top of the idle
+// timeout itself.
+const RECORDING_SWEEP_INTERVAL_MS = 60_000;
 const SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 const logger = createLogger("background-jobs", { workerId: WORKER_ID });
@@ -188,6 +191,16 @@ export function startMaintenanceWorker(): { stop(): Promise<void> } {
     RESERVATION_SWEEP_INTERVAL_MS,
     runtime.maintenance.leadReservation.sweepReservations,
   );
+  const stopRecordingSweep = startScheduledTick(
+    "extension-recording-sweep",
+    RECORDING_SWEEP_INTERVAL_MS,
+    async (context) => {
+      const swept = await runtime.maintenance.sweepExtensionRecordings(context);
+      if (swept.interruptedRecordings > 0 || swept.endedCalls > 0) {
+        logger.info("extension_recordings_swept", { ...swept });
+      }
+    },
+  );
   const stopSessionCleanup = startScheduledTick(
     "session-cleanup",
     SESSION_CLEANUP_INTERVAL_MS,
@@ -224,6 +237,7 @@ export function startMaintenanceWorker(): { stop(): Promise<void> } {
         stopAccountExpiry.stop(),
         stopExpiryNotification.stop(),
         stopReservationSweep.stop(),
+        stopRecordingSweep.stop(),
         stopSessionCleanup.stop(),
       ];
 

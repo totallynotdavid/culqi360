@@ -10,7 +10,6 @@ import { createIngestJobProjector } from "~/server/data-source-uploads/realtime"
 import { createDataSourceUploadsRuntime } from "~/server/data-source-uploads/runtime";
 import { createEventLogsChannel } from "~/server/event-logs/realtime";
 import { createEventLogsService } from "~/server/event-logs/service";
-import { createExtensionRuntime } from "~/server/extension/runtime";
 import { createJobsChannel } from "~/server/jobs/channel";
 import { createGpvSnapshotProjector } from "~/server/merchant-stats/snapshot/realtime";
 import { createActionObservationsRepo } from "~/server/observability/repos-action-observations";
@@ -82,7 +81,7 @@ function createApplication(infrastructure: ServerInfrastructure) {
     dataSourceUploads,
     ingestJobs: ingestBridge,
     eventLogs,
-    extension: createExtensionRuntime(infrastructure),
+    extension: shared.extension,
     files: {
       download: shared.files.download,
     },
