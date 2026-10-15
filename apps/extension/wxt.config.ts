@@ -1,3 +1,4 @@
+import solid from "@solidjs/vite-plugin";
 import { defineConfig } from "wxt";
 
 function toOriginMatchPattern(value: string | undefined): string | null {
@@ -19,7 +20,10 @@ const extensionHostPermissions = [
 ].filter((value): value is string => typeof value === "string" && value !== "");
 
 export default defineConfig({
-  modules: ["@wxt-dev/module-solid"],
+  vite: () => ({
+    plugins: [solid()],
+    resolve: { dedupe: ["solid-js", "@solidjs/web"] },
+  }),
   manifest: {
     name: "CRM call companion",
     description:

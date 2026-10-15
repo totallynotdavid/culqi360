@@ -1,7 +1,7 @@
 {
   "extends": ["@crm/tsconfig/solid.json", "./.wxt/tsconfig.json"],
   "compilerOptions": {
-    "jsxImportSource": "solid-js",
+    "jsxImportSource": "@solidjs/web",
     "types": ["chrome"]
   }
 }

@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onSettled, Show } from "solid-js";
 
 import {
   connectCall,
@@ -45,8 +45,6 @@ export function Dashboard(props: DashboardProps) {
   const [state, setState] = createSignal<ExtensionState | null>(null);
   const [error, setError] = createSignal<string | null>(null);
 
-  let intervalId: number | undefined;
-
   const refreshState = async () => {
     const response = await getState();
     if (!isSuccessfulResponse(response)) {
@@ -79,17 +77,13 @@ export function Dashboard(props: DashboardProps) {
     await refreshState();
   };
 
-  onMount(() => {
+  onSettled(() => {
     void refreshState();
-    intervalId = window.setInterval(() => {
+    const intervalId = window.setInterval(() => {
       void refreshState();
     }, 2500);
-  });
 
-  onCleanup(() => {
-    if (intervalId) {
-      window.clearInterval(intervalId);
-    }
+    return () => window.clearInterval(intervalId);
   });
 
   return (
