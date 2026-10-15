@@ -60,7 +60,7 @@
     "agent-browser": "^0.39.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
-    "oxlint-tsgolint": "^7.0.2003",
+    "oxlint-tsgolint": "^7.0.2004",
     "shx": "^0.4.0",
     "typescript": "^7.0.2"
   },
