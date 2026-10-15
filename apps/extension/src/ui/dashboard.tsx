@@ -150,14 +150,6 @@ export function Dashboard(props: DashboardProps) {
           {(handoff) => (
             <div class="assignment-summary">
               <p>
-                Assignment
-                <strong>#{handoff().assignmentId}</strong>
-              </p>
-              <p>
-                Contact
-                <strong>#{handoff().contactId}</strong>
-              </p>
-              <p>
                 Client
                 <strong>{handoff().clientName ?? "Unnamed contact"}</strong>
               </p>

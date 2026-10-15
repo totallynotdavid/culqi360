@@ -1,8 +1,9 @@
 import {
   isExtensionHandoffClaims,
   type ExtensionHandoffClaims,
-} from "@/src/domain/handoff-token";
-import type { AssignmentHandoff, SyncConfig } from "@/src/domain/model";
+} from "@crm/contracts/extension";
+
+import type { AssignmentHandoff, SyncConfig } from "../domain/model";
 
 function fromBase64Url(value: string): Uint8Array {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -43,7 +44,7 @@ async function importPublicKey(): Promise<CryptoKey> {
   );
 }
 
-function senderOrigin(sender: chrome.runtime.MessageSender): string {
+function senderOrigin(sender: { url?: string }): string {
   if (!sender.url) {
     throw new Error("missing sender url");
   }
@@ -131,7 +132,7 @@ export interface VerifiedExternalHandoff {
 
 export async function verifyExternalHandoff(input: {
   token: string;
-  sender: chrome.runtime.MessageSender;
+  sender: { url?: string };
 }): Promise<VerifiedExternalHandoff> {
   const origin = senderOrigin(input.sender);
   if (origin !== expectedWebOrigin()) {

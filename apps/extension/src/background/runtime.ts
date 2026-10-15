@@ -100,8 +100,8 @@ function resolveCallHandoff(
   message: Extract<RuntimeMessage, { type: "call.start" }>,
 ): AssignmentHandoff {
   if (
-    typeof message.assignmentId === "number" &&
-    typeof message.contactId === "number" &&
+    typeof message.assignmentId === "string" &&
+    typeof message.contactId === "string" &&
     typeof message.phone === "string"
   ) {
     return {

@@ -25,8 +25,8 @@ export type QueueJobType =
 
 export interface CallSession {
   sessionId: string;
-  assignmentId: number;
-  contactId: number;
+  assignmentId: string;
+  contactId: string;
   phone: string;
   startedAt: number;
   connectedAt: number | null;
@@ -37,8 +37,8 @@ export interface CallSession {
 }
 
 export interface AssignmentHandoff {
-  assignmentId: number;
-  contactId: number;
+  assignmentId: string;
+  contactId: string;
   phone: string;
   clientName: string | null;
   organizationLabel: string | null;

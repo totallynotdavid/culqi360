@@ -11,8 +11,8 @@ export type RuntimeMessage =
     }
   | {
       type: "call.start";
-      assignmentId?: number;
-      contactId?: number;
+      assignmentId?: string;
+      contactId?: string;
       phone?: string;
     }
   | {
@@ -80,9 +80,9 @@ export function isRuntimeMessage(value: unknown): value is RuntimeMessage {
     case "call.start":
       return (
         (value.assignmentId === undefined ||
-          typeof value.assignmentId === "number") &&
+          typeof value.assignmentId === "string") &&
         (value.contactId === undefined ||
-          typeof value.contactId === "number") &&
+          typeof value.contactId === "string") &&
         (value.phone === undefined || typeof value.phone === "string")
       );
     case "call.end":

@@ -12,6 +12,10 @@ function asNumber(value: unknown, fallback: number): number {
   return typeof value === "number" ? value : fallback;
 }
 
+function asString(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
 function asNullableNumber(value: unknown): number | null {
   return typeof value === "number" ? value : null;
 }
@@ -68,8 +72,8 @@ function normalizeState(value: unknown): ExtensionState {
     nextEventSequence: Math.max(1, asNumber(value.nextEventSequence, 1)),
     handoff: handoff
       ? {
-          assignmentId: asNumber(handoff.assignmentId, 0),
-          contactId: asNumber(handoff.contactId, 0),
+          assignmentId: asString(handoff.assignmentId, ""),
+          contactId: asString(handoff.contactId, ""),
           phone: typeof handoff.phone === "string" ? handoff.phone : "",
           clientName: asNullableString(handoff.clientName),
           organizationLabel: asNullableString(handoff.organizationLabel),
@@ -82,8 +86,8 @@ function normalizeState(value: unknown): ExtensionState {
             typeof currentCall.sessionId === "string"
               ? currentCall.sessionId
               : crypto.randomUUID(),
-          assignmentId: asNumber(currentCall.assignmentId, 0),
-          contactId: asNumber(currentCall.contactId, 0),
+          assignmentId: asString(currentCall.assignmentId, ""),
+          contactId: asString(currentCall.contactId, ""),
           phone: typeof currentCall.phone === "string" ? currentCall.phone : "",
           startedAt: asNumber(currentCall.startedAt, Date.now()),
           connectedAt: asNullableNumber(currentCall.connectedAt),
