@@ -11,8 +11,8 @@ describe("extension contract", () => {
       isExecutiveStateSnapshot({
         presenceStatus: "active",
         syncHealth: "ok",
-        assignmentId: 42,
-        contactId: 7,
+        assignmentId: "0199d3a0-0000-7000-8000-000000000042",
+        contactId: "0199d3a0-0000-7000-8000-000000000007",
         phone: "999999111",
         presenceUpdatedAt: 1_000,
         syncUpdatedAt: 2_000,
@@ -66,8 +66,8 @@ describe("extension contract", () => {
         executiveState: {
           presenceStatus: "ready",
           syncHealth: "pending",
-          assignmentId: 1,
-          contactId: 2,
+          assignmentId: "0199d3a0-0000-7000-8000-000000000001",
+          contactId: "0199d3a0-0000-7000-8000-000000000002",
           phone: "999999111",
           presenceUpdatedAt: 10,
           syncUpdatedAt: 20,

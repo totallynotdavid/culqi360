@@ -27,6 +27,7 @@ import { createCompanyRegistryRepo } from "~/server/client-search/repository";
 import { createContactAssignmentsRepo } from "~/server/contact-assignments/infrastructure/assignment-repo";
 import { createContactCadenceRepo } from "~/server/contact-assignments/infrastructure/cadence-repo";
 import { createInteractionLogsRepo } from "~/server/contact-assignments/infrastructure/interaction-logs-repo";
+import { createExtensionRecordingsRepo } from "~/server/extension/recordings-repo";
 import { createExtensionRuntimeRepo } from "~/server/extension/repos";
 import { createIntegrationJobRepo } from "~/server/integrations/infrastructure/integration-job-repo";
 import { createAppNotificationRepo } from "~/server/notifications/repos/app-notification";
@@ -77,6 +78,7 @@ export function createTestRepositories(db: Kysely<Database>) {
     appNotifications: createAppNotificationRepo(db),
     actionObservations: createActionObservationsRepo(db),
     authFunnelEvents: createAuthFunnelEventsRepo(db),
+    extensionRecordings: createExtensionRecordingsRepo(db),
     extensionRuntime: createExtensionRuntimeRepo(db),
     auditActionPolicies: createAuditActionPoliciesRepo(db),
     passkeys: createPasskeysRepo(db),

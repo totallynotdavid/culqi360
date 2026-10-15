@@ -28,8 +28,8 @@ describe("extension runtime bridge", () => {
               executiveState: {
                 presenceStatus: "active",
                 syncHealth: "ok",
-                assignmentId: 42,
-                contactId: 7,
+                assignmentId: "0199d3a0-0000-7000-8000-000000000042",
+                contactId: "0199d3a0-0000-7000-8000-000000000007",
                 phone: "999999111",
                 presenceUpdatedAt: 1_000,
                 syncUpdatedAt: 1_000,
@@ -44,6 +44,8 @@ describe("extension runtime bridge", () => {
 
     expect(result).toMatchObject({ ok: false });
     expect(result.executiveState?.presenceStatus).toBe("active");
-    expect(result.executiveState?.assignmentId).toBe(42);
+    expect(result.executiveState?.assignmentId).toBe(
+      "0199d3a0-0000-7000-8000-000000000042",
+    );
   });
 });

@@ -1,12 +1,11 @@
 import { generateKeyPairSync } from "node:crypto";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-
 import {
   EXTENSION_HANDOFF_TOKEN_AUDIENCE,
   EXTENSION_HANDOFF_TOKEN_ISSUER,
-} from "~/server/extension/contracts";
-import { isExtensionHandoffClaims } from "~/server/extension/service/validators";
+  isExtensionHandoffClaims,
+} from "@crm/contracts/extension";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 interface ExtensionTokenKeyMaterial {
   privateKeyPkcs8Base64: string;

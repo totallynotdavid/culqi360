@@ -3,6 +3,9 @@ import { operationAt } from "@tests/support/operation";
 import type { BranchId, OrganizationPersonId, UserId } from "~/domain/ids";
 import { ContactAssignmentId } from "~/domain/ids";
 import { createExtensionService } from "~/server/extension/service";
+import type { ExtensionRepos } from "~/server/extension/service/shared";
+import { createFileStorage } from "~/server/files/storage";
+import type { AppUow } from "~/server/platform/database/uow";
 import { Err, type Result } from "~/shared/result";
 
 import { TEST_FIXTURES, type TestDbContext } from "../runtime/db";
@@ -39,16 +42,42 @@ export function createTransactionRunner(ctx: TestDbContext) {
   };
 }
 
+/** A unit of work whose database fails before anything is written. */
+export function rejectingUow(error: Error): AppUow<ExtensionRepos> {
+  return {
+    run: () => {
+      throw error;
+    },
+  };
+}
+
+/** Commits the work, then fails, as a connection lost before the ack would. */
+export function commitThenRejectUow(
+  ctx: TestDbContext,
+  error: Error,
+): AppUow<ExtensionRepos> {
+  const real = createTransactionRunner(ctx);
+  return {
+    run: async (work) => {
+      await real.run(work);
+      throw error;
+    },
+  };
+}
+
 export function createExtensionScenario(
   ctx: TestDbContext,
   now: () => Date = () => new Date(),
 ) {
+  const storage = createFileStorage(ctx.storageRoot);
   const service = createExtensionService(ctx.repos, {
     uow: createTransactionRunner(ctx),
+    storage,
   });
 
   return {
     service,
+    storage,
     async session(
       input: {
         userId?: UserId;
@@ -127,14 +156,25 @@ export function createExtensionScenario(
         .executeTakeFirstOrThrow();
       return organizationPerson.id;
     },
-    async claim(installationId: string) {
-      const authSessionId = await this.session();
-      const assignmentId = await this.assignment();
+    async handoff(executive: "execOne" | "execTwo" = "execOne") {
+      const user = TEST_FIXTURES.users[executive];
+      const contact =
+        executive === "execOne"
+          ? TEST_FIXTURES.organizationPeople.lima
+          : TEST_FIXTURES.organizationPeople.norte;
+      const authSessionId = await this.session({
+        userId: user.id,
+        branchId: user.branchId,
+      });
+      const assignmentId = await this.assignment({
+        userId: user.id,
+        contactId: contact.id,
+      });
       const handoffResult = await service.createHandoffToken(
         {
-          userId: TEST_FIXTURES.users.execOne.id,
+          userId: user.id,
           authSessionId,
-          branchId: TEST_FIXTURES.branches.lima.id,
+          branchId: user.branchId,
           assignmentId,
           origin: "http://localhost:3000",
         },
@@ -143,20 +183,28 @@ export function createExtensionScenario(
       if (!handoffResult.ok) {
         throw new Error(handoffResult.error.code ?? handoffResult.error.kind);
       }
+      return {
+        authSessionId,
+        assignmentId,
+        handoffToken: handoffResult.value.handoffToken,
+      };
+    },
+    async claim(
+      installationId: string,
+      executive: "execOne" | "execTwo" = "execOne",
+    ) {
+      const handoff = await this.handoff(executive);
       const claimResult = await service.claimInstallationSession(
-        {
-          handoffToken: handoffResult.value.handoffToken,
-          installationId,
-        },
+        { handoffToken: handoff.handoffToken, installationId },
         operationAt(now()),
       );
       if (!claimResult.ok) {
         throw new Error(claimResult.error.code ?? claimResult.error.kind);
       }
       return {
-        authSessionId,
-        assignmentId,
+        ...handoff,
         sessionToken: claimResult.value.sessionToken,
+        callId: claimResult.value.callId,
       };
     },
   };
