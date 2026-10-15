@@ -20,6 +20,38 @@ const EXTENSION_OUTPUT_PATH = path.resolve(
 );
 
 test.describe("extension runtime integration", () => {
+  test("popup renders the dashboard and polls runtime state", async () => {
+    const session = await launchExtensionSession({
+      extensionOutputPath: EXTENSION_OUTPUT_PATH,
+    });
+
+    try {
+      const page = await openPopupPage(session.context, session.extensionId);
+      const queueJobs = page
+        .locator("p", { hasText: "Queue jobs" })
+        .locator("strong");
+
+      await expect(
+        page.getByRole("heading", { name: "Assigned call companion" }),
+      ).toBeVisible();
+      await expect(queueJobs).toHaveText("0");
+
+      const callStarted = await sendRuntimeMessage(page, {
+        type: "call.start",
+        assignmentId: 10,
+        contactId: 20,
+        phone: "+51933333333",
+      });
+      expect(callStarted.ok).toBe(true);
+
+      // Runtime state changes are not pushed to the dashboard.
+      // The dashboard polls every 2.5 seconds.
+      await expect(queueJobs).not.toHaveText("0", { timeout: 6_000 });
+    } finally {
+      await closeExtensionSession(session);
+    }
+  });
+
   test("rejects invalid call and recording transitions", async () => {
     const session = await launchExtensionSession({
       extensionOutputPath: EXTENSION_OUTPUT_PATH,
