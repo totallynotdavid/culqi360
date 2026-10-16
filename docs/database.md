@@ -76,3 +76,12 @@ schema therefore stops at `prepare`, because there are no migrations and
 The Playwright suite creates its own template and worker databases. It does not
 use or reset the development `crm` database. See
 [End-to-end testing](e2e-testing.md).
+
+## Test databases
+
+The web test setup acquires a disposable PostgreSQL server for local managed
+test runs. Its state defaults to `.vitest-db/postgres-server` in the checkout.
+`TEST_DB_SERVER_ROOT` is a test-only override for that managed-server root. Use
+it when a test needs its server state in a temporary directory or needs multiple
+processes to share one managed server. It does not configure the development
+database or the CI service database.
