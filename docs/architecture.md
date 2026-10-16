@@ -111,8 +111,10 @@ files.
 The service worker starts at
 [`entrypoints/background.ts`](../apps/extension/entrypoints/background.ts) and
 registers [`runtime.ts`](../apps/extension/src/background/runtime.ts). On every
-wake it migrates a stored v1 install, ensures the sync alarm exists, then
-handles messages and sends the queue. The offscreen document
+wake (a browser start, an install or update, or an idle restart) it migrates a
+stored v1 install, closes the recordings whose recorder is gone, ensures the
+sync alarm exists, then handles messages and sends the queue. The offscreen
+document
 ([`entrypoints/offscreen/main.ts`](../apps/extension/entrypoints/offscreen/main.ts))
 records the call tab. These two contexts are the only writers of the database.
 
@@ -131,7 +133,7 @@ database, `crm_extension`, that holds all durable state:
 | `calls`      | One row per call, keyed by the server's `callId`.                     |
 | `recordings` | One row per recording: local id, server id, status and call.          |
 | `chunks`     | Append-only audio, keyed by `[recordingId, seq]`, one row per second. |
-| `queue`      | Sync jobs in sequence order, with attempts and the last error.        |
+| `queue`      | Sync jobs in sequence order, with attempts, last error and `deadAt`.  |
 | `meta`       | The sequence counter and the last sync result.                        |
 
 `commit(fn)` runs `fn` in one readwrite transaction, and commits run one at a
@@ -176,6 +178,9 @@ Each state has one owner. A transition not listed is refused.
 - The offscreen document adds a chunk row once per second, together with its
   segment job. Only the worker deletes chunk rows, and only in the commit that
   makes the recording `complete`.
+- A `recording` row whose recorder died is closed by the worker as `interrupted`
+  (see liveness below). That is the only way the worker moves a recording out of
+  `recording`.
 
 Queue jobs:
 
@@ -187,11 +192,31 @@ Queue jobs:
 | `recording.close`   | offscreen, `finishRecording`                  | the recording is `complete`                 | `remoteId` and every segment job of it |
 
 Only the worker sends jobs, and one pass runs at a time. A job that waits for
-another counts no attempt. A failed job gets `attempts + 1` and a
-`nextAttemptAt` of `2^n` seconds (at most five minutes) later. Events and each
-recording are separate lanes, so a failing upload does not delay call events. A
-401 refreshes the session once, and a 401 on the retried send counts as a failed
-attempt.
+another counts no attempt. Events and each recording are separate lanes, so a
+failing upload does not delay call events. A 401 refreshes the session once, and
+a 401 on the retried send counts as a failed attempt.
+
+How a failure ends:
+
+| Failure                                 | Result                                             |
+| --------------------------------------- | -------------------------------------------------- |
+| 408, 425, 429, any 5xx, a network error | `attempts + 1`, retried after a backoff            |
+| any other 4xx (except 401)              | parked at once as a dead letter                    |
+| the 20th failed attempt of one job      | parked as a dead letter                            |
+| a refused session refresh               | the agent is signed out, and no attempt is counted |
+
+The backoff ceiling is `2^n` seconds (at most five minutes), and the delay is a
+random point between half the ceiling and all of it, so extensions that saw the
+same outage do not retry together. A failure holds the rest of its lane for the
+pass, which costs one attempt per lane instead of one per job.
+
+A dead letter keeps its row, its payload and its last error, and no pass sends
+it again, not even `sync.flush`. It does not block its lane, but a recording's
+close still waits for the dead segments of that recording, and a dead create
+keeps its segments waiting. The state reports `queue.dead`, the dashboard shows
+the count with a "Retry failed jobs" button, and `queue.retryDead` puts every
+dead letter back on the schedule with a fresh attempt count. A dead heartbeat is
+deleted instead, because the next alarm queues a fresh one.
 
 ### Extension recording and upload
 
@@ -225,6 +250,34 @@ Stopping the tracks at the end of a recording or after a failed start is not a
 loss: the document marks the capture released first, and its listeners ignore
 any `ended` that follows. If the tab track ends while recording, the recording
 closes as interrupted.
+
+Chrome lets an extension capture a tab only after an activeTab invocation on
+that tab: a click on the extension icon, or the `start-recording` shortcut
+(`Alt+Shift+K` by default, declared as a manifest `commands` entry). While a
+call is live and nothing records it, the toolbar badge shows `!` and the
+dashboard says "Click the extension icon on the call tab to resume recording",
+with a "Record this tab" button that records the tab that is active when it is
+clicked. The worker creates the offscreen document before it asks for the stream
+id, and the document opens that single-use id at once. A start is tried once. If
+Chrome refuses it (a tab with an active stream stays blocked for about a
+minute), the reason is stored and shown on the dashboard until the next start,
+and nothing retries by itself. A recording that was interrupted cannot be
+started again, because the server accepts one recording per call.
+
+Liveness is a Web Lock, not a heartbeat. The offscreen document takes
+`recording:{callId}` before it writes the recording row and releases it after
+the close is queued, so a `recording` row always has a holder. Chrome releases a
+lock when its holder dies, whether the document crashed or the browser quit. The
+worker, on every wake and every alarm, asks for the lock of each `recording` row
+with `ifAvailable`. A lock it gets means nobody records, so it queues the close
+with `interrupted: true`, even when no chunk was stored (the close then reports
+zero segments, as for any silent recording). A second recorder for the same call
+cannot get the lock and is refused.
+
+The extension requests `unlimitedStorage`, which lifts the quota, and the
+offscreen document calls `navigator.storage.persist()` before the first chunk,
+which asks the browser not to evict the database. Only a window can ask, so a
+service worker cannot. A refusal is logged and the recording goes on.
 
 Each chunk goes into IndexedDB with its job in one transaction, and only then
 does the document tell the worker the chunk key, so no audio crosses a message
