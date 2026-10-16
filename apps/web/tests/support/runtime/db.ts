@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { sql, type Kysely } from "kysely";
 import { Client } from "pg";
+import { inject } from "vitest";
 
 import {
   BranchId,
@@ -20,6 +21,7 @@ import {
   createTestRepositories,
   type TestRepositories,
 } from "../runtime/repos";
+import { TEST_WEB_DB_URL_CONTEXT } from "./test-context";
 
 // Each test file clones a seeded template; resetTestDb restores fixtures between
 // cases.
@@ -28,11 +30,6 @@ const NAMESPACE = (process.env.TEST_DB_NAMESPACE ?? "default").replace(
   "_",
 );
 const TEMPLATE_DB_NAME = `crm_test_template_${NAMESPACE}`.toLowerCase();
-
-const BASE_URL =
-  process.env.TEST_WEB_DB_URL ??
-  process.env.WEB_DB_URL ??
-  "postgres://postgres@localhost:5432/postgres";
 
 const TEMPLATE_LOCK_KEY = 0x6372_6d74; // "crmt"
 
@@ -88,8 +85,11 @@ export const TEST_FIXTURES = {
   },
 } as const;
 
-export function databaseUrl(name: string): string {
-  const url = new URL(BASE_URL);
+export function databaseUrl(
+  name: string,
+  connectionString = inject(TEST_WEB_DB_URL_CONTEXT),
+): string {
+  const url = new URL(connectionString);
   url.pathname = `/${name}`;
   return url.toString();
 }
@@ -102,8 +102,11 @@ function assertSafeDbName(name: string): void {
 
 async function withMaintenanceClient<T>(
   fn: (client: Client) => Promise<T>,
+  connectionString = inject(TEST_WEB_DB_URL_CONTEXT),
 ): Promise<T> {
-  const client = new Client({ connectionString: databaseUrl("postgres") });
+  const client = new Client({
+    connectionString: databaseUrl("postgres", connectionString),
+  });
   await client.connect();
   try {
     return await fn(client);
@@ -305,7 +308,7 @@ async function templateExists(client: Client): Promise<boolean> {
   return result.rowCount === 1;
 }
 
-async function buildTemplate(): Promise<void> {
+async function buildTemplate(connectionString: string): Promise<void> {
   assertSafeDbName(TEMPLATE_DB_NAME);
 
   await withMaintenanceClient(async (client) => {
@@ -317,7 +320,9 @@ async function buildTemplate(): Promise<void> {
       await client.query(`CREATE DATABASE "${TEMPLATE_DB_NAME}"`);
 
       try {
-        const db = createDb(() => databaseUrl(TEMPLATE_DB_NAME));
+        const db = createDb(() =>
+          databaseUrl(TEMPLATE_DB_NAME, connectionString),
+        );
         try {
           await migrateToLatest(db);
           await seedFixtures(db);
@@ -335,12 +340,14 @@ async function buildTemplate(): Promise<void> {
     } finally {
       await client.query("SELECT pg_advisory_unlock($1)", [TEMPLATE_LOCK_KEY]);
     }
-  });
+  }, connectionString);
 }
 
-async function ensureTemplate(): Promise<void> {
+async function ensureTemplate(
+  connectionString = inject(TEST_WEB_DB_URL_CONTEXT),
+): Promise<void> {
   if (!templatePromise) {
-    templatePromise = buildTemplate().catch((error) => {
+    templatePromise = buildTemplate(connectionString).catch((error) => {
       templatePromise = null;
       throw error;
     });
@@ -348,8 +355,10 @@ async function ensureTemplate(): Promise<void> {
   return templatePromise;
 }
 
-export async function prepareTestDbTemplate(): Promise<void> {
-  await ensureTemplate();
+export async function prepareTestDbTemplate(
+  connectionString: string,
+): Promise<void> {
+  await ensureTemplate(connectionString);
 }
 
 export async function createIsolatedTestDb(
