@@ -354,7 +354,7 @@ async function startOrAttachManagedServer(): Promise<{
 
     const connectionString = managedConnectionString(await findFreePort());
     const lease = await acquireLease();
-    let serverStarted = false;
+    let didStartServer = false;
     let previousPortFile: string | undefined;
     let portFileChanged = false;
     let dataDirCreated = false;
@@ -390,11 +390,11 @@ async function startOrAttachManagedServer(): Promise<{
 
     try {
       await startManagedServer(connectionString);
-      serverStarted = true;
+      didStartServer = true;
       await waitForServer(connectionString);
       return { connectionString, lease };
     } catch (error) {
-      if (serverStarted) {
+      if (didStartServer) {
         await stopManagedServer();
       }
       await rollbackManagedServerStart({
