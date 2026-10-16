@@ -14,6 +14,8 @@ import type { Receiver } from "./receiver";
 
 export interface CallScenario {
   popup: Page;
+  /** The softphone tab. It is the active tab when `beginCall` returns. */
+  callTab: Page;
   worker: Worker;
   callId: string;
   callTabId: number;
@@ -50,7 +52,7 @@ export async function beginCall(
     return tab.id;
   }, `${receiver.origin}/`);
 
-  return { popup, worker, callId, callTabId };
+  return { popup, callTab, worker, callId, callTabId };
 }
 
 export async function startRecording(scenario: CallScenario): Promise<void> {

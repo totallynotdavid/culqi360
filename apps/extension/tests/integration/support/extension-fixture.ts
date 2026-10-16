@@ -55,11 +55,10 @@ function extensionArgs(extensionOutputPath: string): string[] {
 }
 
 /**
- * Playwright's `grantPermissions` refuses a `chrome-extension://` origin
- * ("Permission can't be granted to opaque origins"), so this speaks CDP. Chrome
- * drops a CDP grant when the session that made it detaches (measured: the same
- * page asks `denied` again after `cdp.detach()`), so the session and its blank
- * page stay open until `closeExtensionSession`.
+ * Playwright's `grantPermissions` refuses a `chrome-extension://` origin, so
+ * this speaks CDP. Chrome drops a CDP grant when the session that made it
+ * detaches (measured), so the session and its blank page stay open until
+ * `closeExtensionSession`.
  */
 export async function grantMicrophone(
   session: ExtensionSession,
@@ -84,6 +83,35 @@ export async function revokeMicrophone(
     throw new Error("the microphone was never granted in this session");
   }
   await session.permissions.send("Browser.resetPermissions");
+}
+
+/**
+ * Presses the extension's `start-recording` shortcut (Alt+Shift+K) with `page`
+ * as the active tab. Chrome treats a key event sent to a page target as a
+ * browser accelerator, so `commands.onCommand` fires as it does for a real
+ * keystroke.
+ */
+export async function pressRecordingShortcut(
+  session: ExtensionSession,
+  page: Page,
+): Promise<void> {
+  await page.bringToFront();
+  const cdp = await session.context.newCDPSession(page);
+  try {
+    for (const type of ["rawKeyDown", "keyUp"] as const) {
+      // oxlint-disable-next-line no-await-in-loop -- key down must precede key up
+      await cdp.send("Input.dispatchKeyEvent", {
+        type,
+        modifiers: 9,
+        key: "K",
+        code: "KeyK",
+        windowsVirtualKeyCode: 75,
+        nativeVirtualKeyCode: 75,
+      });
+    }
+  } finally {
+    await cdp.detach();
+  }
 }
 
 export async function serviceWorkerOf(
