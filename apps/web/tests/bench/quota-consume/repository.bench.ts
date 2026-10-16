@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { UserId } from "~/domain/ids";
 import { appMonthRange } from "~/domain/time/app-time";
@@ -31,8 +31,14 @@ describe("search capacity grant repository benchmark", () => {
     await db.teardown();
   });
 
-  bench("repository path: load search capacity grants by user and period", async () => {
-    const repo = db.ctx().repos.searchCapacityGrants;
-    await repo.findByUserAndRange(userId, monthRange);
+  test("repository path: load search capacity grants by user and period", async ({
+    bench,
+  }) => {
+    const result =
+      await bench("repository path: load search capacity grants by user and period", async () => {
+        const repo = db.ctx().repos.searchCapacityGrants;
+        await repo.findByUserAndRange(userId, monthRange);
+      }).run();
+    expect(result.state).toBe("completed");
   });
 });

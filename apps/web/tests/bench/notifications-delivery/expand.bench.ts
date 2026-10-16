@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { UserId } from "~/domain/ids";
 import { createIntentExpander } from "~/server/notifications/expansion/expand-intent";
@@ -34,20 +34,23 @@ describe("notifications expansion benchmark", () => {
     });
   });
 
-  beforeEach(async () => {
-    job = await seedExpandIntent(db.ctx(), recipients);
-  });
-
   afterAll(async () => {
     process.env.LOG_LEVEL = originalLogLevel;
     await db.teardown();
   });
 
-  bench(
-    "service path: expand one intent",
-    async () => {
-      await expand(job, BENCH_NOW);
-    },
-    SINGLE_CALL,
-  );
+  test("service path: expand one intent", async ({ bench }) => {
+    const result = await bench(
+      "service path: expand one intent",
+      {
+        beforeEach: async () => {
+          job = await seedExpandIntent(db.ctx(), recipients);
+        },
+      },
+      async () => {
+        await expand(job, BENCH_NOW);
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });

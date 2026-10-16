@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import {
   createRecipientPlanner,
@@ -35,12 +35,18 @@ describe("notifications delivery planner benchmark", () => {
   });
 
   for (const scenario of PLANNER_SCENARIOS) {
-    bench(`service path: plan deliveries (${scenario.name})`, async () => {
-      const input = projectIntentForPlanning(entries[scenario.name]);
-      if (isErr(input)) {
-        throw new Error(input.error);
-      }
-      await planRecipients(input.value, BENCH_NOW);
+    test(`service path: plan deliveries (${scenario.name})`, async ({
+      bench,
+    }) => {
+      const result =
+        await bench(`service path: plan deliveries (${scenario.name})`, async () => {
+          const input = projectIntentForPlanning(entries[scenario.name]);
+          if (isErr(input)) {
+            throw new Error(input.error);
+          }
+          await planRecipients(input.value, BENCH_NOW);
+        }).run();
+      expect(result.state).toBe("completed");
     });
   }
 });

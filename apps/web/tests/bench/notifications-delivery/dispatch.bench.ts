@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { UserId } from "~/domain/ids";
 import type { MessagingGateway } from "~/server/notifications/channels/messaging-gateway";
@@ -55,20 +55,23 @@ describe("notifications dispatch benchmark", () => {
     });
   });
 
-  beforeEach(async () => {
-    job = await seedDispatchDelivery(db.ctx(), userId);
-  });
-
   afterAll(async () => {
     process.env.LOG_LEVEL = originalLogLevel;
     await db.teardown();
   });
 
-  bench(
-    "service path: send one delivery",
-    async () => {
-      await send(job);
-    },
-    SINGLE_CALL,
-  );
+  test("service path: send one delivery", async ({ bench }) => {
+    const result = await bench(
+      "service path: send one delivery",
+      {
+        beforeEach: async () => {
+          job = await seedDispatchDelivery(db.ctx(), userId);
+        },
+      },
+      async () => {
+        await send(job);
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });

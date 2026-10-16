@@ -1,5 +1,5 @@
 import { operationAt } from "@tests/support/operation";
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { BranchId, UserId } from "~/domain/ids";
 import { createContactAssignmentsRuntime } from "~/server/contact-assignments/runtime";
@@ -27,28 +27,31 @@ describe("lead refill service benchmark", () => {
     });
   });
 
-  beforeEach(async () => {
-    userId = await seedUnit();
-  });
-
   afterAll(async () => {
     await db.teardown();
   });
 
-  bench(
-    "service path: request lead refill for one user",
-    async () => {
-      const result = await assignmentRuntime.assign(
-        { actorUserId: userId, branchId },
-        operationAt(BENCH_NOW),
-      );
-
-      if (!result.ok) {
-        throw new Error(
-          `expected lead refill success, got ${result.error.code}`,
+  test("service path: request lead refill for one user", async ({ bench }) => {
+    const result = await bench(
+      "service path: request lead refill for one user",
+      {
+        beforeEach: async () => {
+          userId = await seedUnit();
+        },
+      },
+      async () => {
+        const assignmentResult = await assignmentRuntime.assign(
+          { actorUserId: userId, branchId },
+          operationAt(BENCH_NOW),
         );
-      }
-    },
-    SINGLE_CALL,
-  );
+
+        if (!assignmentResult.ok) {
+          throw new Error(
+            `expected lead refill success, got ${assignmentResult.error.code}`,
+          );
+        }
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });

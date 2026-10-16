@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { UserId } from "~/domain/ids";
 
@@ -15,19 +15,22 @@ describe("sessions.deleteAllForUser", () => {
     userId = await seedBenchUser(ctx);
   });
 
-  beforeEach(async () => {
-    await setUserSessions(db.ctx(), userId, SESSIONS_PER_USER);
-  });
-
   afterAll(async () => {
     await db.teardown();
   });
 
-  bench(
-    "delete all sessions for a heavy user",
-    async () => {
-      await db.ctx().repos.sessions.deleteAllForUser(userId);
-    },
-    SINGLE_CALL,
-  );
+  test("delete all sessions for a heavy user", async ({ bench }) => {
+    const result = await bench(
+      "delete all sessions for a heavy user",
+      {
+        beforeEach: async () => {
+          await setUserSessions(db.ctx(), userId, SESSIONS_PER_USER);
+        },
+      },
+      async () => {
+        await db.ctx().repos.sessions.deleteAllForUser(userId);
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });

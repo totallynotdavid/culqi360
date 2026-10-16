@@ -15,7 +15,6 @@ export default defineConfig({
     benchmark: {
       include: ["tests/**/*.bench.ts"],
     },
-    runner: "./tests/bench/runner.ts",
     environment: "node",
     fileParallelism: false,
     server: {

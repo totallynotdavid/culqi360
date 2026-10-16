@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { UserId } from "~/domain/ids";
 
@@ -28,7 +28,10 @@ describe("sessions.listForUser", () => {
     await db.teardown();
   });
 
-  bench("list sessions for a heavy user", async () => {
-    await db.ctx().repos.sessions.listForUser(userId);
+  test("list sessions for a heavy user", async ({ bench }) => {
+    const result = await bench("list sessions for a heavy user", async () => {
+      await db.ctx().repos.sessions.listForUser(userId);
+    }).run();
+    expect(result.state).toBe("completed");
   });
 });

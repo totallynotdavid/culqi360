@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { BENCH_NOW } from "../_shared/constants";
 import { createBenchDbFixture } from "../_shared/fixture";
@@ -17,12 +17,16 @@ describe("team invite repository benchmark", () => {
     await db.teardown();
   });
 
-  bench("repository path: load pending invite by token", async () => {
-    const row = await db
-      .ctx()
-      .repos.userInvites.findPendingByToken(token, BENCH_NOW);
-    if (!row) {
-      throw new Error("expected pending invite row for token");
-    }
+  test("repository path: load pending invite by token", async ({ bench }) => {
+    const result =
+      await bench("repository path: load pending invite by token", async () => {
+        const row = await db
+          .ctx()
+          .repos.userInvites.findPendingByToken(token, BENCH_NOW);
+        if (!row) {
+          throw new Error("expected pending invite row for token");
+        }
+      }).run();
+    expect(result.state).toBe("completed");
   });
 });

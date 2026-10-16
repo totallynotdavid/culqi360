@@ -1,6 +1,6 @@
 import { operationAt } from "@tests/support/operation";
 import { TEST_FIXTURES } from "@tests/support/runtime/db";
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { BranchId, UserId } from "~/domain/ids";
 import type { InviteService } from "~/server/invites/application/types";
@@ -27,36 +27,39 @@ describe("team invite create benchmark", () => {
       inviteService.createInvite(input, operationAt(BENCH_NOW));
   });
 
-  beforeEach(() => {
-    email = freshInviteEmail();
-  });
-
   afterAll(async () => {
     await db.teardown();
   });
 
-  bench(
-    "service path: create invite",
-    async () => {
-      const result = await inviteCreate({
-        actorUserId,
-        actorRole: "superuser",
-        branchId,
-        names: "Bench Create",
-        firstSurname: "User",
-        secondSurname: "Bench",
-        email,
-        role: "executive",
-        executiveCategory: "elite",
-        teamId: null,
-      });
+  test("service path: create invite", async ({ bench }) => {
+    const result = await bench(
+      "service path: create invite",
+      {
+        beforeEach: () => {
+          email = freshInviteEmail();
+        },
+      },
+      async () => {
+        const createResult = await inviteCreate({
+          actorUserId,
+          actorRole: "superuser",
+          branchId,
+          names: "Bench Create",
+          firstSurname: "User",
+          secondSurname: "Bench",
+          email,
+          role: "executive",
+          executiveCategory: "elite",
+          teamId: null,
+        });
 
-      if (!result.ok) {
-        throw new Error(
-          `expected invite create success, got ${result.error.code ?? result.error.kind}`,
-        );
-      }
-    },
-    SINGLE_CALL,
-  );
+        if (!createResult.ok) {
+          throw new Error(
+            `expected invite create success, got ${createResult.error.code ?? createResult.error.kind}`,
+          );
+        }
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });

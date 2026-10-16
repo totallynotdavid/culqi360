@@ -1,5 +1,5 @@
 import { operationAt } from "@tests/support/operation";
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { UserId } from "~/domain/ids";
 import { SearchReservationId } from "~/domain/ids";
@@ -24,35 +24,40 @@ describe("search capacity consume service benchmark", () => {
     userId = await seedQuotaUser(ctx);
   });
 
-  beforeEach(async () => {
-    await resetQuotaUsage(db.ctx(), userId);
-  });
-
   afterAll(async () => {
     await db.teardown();
   });
 
-  bench(
-    "service path: reserve and commit search usage for one user",
-    async () => {
-      const result = await executeWithUsageReservation(
-        {
-          kind: "search",
-          actorUserId: userId,
-          requested: 1,
-          reserveReason: "direct_search",
-          brand: SearchReservationId.trust,
+  test("service path: reserve and commit search usage for one user", async ({
+    bench,
+  }) => {
+    const result = await bench(
+      "service path: reserve and commit search usage for one user",
+      {
+        beforeEach: async () => {
+          await resetQuotaUsage(db.ctx(), userId);
         },
-        usageReservationPorts,
-        operationAt(BENCH_NOW),
-        async () => Ok({ value: undefined, consumed: 1 }),
-      );
-      if (!result.ok) {
-        throw new Error(
-          `expected reserve+commit success, got ${result.error.code}`,
+      },
+      async () => {
+        const reservationResult = await executeWithUsageReservation(
+          {
+            kind: "search",
+            actorUserId: userId,
+            requested: 1,
+            reserveReason: "direct_search",
+            brand: SearchReservationId.trust,
+          },
+          usageReservationPorts,
+          operationAt(BENCH_NOW),
+          async () => Ok({ value: undefined, consumed: 1 }),
         );
-      }
-    },
-    SINGLE_CALL,
-  );
+        if (!reservationResult.ok) {
+          throw new Error(
+            `expected reserve+commit success, got ${reservationResult.error.code}`,
+          );
+        }
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });

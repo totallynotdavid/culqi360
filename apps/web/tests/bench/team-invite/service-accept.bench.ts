@@ -1,5 +1,5 @@
 import { operationAt } from "@tests/support/operation";
-import { afterAll, beforeAll, beforeEach, bench, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { InviteService } from "~/server/invites/application/types";
 import { createInviteServiceForExecutor } from "~/server/invites/infrastructure/invite-service-factory";
@@ -23,28 +23,31 @@ describe("team invite accept benchmark", () => {
       inviteService.acceptInvite(input, operationAt(BENCH_NOW));
   });
 
-  beforeEach(async () => {
-    token = (await seedPendingInvite(db.ctx())).token;
-  });
-
   afterAll(async () => {
     await db.teardown();
   });
 
-  bench(
-    "service path: accept invite",
-    async () => {
-      const result = await inviteAccept({
-        token,
-        password: "StrongPass123",
-      });
+  test("service path: accept invite", async ({ bench }) => {
+    const result = await bench(
+      "service path: accept invite",
+      {
+        beforeEach: async () => {
+          token = (await seedPendingInvite(db.ctx())).token;
+        },
+      },
+      async () => {
+        const acceptResult = await inviteAccept({
+          token,
+          password: "StrongPass123",
+        });
 
-      if (!result.ok) {
-        throw new Error(
-          `expected invite accept success, got ${result.error.code ?? result.error.kind}`,
-        );
-      }
-    },
-    SINGLE_CALL,
-  );
+        if (!acceptResult.ok) {
+          throw new Error(
+            `expected invite accept success, got ${acceptResult.error.code ?? acceptResult.error.kind}`,
+          );
+        }
+      },
+    ).run(SINGLE_CALL);
+    expect(result.state).toBe("completed");
+  });
 });
