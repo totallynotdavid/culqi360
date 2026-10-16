@@ -1,6 +1,11 @@
 import type { RuntimeResponse } from "@/src/domain/messages";
-import { getExecutiveState, type ExtensionState } from "@/src/domain/model";
+import {
+  getExecutiveState,
+  isHeartbeat,
+  type ExtensionState,
+} from "@/src/domain/model";
 import { chunkRange, read } from "@/src/services/database";
+import { recordingBlocker } from "@/src/services/recording-store";
 import { readSession } from "@/src/services/session";
 
 import { latestCall } from "./calls";
@@ -18,6 +23,9 @@ export async function readState(): Promise<ExtensionState> {
       ? await tx.count("chunks", chunkRange(recording.id))
       : 0;
     const queue = await tx.getAll("queue");
+    const startable = call
+      ? (await recordingBlocker(tx, call.id)) === null
+      : false;
 
     return {
       call,
@@ -25,14 +33,16 @@ export async function readState(): Promise<ExtensionState> {
         phase: recording?.status ?? "idle",
         chunkCount,
         microphoneLost: recording?.microphoneLostAt != null,
+        startable,
+        captureError: startable
+          ? ((await tx.getMeta("captureError")) ?? null)
+          : null,
       },
       queue: {
         pending: queue.filter(
-          (row) =>
-            !(
-              row.job.kind === "event" && row.job.type === "executive.heartbeat"
-            ),
+          (row) => row.deadAt == null && !isHeartbeat(row.job),
         ).length,
+        dead: queue.filter((row) => row.deadAt != null).length,
       },
       sync: {
         signedIn: session?.sessionToken != null,

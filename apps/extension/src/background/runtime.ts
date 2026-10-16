@@ -10,8 +10,10 @@ import { read } from "@/src/services/database";
 import { claimHandoff } from "@/src/services/external-auth";
 import { migrateV1 } from "@/src/services/migration";
 import { closeOffscreenDocument } from "@/src/services/offscreen";
+import { interruptOrphanedRecordings } from "@/src/services/recording-lock";
 import { readSession, writeSession } from "@/src/services/session";
 
+import { syncBadge } from "./badge";
 import {
   connectCall,
   endCall,
@@ -26,9 +28,13 @@ import {
   enqueueHeartbeat,
   HEARTBEAT_ALARM,
   isSyncAlarm,
+  retryDeadLetters,
   syncDue,
   syncNow,
 } from "./sync";
+
+/** Declared in the manifest as `commands["start-recording"]` (`wxt.config.ts`). */
+const START_RECORDING_COMMAND = "start-recording";
 
 const connectedPorts = new Set<chrome.runtime.Port>();
 
@@ -55,14 +61,20 @@ function logFailure(context: string, error: unknown): void {
 }
 
 /**
- * Runs on every worker wake, before any handler: moves a v1 install over and
- * arms the alarms. It never rejects, so one failure cannot lock the extension
- * up.
+ * Runs on every worker wake, before any handler: moves a v1 install over,
+ * closes recordings whose recorder is gone and arms the alarms. The module
+ * reruns on every browser start, install, update and idle wake, so this is
+ * also the `onStartup` and `onInstalled` sweep. It never rejects.
  */
 async function wake(): Promise<void> {
   try {
     await migrateV1();
+    const interrupted = await interruptOrphanedRecordings();
+    if (interrupted > 0) {
+      afterChangeInBackground();
+    }
     await ensureAlarms();
+    await syncBadge();
   } catch (error: unknown) {
     logFailure("worker start failed", error);
   }
@@ -72,6 +84,9 @@ let ready: Promise<void> = Promise.resolve();
 
 async function afterChange(): Promise<void> {
   await broadcast();
+  await syncBadge().catch((error: unknown) =>
+    logFailure("badge failed", error),
+  );
   await syncDue();
 }
 
@@ -108,6 +123,24 @@ async function startRecordingOf(tabId: number): Promise<RuntimeResponse> {
   return stateResponse();
 }
 
+/**
+ * The shortcut is an activeTab invocation on the tab it was pressed in, which
+ * is what lets `getMediaStreamId` name that tab. A failure is stored by
+ * `startRecording`, and the dashboard shows it.
+ */
+async function startRecordingFromShortcut(
+  tab: chrome.tabs.Tab | undefined,
+): Promise<void> {
+  await ready;
+  if (tab?.id === undefined) {
+    throw new Error("the shortcut was pressed in no tab");
+  }
+  const response = await startRecordingOf(tab.id);
+  if (!response.ok) {
+    logFailure("recording shortcut", new Error(response.error));
+  }
+}
+
 async function handleMessage(
   message: RuntimeMessage,
 ): Promise<RuntimeResponse | undefined> {
@@ -140,6 +173,8 @@ async function handleMessage(
       return undefined;
     case "sync.flush":
       return perform(syncNow);
+    case "queue.retryDead":
+      return perform(retryDeadLetters);
     default:
       return message satisfies never;
   }
@@ -201,6 +236,9 @@ async function handleExternalMessage(
 
 async function handleAlarm(name: string): Promise<void> {
   await ready;
+  // A recorder can die while the worker stays awake, so a wake-time sweep
+  // alone would leave that recording open until the next browser start.
+  await interruptOrphanedRecordings();
   if (name === HEARTBEAT_ALARM) {
     await enqueueHeartbeat();
   }
@@ -226,6 +264,15 @@ export function registerRuntime(): void {
       return Promise.resolve(errorResponse("invalid external message payload"));
     }
     return handleExternalMessage(message, sender);
+  });
+
+  chrome.commands.onCommand.addListener((command, tab) => {
+    if (command !== START_RECORDING_COMMAND) {
+      return;
+    }
+    startRecordingFromShortcut(tab).catch((error: unknown) =>
+      logFailure("recording shortcut failed", error),
+    );
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {

@@ -50,7 +50,14 @@ export default defineConfig({
       "tabCapture",
       "activeTab",
       "sidePanel",
+      "unlimitedStorage",
     ],
+    commands: {
+      "start-recording": {
+        suggested_key: { default: "Alt+Shift+K" },
+        description: "Record the call tab",
+      },
+    },
     host_permissions: extensionHostPermissions,
     externally_connectable: {
       matches: extensionHostPermissions,

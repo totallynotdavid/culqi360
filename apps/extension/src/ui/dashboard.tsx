@@ -6,7 +6,9 @@ import {
   flushQueue,
   getState,
   isSuccessfulResponse,
+  retryDeadQueue,
   startCall,
+  startRecording,
 } from "@/src/client/runtime-client";
 import type { ExtensionState } from "@/src/domain/model";
 import {
@@ -16,6 +18,9 @@ import {
 } from "@/src/services/microphone";
 
 import "./dashboard.css";
+
+const RESUME_NOTICE =
+  "Click the extension icon on the call tab to resume recording";
 
 interface DashboardProps {
   surface: "popup" | "sidepanel";
@@ -229,6 +234,21 @@ export function Dashboard(props: DashboardProps) {
             <strong>{state()?.recording.chunkCount ?? 0}</strong>
           </p>
         </div>
+        <Show when={state()?.recording.startable}>
+          <p class="muted" data-testid="resume-notice">
+            {RESUME_NOTICE}
+          </p>
+          <div class="button-row">
+            <button onClick={() => void run(() => startRecording())}>
+              Record this tab
+            </button>
+          </div>
+        </Show>
+        <Show when={state()?.recording.captureError}>
+          <p class="error" data-testid="capture-error">
+            {state()?.recording.captureError}
+          </p>
+        </Show>
         <Show when={!microphoneGranted()}>
           <p class="error" data-testid="microphone-notice">
             {MICROPHONE_NOT_ALLOWED}
@@ -256,6 +276,12 @@ export function Dashboard(props: DashboardProps) {
         <Show when={state()?.sync.lastSyncError}>
           <p class="muted">Last error: {state()?.sync.lastSyncError}</p>
         </Show>
+        <Show when={state()?.queue.dead}>
+          <p class="error" data-testid="dead-letters">
+            Failed jobs: {state()?.queue.dead}. The server refused them or they
+            kept failing. They stay on this device until you retry them.
+          </p>
+        </Show>
 
         <div class="button-row">
           <button
@@ -264,6 +290,11 @@ export function Dashboard(props: DashboardProps) {
           >
             Flush queue
           </button>
+          <Show when={state()?.queue.dead}>
+            <button onClick={() => void run(() => retryDeadQueue())}>
+              Retry failed jobs
+            </button>
+          </Show>
         </div>
       </section>
     </main>

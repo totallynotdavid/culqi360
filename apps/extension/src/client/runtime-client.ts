@@ -40,8 +40,28 @@ export function endCall(): Promise<RuntimeResponse> {
   return sendMessage({ type: "call.end" });
 }
 
+/**
+ * Records the tab the agent is looking at. Chrome lets the extension capture a
+ * tab only after an activeTab invocation on it (icon click or shortcut), so
+ * this fails with Chrome's own reason when the call tab was not invoked.
+ */
+export async function startRecording(): Promise<RuntimeResponse> {
+  const [tab] = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  if (tab?.id === undefined) {
+    return { ok: false, error: "there is no active tab to record" };
+  }
+  return sendMessage({ type: "recording.start", tabId: tab.id });
+}
+
 export function flushQueue(): Promise<RuntimeResponse> {
   return sendMessage({ type: "sync.flush" });
+}
+
+export function retryDeadQueue(): Promise<RuntimeResponse> {
+  return sendMessage({ type: "queue.retryDead" });
 }
 
 export function isSuccessfulResponse(response: RuntimeResponse): response is {

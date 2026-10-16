@@ -1,7 +1,7 @@
 import { requestStreamId } from "#tab-capture";
 import type { OffscreenMessage } from "@/src/domain/messages";
 import { Err, Ok, type Result } from "@/src/domain/result";
-import { read } from "@/src/services/database";
+import { commit, read } from "@/src/services/database";
 import {
   closeOffscreenDocument,
   ensureOffscreenDocument,
@@ -63,7 +63,12 @@ async function openCapture(
   });
 }
 
-/** The offscreen document owns the recorder after it opens the call tab. */
+/**
+ * One request makes one attempt. A failed stream id leaves the tab blocked for
+ * about a minute ("Cannot capture a tab with an active stream"), so retries
+ * would fail too. Store the reason for the dashboard because the shortcut has
+ * no caller to answer.
+ */
 export async function startRecording(
   tabId: number,
 ): Promise<Result<void, string>> {
@@ -72,7 +77,13 @@ export async function startRecording(
     return callId;
   }
 
-  const started = await openCapture(tabId, callId.value);
+  const started = await openCapture(tabId, callId.value).catch(
+    (error: unknown) =>
+      Err(error instanceof Error ? error.message : "tab capture failed"),
+  );
+  await commit((tx) =>
+    tx.setMeta("captureError", started.ok ? null : started.error),
+  );
   if (!started.ok) {
     await closeOffscreenDocument();
   }
