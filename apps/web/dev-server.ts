@@ -1,6 +1,6 @@
 // The default origin in `.env.example`, the extension, and the production
 // image all use this port.
-export const DEFAULT_DEV_PORT = 3000;
+const DEFAULT_DEV_PORT = 3000;
 
 /**
  * Plain Vite does not read PORT or HOST, so this maps them to Vite options.
