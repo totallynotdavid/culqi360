@@ -88,6 +88,16 @@ export interface ClaimExtensionSessionResponse {
   callId: string;
 }
 
+/** A refresh rotates both tokens and keeps the call the claim opened. */
+export type RefreshExtensionSessionResponse = Omit<
+  ClaimExtensionSessionResponse,
+  "callId"
+>;
+
+export const EXTENSION_SESSION_CLAIM_PATH = "/api/extension/session/claim";
+export const EXTENSION_SESSION_REFRESH_PATH = "/api/extension/session/refresh";
+export const EXTENSION_EVENTS_PATH = "/api/extension/events";
+
 /*
  * Call recording upload. The server mints every id (`callId` at claim,
  * `recordingId` at recording creation) and the extension never invents one.
@@ -255,6 +265,17 @@ export function isClaimExtensionSessionResponse(
     typeof value.refreshToken === "string" &&
     typeof value.expiresAt === "number" &&
     typeof value.callId === "string"
+  );
+}
+
+export function isRefreshExtensionSessionResponse(
+  value: unknown,
+): value is RefreshExtensionSessionResponse {
+  return (
+    isRecord(value) &&
+    typeof value.sessionToken === "string" &&
+    typeof value.refreshToken === "string" &&
+    typeof value.expiresAt === "number"
   );
 }
 
