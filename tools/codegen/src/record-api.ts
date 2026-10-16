@@ -1,7 +1,5 @@
 import { asObject, asString } from "./shared.ts";
 
-// parsing
-
 export type FieldType = "string" | "i32" | "i64";
 
 export type FieldSpec = {
