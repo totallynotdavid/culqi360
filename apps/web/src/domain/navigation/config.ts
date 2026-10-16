@@ -79,6 +79,14 @@ export const PAGE_HEADERS = [
     },
   },
   {
+    match: "/me/assignments",
+    header: {
+      label: "Mis contactos",
+      icon: "leads",
+      tileColor: "blue",
+    },
+  },
+  {
     match: "/me/capacity",
     header: {
       label: "Mi capacidad",
@@ -211,6 +219,17 @@ export const SIDEBAR_ENTRIES = [
     group: "Comercial",
   },
   {
+    id: "my-assignments",
+    href: "/me/assignments",
+    activePrefixes: ["/me/assignments"],
+    label: "Mis contactos",
+    icon: "leads",
+    tileColor: "blue",
+    section: "secondary",
+    order: 4,
+    group: "Comercial",
+  },
+  {
     id: "my-capacity",
     href: "/me/capacity",
     activePrefixes: ["/me/capacity"],
@@ -218,7 +237,7 @@ export const SIDEBAR_ENTRIES = [
     icon: "capacity",
     tileColor: "turquoise",
     section: "secondary",
-    order: 4,
+    order: 5,
     group: "Comercial",
   },
   {
@@ -229,7 +248,7 @@ export const SIDEBAR_ENTRIES = [
     icon: "inventory",
     tileColor: "orange",
     section: "secondary",
-    order: 4,
+    order: 6,
     group: "Operaciones",
   },
   {
@@ -240,7 +259,7 @@ export const SIDEBAR_ENTRIES = [
     icon: "team",
     tileColor: "turquoise",
     section: "secondary",
-    order: 5,
+    order: 7,
     group: "Operaciones",
     children: [
       { href: "/team", label: "Capacidad", order: 1 },
@@ -255,7 +274,7 @@ export const SIDEBAR_ENTRIES = [
     icon: "inventory",
     tileColor: "orange",
     section: "secondary",
-    order: 6,
+    order: 8,
     group: "Operaciones",
   },
   {
@@ -266,7 +285,7 @@ export const SIDEBAR_ENTRIES = [
     icon: "dashboards",
     tileColor: "green",
     section: "secondary",
-    order: 7,
+    order: 9,
     group: "Negocio",
   },
   {
@@ -277,7 +296,7 @@ export const SIDEBAR_ENTRIES = [
     icon: "monitoring",
     tileColor: "yellow",
     section: "secondary",
-    order: 8,
+    order: 10,
     group: "Administración",
   },
 ] satisfies SidebarEntry[];

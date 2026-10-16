@@ -1,3 +1,5 @@
+import type { MyContactAssignmentView } from "~/contracts/contact-assignments/views";
+import { epochMilliseconds } from "~/domain/time/clock";
 import { getLeadCapacitySnapshot } from "~/server/capacity/application/queries/get-lead-capacity-snapshot";
 import type { UsageReservationPorts } from "~/server/capacity/application/usage/ledger";
 import { createCapacityUsersRepo } from "~/server/capacity/infrastructure/capacity-users-repo";
@@ -102,6 +104,26 @@ export function createContactAssignmentsRuntime(
         { repos, uow, engine, leadUsageReservationPorts },
         operation,
       ),
+    listActive: async (
+      actorUserId: Parameters<typeof getLeadCapacitySnapshot>[0],
+      operation: OperationContext,
+    ) => {
+      const rows = await repos.contactAssignments.findActiveByUserWithContacts(
+        actorUserId,
+        operation.operationAt,
+      );
+
+      return Ok(
+        rows.map((row): MyContactAssignmentView => ({
+          assignmentId: row.assignmentId,
+          contactId: row.contactId,
+          name: row.name,
+          phone: row.phonePrimary,
+          assignedAt: epochMilliseconds(row.assignedAt),
+          expiresAt: epochMilliseconds(row.expiresAt),
+        })),
+      );
+    },
     completeCall: (
       command: Parameters<typeof completeContactAssignmentCall>[0],
       operation: OperationContext,

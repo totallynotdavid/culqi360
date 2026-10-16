@@ -1,0 +1,38 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4, 16px);
+  padding: var(--spacing-4, 16px);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background: var(--background, #ffffff);
+}
+
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1, 4px);
+  min-width: 0;
+}
+
+.name {
+  color: var(--foreground, #111827);
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.phone {
+  color: var(--foreground-secondary, #374151);
+  font-size: var(--font-size-sm, 13px);
+  font-variant-numeric: tabular-nums;
+}

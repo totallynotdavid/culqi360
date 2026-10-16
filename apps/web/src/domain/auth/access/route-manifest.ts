@@ -25,7 +25,8 @@ export type AppPath =
   | "/settings/profile"
   | "/settings/appearance"
   | "/settings/notifications"
-  | "/me/capacity";
+  | "/me/capacity"
+  | "/me/assignments";
 
 export interface RouteConfig {
   permission?: Permission;
@@ -69,6 +70,7 @@ export const ROUTE_MANIFEST: Record<AppPath, RouteConfig> = {
   "/settings/appearance": {},
   "/settings/notifications": {},
   "/me/capacity": { permission: "capacity:read:self" },
+  "/me/assignments": { permission: "lead:work" },
 };
 
 export const DYNAMIC_ROUTES: DynamicRouteConfig[] = [
