@@ -1,0 +1,29 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 28rem;
+  gap: var(--spacing-2, 8px);
+  text-align: right;
+}
+
+.success,
+.failure {
+  margin: 0;
+  font-size: var(--font-size-sm, 13px);
+  line-height: 1.4;
+}
+
+.success {
+  color: var(--color-green-11);
+}
+
+.failure {
+  color: var(--destructive);
+}
+
+.detail {
+  display: block;
+  color: var(--foreground-tertiary, #6b7280);
+  font-size: var(--font-size-caption, 11px);
+}
