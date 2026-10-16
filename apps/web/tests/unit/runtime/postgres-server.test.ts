@@ -1,10 +1,13 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+
+const execFileAsync = promisify(execFile);
 
 const CHILD_SCRIPT = fileURLToPath(
   new URL("./postgres-server-child.ts", import.meta.url),
@@ -16,28 +19,58 @@ interface ManagedChild {
   send(command: "query" | "release" | "exit"): Promise<void>;
 }
 
+async function canRunManagedPostgres(): Promise<boolean> {
+  try {
+    await Promise.all(
+      ["initdb", "pg_ctl"].map((command) =>
+        execFileAsync("mise", ["x", "postgres", "--", command, "--version"]),
+      ),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function waitForOutput(child: ChildProcess, expected: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    let output = "";
-    const onData = (chunk: Buffer | string) => {
-      output += chunk.toString();
-      const line = output
+    let stdout = "";
+    let stderr = "";
+    const cleanup = () => {
+      child.stdout?.off("data", onStdout);
+      child.stderr?.off("data", onStderr);
+      child.off("error", onError);
+      child.off("exit", onExit);
+    };
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const onExit = (code: number | null, signal: string | null) => {
+      cleanup();
+      reject(
+        new Error(
+          `database child exited before ${expected}: code=${code}, signal=${signal}, stdout=${stdout}, stderr=${stderr}`,
+        ),
+      );
+    };
+    const onStderr = (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    };
+    const onStdout = (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+      const line = stdout
         .split("\n")
         .find((candidate) => candidate.startsWith(expected));
       if (line) {
-        child.stdout?.off("data", onData);
+        cleanup();
         resolve(line);
       }
     };
-    child.stdout?.on("data", onData);
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      reject(
-        new Error(
-          `database child exited before ${expected}: code=${code}, signal=${signal}, output=${output}`,
-        ),
-      );
-    });
+    child.stdout?.on("data", onStdout);
+    child.stderr?.on("data", onStderr);
+    child.once("error", onError);
+    child.once("exit", onExit);
   });
 }
 
@@ -45,16 +78,22 @@ async function startChild(
   cwd: string,
   serverRoot?: string,
 ): Promise<ManagedChild> {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    CI: "",
+    GITHUB_ACTIONS: "",
+    TEST_WEB_DB_URL: "",
+    WEB_DB_URL: "",
+  };
+  if (serverRoot === undefined) {
+    delete env.TEST_DB_SERVER_ROOT;
+  } else {
+    env.TEST_DB_SERVER_ROOT = serverRoot;
+  }
+
   const child = spawn(process.execPath, [CHILD_SCRIPT], {
     cwd,
-    env: {
-      ...process.env,
-      CI: "",
-      GITHUB_ACTIONS: "",
-      TEST_WEB_DB_URL: "",
-      WEB_DB_URL: "",
-      ...(serverRoot ? { TEST_DB_SERVER_ROOT: serverRoot } : {}),
-    },
+    env,
     stdio: ["pipe", "pipe", "pipe"],
   });
   let line: string;
@@ -113,6 +152,9 @@ async function runIndependentCheckouts(root: string): Promise<void> {
   let second: ManagedChild | undefined;
   try {
     second = await startChild(secondCwd);
+    expect(new URL(second.connectionString).port).not.toBe(
+      new URL(first.connectionString).port,
+    );
     expect(second.connectionString).not.toBe(first.connectionString);
 
     await releaseChild(first);
@@ -151,13 +193,20 @@ async function runAttachedCheckouts(root: string): Promise<void> {
   }
 }
 
-it("keeps independent and attached runs connected after the first run ends", async () => {
-  expect.hasAssertions();
-  const root = await mkdtemp(join(tmpdir(), "culqi360-postgres-test-"));
-  try {
-    await runIndependentCheckouts(root);
-    await runAttachedCheckouts(root);
-  } finally {
-    await rm(root, { force: true, recursive: true });
-  }
-}, 60_000);
+const managedPostgresAvailable = await canRunManagedPostgres();
+
+describe.skipIf(!managedPostgresAvailable)(
+  "managed Postgres isolation (requires mise x postgres)",
+  () => {
+    it("keeps independent and attached runs connected after the first run ends", async () => {
+      expect.hasAssertions();
+      const root = await mkdtemp(join(tmpdir(), "culqi360-postgres-test-"));
+      try {
+        await runIndependentCheckouts(root);
+        await runAttachedCheckouts(root);
+      } finally {
+        await rm(root, { force: true, recursive: true });
+      }
+    }, 60_000);
+  },
+);
