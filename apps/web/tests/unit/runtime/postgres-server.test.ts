@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -152,11 +153,7 @@ async function runAttachedCheckouts(root: string): Promise<void> {
 
 it("keeps independent and attached runs connected after the first run ends", async () => {
   expect.hasAssertions();
-  const scratchDirectory = process.env.TMPDIR;
-  if (!scratchDirectory) {
-    throw new Error("TMPDIR must be set for the Postgres isolation test");
-  }
-  const root = await mkdtemp(join(scratchDirectory, "culqi360-postgres-test-"));
+  const root = await mkdtemp(join(tmpdir(), "culqi360-postgres-test-"));
   try {
     await runIndependentCheckouts(root);
     await runAttachedCheckouts(root);
