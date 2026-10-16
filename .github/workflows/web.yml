@@ -148,7 +148,6 @@ jobs:
           path: packages/email-composer/src/templates/compiled
 
       - name: build
-        working-directory: apps/web
         env:
           ENGINE_HMAC_KEY_ID: web
           ENGINE_HMAC_SECRET: ci-build-engine-hmac-secret-7Kp4xQ9m2Vw8

@@ -7,3 +7,23 @@ bun = "1.4.2"
 uv = "0.12.24"
 python = "3.15.0"
 postgres = "18.6"
+
+[tasks.test]
+description = "Run the web, engine and pipeline test suites"
+run = ["bun run test", "bun run test:engine", "bun run test:pipeline"]
+
+[tasks.lint]
+description = "Run the web, package, engine and pipeline linters"
+run = ["bun run check:lint", "bun run lint:engine", "bun run lint:pipeline"]
+
+[tasks.typecheck]
+description = "Typecheck every workspace package and tool"
+run = "bun run typecheck"
+
+[tasks.build]
+description = "Build the web application"
+run = "bun run build"
+
+[tasks.check]
+description = "Run every default CI check"
+run = ["bun run check", "mise run test", "mise run build"]

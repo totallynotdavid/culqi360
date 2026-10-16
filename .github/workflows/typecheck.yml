@@ -47,5 +47,8 @@ jobs:
       - name: install dependencies
         run: bun install --frozen-lockfile
 
+      - name: check local CI parity
+        run: bun run check:ci-parity
+
       - name: type check
         run: bun run typecheck

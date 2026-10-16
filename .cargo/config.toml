@@ -11,4 +11,24 @@ xtask-clippy = [
   "-D",
   "warnings",
 ]
+xtask-clippy-engine = [
+  "clippy",
+  "-p",
+  "engine",
+  "--all-targets",
+  "--all-features",
+  "--",
+  "-D",
+  "warnings",
+]
+xtask-clippy-pipeline = [
+  "clippy",
+  "-p",
+  "pipeline",
+  "--all-targets",
+  "--all-features",
+  "--",
+  "-D",
+  "warnings",
+]
 xtask-format = "fmt --all"
