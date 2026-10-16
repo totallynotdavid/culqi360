@@ -3,53 +3,6 @@ use rusqlite::{Connection, Row, params};
 use shared::error::ApiError;
 use std::sync::LazyLock;
 
-pub trait LeadsRepository: Send + Sync {
-    fn list_candidates(
-        &self,
-        conn: &Connection,
-        limit: usize,
-        branch_id: i64,
-        user_id: i64,
-        strategy: CandidateStrategy,
-    ) -> Result<Vec<RecordCandidate>, ApiError>;
-
-    fn upsert_batch(
-        &self,
-        conn: &mut Connection,
-        rows: &[RecordImportRow],
-        source: &str,
-        now: i64,
-    ) -> Result<(usize, usize), ApiError>;
-}
-
-#[derive(Default)]
-pub struct SqliteLeadsRepository;
-
-impl LeadsRepository for SqliteLeadsRepository {
-    fn list_candidates(
-        &self,
-        conn: &Connection,
-        limit: usize,
-        branch_id: i64,
-        user_id: i64,
-        strategy: CandidateStrategy,
-    ) -> Result<Vec<RecordCandidate>, ApiError> {
-        list_candidates(conn, limit, branch_id, user_id, strategy)
-    }
-
-    fn upsert_batch(
-        &self,
-        conn: &mut Connection,
-        rows: &[RecordImportRow],
-        source: &str,
-        now: i64,
-    ) -> Result<(usize, usize), ApiError> {
-        upsert_batch(conn, rows, source, now)
-    }
-}
-
-// candidate queries
-
 const SELECT_ACTIVE: &str = "
     SELECT
         ruc,
@@ -176,8 +129,6 @@ pub fn upsert_batch(
 
     Ok((inserted, updated))
 }
-
-// helpers
 
 fn map_candidate_row(row: &Row<'_>) -> rusqlite::Result<RecordCandidate> {
     Ok(RecordCandidate {

@@ -1,43 +1,11 @@
 use leads::contracts::{RecordImportRequest, RecordImportRow};
-use leads::repo::LeadsRepository;
 use leads::service::ImportService;
 use shared::error::ApiError;
 
-use rusqlite::Connection;
-use std::sync::Arc;
-
-struct FailingLeadsRepo;
-
-impl LeadsRepository for FailingLeadsRepo {
-    fn list_candidates(
-        &self,
-        _conn: &Connection,
-        _limit: usize,
-        _branch_id: i64,
-        _user_id: i64,
-        _strategy: leads::contracts::CandidateStrategy,
-    ) -> Result<Vec<leads::contracts::RecordCandidate>, ApiError> {
-        Ok(Vec::new())
-    }
-
-    fn upsert_batch(
-        &self,
-        _conn: &mut Connection,
-        _rows: &[RecordImportRow],
-        _source: &str,
-        _now: i64,
-    ) -> Result<(usize, usize), ApiError> {
-        Err(ApiError::Service("fake upsert failure".into()))
-    }
-}
-
-fn make_test_pool() -> shared::sqlite::SqlitePool {
-    r2d2::Pool::new(r2d2_sqlite::SqliteConnectionManager::memory()).expect("pool")
-}
-
 #[test]
-fn import_service_supports_repo_injection_for_failure_paths() {
-    let service = ImportService::with_repo(make_test_pool(), Arc::new(FailingLeadsRepo));
+fn import_reports_a_storage_failure_as_a_service_error() {
+    let pool = r2d2::Pool::new(r2d2_sqlite::SqliteConnectionManager::memory()).expect("pool");
+    let service = ImportService::new(pool);
     let req = RecordImportRequest {
         rows: vec![RecordImportRow {
             ruc: "20100000001".into(),
@@ -54,9 +22,9 @@ fn import_service_supports_repo_injection_for_failure_paths() {
 
     let err = service
         .import_leads(&req)
-        .expect_err("expected repo failure");
+        .expect_err("a database without the leads table cannot accept rows");
     match err {
-        ApiError::Service(message) => assert!(message.contains("fake upsert failure")),
+        ApiError::Service(message) => assert!(message.contains("insert failed")),
         other => panic!("unexpected error type: {other}"),
     }
 }

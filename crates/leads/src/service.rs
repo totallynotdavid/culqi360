@@ -3,33 +3,19 @@ use crate::contracts::{
     RecordImportRow,
 };
 use crate::domain;
-use crate::repo::{LeadsRepository, SqliteLeadsRepository};
+use crate::repo;
 use shared::error::ApiError;
 use shared::sqlite::SqlitePool;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct CandidateService {
-    repo: Arc<dyn LeadsRepository>,
     pool: SqlitePool,
     max_limit: usize,
 }
 
 impl CandidateService {
     pub fn new(pool: SqlitePool, max_limit: usize) -> Self {
-        Self {
-            repo: Arc::new(SqliteLeadsRepository),
-            pool,
-            max_limit,
-        }
-    }
-
-    pub fn with_repo(pool: SqlitePool, max_limit: usize, repo: Arc<dyn LeadsRepository>) -> Self {
-        Self {
-            repo,
-            pool,
-            max_limit,
-        }
+        Self { pool, max_limit }
     }
 
     #[tracing::instrument(skip(self, req), fields(branch_id = req.branch_id, user_id = req.user_id, amount = req.amount))]
@@ -45,9 +31,7 @@ impl CandidateService {
             .get()
             .map_err(|e| ApiError::Service(format!("pool get failed: {e}")))?;
 
-        let raw =
-            self.repo
-                .list_candidates(&conn, limit, req.branch_id, req.user_id, req.strategy)?;
+        let raw = repo::list_candidates(&conn, limit, req.branch_id, req.user_id, req.strategy)?;
         let ranked = domain::rank_candidates(raw, req.strategy);
         let deduped = domain::dedupe_candidates(ranked);
         let count = deduped.len();
@@ -61,20 +45,12 @@ impl CandidateService {
 
 #[derive(Clone)]
 pub struct ImportService {
-    repo: Arc<dyn LeadsRepository>,
     pool: SqlitePool,
 }
 
 impl ImportService {
     pub fn new(pool: SqlitePool) -> Self {
-        Self {
-            repo: Arc::new(SqliteLeadsRepository),
-            pool,
-        }
-    }
-
-    pub fn with_repo(pool: SqlitePool, repo: Arc<dyn LeadsRepository>) -> Self {
-        Self { repo, pool }
+        Self { pool }
     }
 
     #[tracing::instrument(skip(self, req), fields(rows = req.rows.len(), source = %req.source))]
@@ -93,9 +69,7 @@ impl ImportService {
 
         let now = current_unix_secs()?;
         let owned: Vec<RecordImportRow> = valid.into_iter().cloned().collect();
-        let (inserted, updated) = self
-            .repo
-            .upsert_batch(&mut conn, &owned, &req.source, now)?;
+        let (inserted, updated) = repo::upsert_batch(&mut conn, &owned, &req.source, now)?;
 
         Ok(RecordImportResponse {
             inserted,
@@ -105,8 +79,6 @@ impl ImportService {
         })
     }
 }
-
-// private helpers
 
 fn validate_candidate_request(req: &RecordCandidateRequest) -> Result<(), ApiError> {
     if req.branch_id <= 0 {
