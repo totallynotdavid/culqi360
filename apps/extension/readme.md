@@ -1,54 +1,34 @@
 # Browser extension
 
 The browser extension is the call companion for Culqi360. It tracks an
-assignment and call lifecycle, records audio through the browser's offscreen
-document, persists state locally, and queues events for synchronization with the
-web application.
+assignment and call lifecycle, records the call tab through the browser's
+offscreen document, keeps everything it captured on disk, and uploads it to the
+web application. It targets Chromium browsers only.
 
-## Runtime
+[Architecture](../../docs/architecture.md#browser-extension) describes how it
+stores, records and uploads, and the states it moves through.
 
-The service worker starts at
-[`entrypoints/background.ts`](entrypoints/background.ts) and registers
-[`src/background/runtime.ts`](src/background/runtime.ts). The runtime restores
-state, ensures the sync alarm exists, handles internal and external messages,
-updates the state model, and flushes queued jobs when a transition needs sync.
+## Code map
 
-The state model and message contracts are
-[`src/domain/model.ts`](src/domain/model.ts) and
-[`src/domain/messages.ts`](src/domain/messages.ts). Popup and side-panel
-entrypoints are under [`entrypoints/`](entrypoints/).
+- [`entrypoints/background.ts`](entrypoints/background.ts) starts the service
+  worker, which registers
+  [`src/background/runtime.ts`](src/background/runtime.ts).
+- [`entrypoints/offscreen/main.ts`](entrypoints/offscreen/main.ts) records the
+  tab. Popup and side-panel entrypoints are also under
+  [`entrypoints/`](entrypoints/).
+- [`src/domain/model.ts`](src/domain/model.ts) and
+  [`src/domain/messages.ts`](src/domain/messages.ts) hold the state model and
+  the message contracts.
+- [`src/services/`](src/services/) holds the database, the upload and the
+  session. The wire contract with the web application is
+  [`packages/contracts/src/extension.ts`](../../packages/contracts/src/extension.ts).
 
-Durable state uses `browser.storage.local` through
-[`src/services/storage.ts`](src/services/storage.ts). Large recording payloads
-use IndexedDB through [`src/services/journal.ts`](src/services/journal.ts).
-Queue and retry behavior are in
-[`src/services/queue.ts`](src/services/queue.ts). Network delivery and session
-refresh are in [`src/services/sync.ts`](src/services/sync.ts).
+## Configuration
 
-## Web handoff
-
-The web application creates a signed handoff token and sends an
-`assignment.handoff` message. The extension verifies the sender origin and
-signature in [`src/services/external-auth.ts`](src/services/external-auth.ts),
-then claims a session through the web API. Queued events use the web
-extension-events API, and refresh uses the web session-refresh API.
-
-Three build-time variables configure the extension. Set them in the shell or,
-for the `VITE_` pair, in `apps/extension/.env`. The repository root `.env` is
-not read.
-
-| Variable                                 | Use                                                                                                                                   |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `CRM_WEB_ORIGIN`                         | Adds the web origin to the manifest host permissions and externally connectable list. `localhost` and `127.0.0.1` are always allowed. |
-| `VITE_CRM_WEB_ORIGIN`                    | Origin the extension accepts handoffs from. Defaults to `http://localhost:3000`.                                                      |
-| `VITE_CRM_HANDOFF_PUBLIC_KEY_RAW_BASE64` | Ed25519 key that verifies handoff tokens. Required.                                                                                   |
-
-The extension needs the raw 32-byte key, which is the last 32 bytes of the SPKI
-value in `EXTENSION_HANDOFF_PUBLIC_KEY_SPKI_BASE64`. Derive it from that value:
-
-```sh
-printf %s "$EXTENSION_HANDOFF_PUBLIC_KEY_SPKI_BASE64" | base64 -d | tail -c 32 | base64 -w0
-```
+`CRM_WEB_ORIGIN` is the only variable a release build reads. It adds the web
+origin to the manifest host permissions and the externally connectable list, and
+`localhost` and `127.0.0.1` are always allowed. The sender's origin of a handoff
+message becomes the origin every later request goes to.
 
 ## Run and validate
 
@@ -56,7 +36,6 @@ Run these commands from `apps/extension/`:
 
 ```sh
 bun run dev
-bun run dev:firefox
 bun run build
 bun run zip
 ```
@@ -68,6 +47,11 @@ bun run typecheck
 bun run test:integration
 ```
 
-The integration command builds the extension before running Playwright. The web
-handoff endpoint is
-[`apps/web/src/server/extension/service.ts`](../web/src/server/extension/service.ts).
+The integration command builds the extension in test mode (`build:test` sets
+`CRM_FAKE_TAB_CAPTURE=1`) and runs Playwright against Chromium with an in-memory
+receiver. The test build replaces one module, `#tab-capture`
+([`src/services/tab-capture.ts`](src/services/tab-capture.ts)), with
+[`tab-capture.fake.ts`](src/services/tab-capture.fake.ts), because a headless
+browser cannot be granted a tab-capture stream and the fake records Chromium's
+fake microphone instead. Install the browser once with
+`bunx playwright install chromium`.

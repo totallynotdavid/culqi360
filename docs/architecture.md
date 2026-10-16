@@ -110,15 +110,107 @@ files.
 
 The service worker starts at
 [`entrypoints/background.ts`](../apps/extension/entrypoints/background.ts) and
-registers [`runtime.ts`](../apps/extension/src/background/runtime.ts). It
-persists call state, stores large recording payloads separately, queues sync
-jobs and sends them to the web application.
+registers [`runtime.ts`](../apps/extension/src/background/runtime.ts). On every
+wake it migrates a stored v1 install, ensures the sync alarm exists, then
+handles messages and sends the queue. The offscreen document
+([`entrypoints/offscreen/main.ts`](../apps/extension/entrypoints/offscreen/main.ts))
+records the call tab. These two contexts are the only writers of the database.
 
 The web application creates the signed handoff and session endpoints in
 [`routes/api/extension/`](../apps/web/src/routes/api/extension/). The extension
-verifies the handoff in
-[`external-auth.ts`](../apps/extension/src/services/external-auth.ts) before it
-claims a session.
+sends the handoff token to the claim endpoint as it is, and the server verifies
+the signature and the single use.
+
+### Extension storage
+
+[`database.ts`](../apps/extension/src/services/database.ts) opens one IndexedDB
+database, `crm_extension`, that holds all durable state:
+
+| Store        | Rows                                                                  |
+| ------------ | --------------------------------------------------------------------- |
+| `calls`      | One row per call, keyed by the server's `callId`.                     |
+| `recordings` | One row per recording: local id, server id, status and call.          |
+| `chunks`     | Append-only audio, keyed by `[recordingId, seq]`, one row per second. |
+| `queue`      | Sync jobs in sequence order, with attempts and the last error.        |
+| `meta`       | The sequence counter and the last sync result.                        |
+
+`commit(fn)` runs `fn` in one readwrite transaction, and commits run one at a
+time. A function handed to `commit` or `read` may await only the transaction's
+own operations, because any other await lets IndexedDB close the transaction. A
+state change and the jobs it queues are written in the same commit. A commit
+that changes a row reads it again inside the transaction, never from an earlier
+snapshot, because the other context may have changed it meanwhile.
+
+`browser.storage.local` keeps only the installation session (the installation id
+and the tokens). The session is signed in while it holds tokens. A refused
+refresh clears the tokens and signs the agent out, and the next handoff claim
+signs in again. [`migration.ts`](../apps/extension/src/services/migration.ts)
+imports a v1 queue the first time the worker starts, keeping each job's id,
+sequence, attempts and payload, and deletes the v1 data.
+
+### Extension states
+
+Each state has one owner. A transition not listed is refused.
+
+| Entity    | State       | Entered by                                        | Next states           |
+| --------- | ----------- | ------------------------------------------------- | --------------------- |
+| call      | `ready`     | worker, when a web handoff is claimed             | `dialing`             |
+| call      | `dialing`   | worker, `call.start`                              | `active`, `ended`     |
+| call      | `active`    | worker, `call.connected`                          | `ended`               |
+| call      | `ended`     | worker, `call.end`; it also stops the recorder    | none                  |
+| recording | `recording` | offscreen, `beginRecording`                       | `closing`             |
+| recording | `closing`   | offscreen, `finishRecording`; it queues the close | `complete`, `closing` |
+| recording | `complete`  | worker, when the server answers `complete`        | none                  |
+
+- A claim is refused while a call is `dialing` or `active`. A second claim of
+  the same call changes nothing.
+- A call has at most one recording, and recording starts only while the call is
+  `dialing` or `active`. The transaction that creates the recording row checks
+  this, because the call can end while the capture stream is being set up.
+- `closing` returns to `closing` when the server answers `missing`: the segments
+  are queued again and the close is retried.
+- A recording's `remoteId` is empty until the create job succeeds, which only
+  the worker does. `finishRecording` sets `interrupted` when the media stream
+  ends by itself (for example when the tab closes) or a chunk cannot be written.
+  It acts only on a `recording` row.
+- The offscreen document adds a chunk row once per second, together with its
+  segment job. Only the worker deletes chunk rows, and only in the commit that
+  makes the recording `complete`.
+
+Queue jobs:
+
+| Job                 | Queued by                                     | Removed when                                | Waits for                              |
+| ------------------- | --------------------------------------------- | ------------------------------------------- | -------------------------------------- |
+| `event`             | worker, in the commit of its change           | the server answers 2xx                      | nothing                                |
+| `recording.create`  | offscreen, `beginRecording`                   | `remoteId` is stored                        | nothing                                |
+| `recording.segment` | offscreen, `storeChunk`; worker, on `missing` | the server answers 2xx or the chunk is gone | `remoteId`                             |
+| `recording.close`   | offscreen, `finishRecording`                  | the recording is `complete`                 | `remoteId` and every segment job of it |
+
+Only the worker sends jobs, and one pass runs at a time. A job that waits for
+another counts no attempt. A failed job gets `attempts + 1` and a
+`nextAttemptAt` of `2^n` seconds (at most five minutes) later. Events and each
+recording are separate lanes, so a failing upload does not delay call events. A
+401 refreshes the session once, and a 401 on the retried send counts as a failed
+attempt.
+
+### Extension recording and upload
+
+The offscreen document records the tab with `MediaRecorder` in 1 s chunks. Each
+chunk goes into IndexedDB with its job in one transaction, and only then does
+the document tell the worker the chunk key, so no audio crosses a message hop
+before it is on disk. A chunk sequence number is taken only after its write
+succeeds, so stored sequence numbers are 0..n-1 without gaps. After a failed
+write no later chunk is stored and the recording closes as interrupted.
+
+[`deliver.ts`](../apps/extension/src/services/deliver.ts) sends the jobs to the
+receiver contract below: `POST` creates the recording and returns the server's
+`recordingId`, each chunk is a `PUT` of its bytes to `.../segments/{seq}`, and
+the close sends the manifest (segment count, total bytes, `interrupted`) after
+the last segment. A 2xx on a segment never deletes local audio. Only a close
+that the server answers `complete`, for the same count and bytes, does, and the
+commit that deletes it first checks the stored chunks still match them. A
+recording stopped before its first chunk closes with zero segments, because its
+create job may already have reached the server.
 
 ### Call recordings
 
