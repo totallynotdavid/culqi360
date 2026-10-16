@@ -77,6 +77,14 @@ Extension handoff uses `EXTENSION_EXPECTED_ORIGIN`,
 variable `VITE_CRM_EXTENSION_ID` holds the extension ID the web app messages.
 While it is empty, the web app reports that the extension is not configured.
 
+An agent with the `lead:work` permission starts a handoff from Mis contactos
+(`/me/assignments`). Each assigned contact that has a phone number gets a
+"Llamar con la extensión" button. A contact without one shows "Sin teléfono" and
+no button. The button requests a token from `POST /api/extension/handoff-token`,
+sends it to the extension, and shows whether the extension is missing, the
+handoff was refused and why, or the contact reached the extension. The agent
+then starts the call from the extension panel.
+
 ## Notifications
 
 `NOTIFICATION_ROUTES` maps channels to providers. The default is
