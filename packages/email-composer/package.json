@@ -14,6 +14,6 @@
     "@crm/tsconfig": "workspace:*",
     "@types/mjml": "^5.0.0",
     "mjml": "^5.4.1",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   }
 }
