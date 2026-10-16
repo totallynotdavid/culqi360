@@ -22,12 +22,11 @@ function formatTimestamp(value: number | null): string {
 }
 
 function formatDurationSeconds(state: ExtensionState | null): string {
-  if (!state?.currentCall) return "0s";
-  const session = state.currentCall;
+  const call = state?.call;
+  if (!call?.connectedAt) return "0s";
 
-  if (!session.connectedAt) return "0s";
-  const endAt = session.endedAt ?? Date.now();
-  const seconds = Math.max(0, Math.round((endAt - session.connectedAt) / 1000));
+  const endAt = call.endedAt ?? Date.now();
+  const seconds = Math.max(0, Math.round((endAt - call.connectedAt) / 1000));
   return `${seconds}s`;
 }
 
@@ -36,9 +35,7 @@ function classForSurface(surface: DashboardProps["surface"]): string {
 }
 
 function statusLabel(state: ExtensionState | null): string {
-  return state?.handoff
-    ? `${state.currentCall?.phase ?? "ready"}`
-    : "waiting_for_assignment";
+  return state?.call?.phase ?? "waiting_for_assignment";
 }
 
 export function Dashboard(props: DashboardProps) {
@@ -108,18 +105,16 @@ export function Dashboard(props: DashboardProps) {
             <strong>{statusLabel(state())}</strong>
           </p>
           <p>
-            Queue jobs
-            <strong>{state()?.queue.length ?? 0}</strong>
+            Queued jobs
+            <strong>{state()?.queue.pending ?? 0}</strong>
           </p>
           <p>
             Client
-            <strong>
-              {state()?.handoff?.clientName ?? "No assigned client"}
-            </strong>
+            <strong>{state()?.call?.clientName ?? "No assigned client"}</strong>
           </p>
           <p>
             Phone
-            <strong>{state()?.handoff?.phone ?? "-"}</strong>
+            <strong>{state()?.call?.phone ?? "-"}</strong>
           </p>
           <p>
             Last sync
@@ -131,15 +126,15 @@ export function Dashboard(props: DashboardProps) {
           </p>
           <p>
             Organization
-            <strong>{state()?.handoff?.organizationLabel ?? "-"}</strong>
+            <strong>{state()?.call?.organizationLabel ?? "-"}</strong>
           </p>
         </div>
       </section>
 
       <section class="card">
-        <h2>Current handoff</h2>
+        <h2>Current call</h2>
         <Show
-          when={state()?.handoff}
+          when={state()?.call}
           fallback={
             <p class="empty-copy">
               Select an assigned client in CRM to send the next number into the
@@ -147,15 +142,15 @@ export function Dashboard(props: DashboardProps) {
             </p>
           }
         >
-          {(handoff) => (
+          {(call) => (
             <div class="assignment-summary">
               <p>
                 Client
-                <strong>{handoff().clientName ?? "Unnamed contact"}</strong>
+                <strong>{call().clientName ?? "Unnamed contact"}</strong>
               </p>
               <p>
                 Phone
-                <strong>{handoff().phone}</strong>
+                <strong>{call().phone}</strong>
               </p>
             </div>
           )}
@@ -164,7 +159,7 @@ export function Dashboard(props: DashboardProps) {
         <div class="button-row">
           <button
             onClick={() => void run(() => startCall())}
-            disabled={!state()?.handoff}
+            disabled={state()?.call?.phase !== "ready"}
           >
             Start call
           </button>
@@ -181,11 +176,30 @@ export function Dashboard(props: DashboardProps) {
       </section>
 
       <section class="card">
+        <h2>Recording</h2>
+        <div class="stats-grid">
+          <p>
+            State
+            <strong>{state()?.recording.phase ?? "idle"}</strong>
+          </p>
+          <p>
+            Saved chunks
+            <strong>{state()?.recording.chunkCount ?? 0}</strong>
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
         <h2>Sync status</h2>
-        <p class="muted">
-          Sync configuration should come from the web handoff, not from manual
-          entry in the extension.
-        </p>
+        <Show when={!state()?.sync.signedIn}>
+          <p class="muted">
+            Not signed in. Send the call from CRM again to sign in.
+          </p>
+        </Show>
+        <Show when={state()?.sync.lastSyncError}>
+          <p class="muted">Last error: {state()?.sync.lastSyncError}</p>
+        </Show>
+
         <div class="button-row">
           <button
             class="secondary"
