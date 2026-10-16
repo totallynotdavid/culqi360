@@ -59,7 +59,7 @@ export interface Transaction {
     key: K,
     value: MetaValues[K],
   ): Promise<void>;
-  /** `dueAt` holds the job back until then; it is due now by default. */
+  /** `dueAt` holds the job back until then. It defaults to now. */
   enqueue(job: QueueJob, dueAt?: number): Promise<number>;
 }
 
@@ -91,7 +91,7 @@ function wrap(transaction: IDBTransaction): Transaction {
     delete: async (name, key) => {
       await settle(store(name).delete(key));
     },
-    // IndexedDB cannot relate a key to its value type; setMeta is the only writer.
+    // IndexedDB cannot relate a key to its value type. setMeta is the only writer.
     getMeta: async <K extends keyof MetaValues>(key: K) =>
       (await tx.get("meta", key))?.value as MetaValues[K] | undefined,
     setMeta: (key, value) => tx.put("meta", { key, value }),

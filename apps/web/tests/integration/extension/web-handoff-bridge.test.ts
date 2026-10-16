@@ -19,46 +19,57 @@ import {
 
 import { handoffLeadToExtension } from "~/features/extension/runtime";
 
-import { verifyExternalHandoff } from "../../../../extension/src/services/external-auth";
+import { claimHandoff } from "../../../../extension/src/services/external-auth";
 
 const WEB_ORIGIN = "http://localhost:3000";
-const ED25519_SPKI_PREFIX_BYTES = 12;
 
-function rawPublicKeyBase64Url(): string {
-  const spki = Buffer.from(
-    process.env.EXTENSION_HANDOFF_PUBLIC_KEY_SPKI_BASE64 ?? "",
-    "base64",
-  );
-  return spki.subarray(ED25519_SPKI_PREFIX_BYTES).toString("base64url");
+// The extension's own claim code runs here; only its HTTP call is answered by
+// the real claim service instead of a network.
+function serveClaimsFrom(
+  service: ReturnType<typeof createExtensionScenario>["service"],
+) {
+  vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
+    const body: { handoffToken: string; installationId: string } = JSON.parse(
+      init.body,
+    );
+    const claimed = await service.claimInstallationSession(
+      body,
+      operationAt(new Date()),
+    );
+    if (!claimed.ok) {
+      return Response.json(
+        { error: claimed.error.code ?? claimed.error.kind },
+        { status: 401 },
+      );
+    }
+    return Response.json(claimed.value);
+  });
 }
 
 async function extensionReply(token: string, senderUrl: string) {
-  try {
-    const verified = await verifyExternalHandoff({
-      token,
-      sender: { url: senderUrl },
-    });
-    return {
-      ok: true,
-      executiveState: {
-        presenceStatus: "ready",
-        syncHealth: "ok",
-        assignmentId: verified.handoff.assignmentId,
-        contactId: verified.handoff.contactId,
-        phone: verified.handoff.phone,
-        presenceUpdatedAt: Date.now(),
-        syncUpdatedAt: Date.now(),
-      },
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
+  const claimed = await claimHandoff({
+    token,
+    installationId: crypto.randomUUID(),
+    origin: new URL(senderUrl).origin,
+  });
+  if (!claimed.ok) {
+    return { ok: false, error: claimed.error };
   }
+  return {
+    ok: true,
+    executiveState: {
+      presenceStatus: "ready",
+      syncHealth: "ok",
+      assignmentId: claimed.value.claims.assignmentId,
+      contactId: claimed.value.claims.contactId,
+      phone: claimed.value.claims.phone,
+      presenceUpdatedAt: Date.now(),
+      syncUpdatedAt: Date.now(),
+    },
+  };
 }
 
-// Simulate `onMessageExternal`; token verification remains the extension code.
+// Simulates `onMessageExternal`.
 function installExtension(senderUrl: string) {
   const runtime = {
     lastError: undefined,
@@ -78,11 +89,6 @@ describe("web handoff to the extension", () => {
 
   beforeAll(async () => {
     ctx = await createExtensionFixture("extension-web-handoff-bridge");
-    vi.stubEnv("VITE_CRM_WEB_ORIGIN", WEB_ORIGIN);
-    vi.stubEnv(
-      "VITE_CRM_HANDOFF_PUBLIC_KEY_RAW_BASE64",
-      rawPublicKeyBase64Url(),
-    );
     vi.stubEnv("VITE_CRM_EXTENSION_ID", "ext-test");
   });
 
@@ -96,10 +102,12 @@ describe("web handoff to the extension", () => {
 
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "chrome");
+    vi.unstubAllGlobals();
   });
 
   async function signHandoffToken() {
     const scenario = createExtensionScenario(ctx);
+    serveClaimsFrom(scenario.service);
     const assignmentId = await scenario.assignment();
     const result = await scenario.service.createHandoffToken(
       {
@@ -137,7 +145,7 @@ describe("web handoff to the extension", () => {
 
     expect(outcome).toEqual({
       status: "refused",
-      reason: "untrusted sender origin",
+      reason: "handoff token was issued for another origin",
     });
   });
 });

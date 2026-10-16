@@ -130,7 +130,7 @@ export interface DatabaseDump {
   stores: Record<string, Record<string, unknown>[]>;
 }
 
-/** Reads every store of the extension database; blobs become their size. */
+/** Reads every store of the extension database. It reports blobs by size. */
 export async function dumpDatabase(page: Page): Promise<DatabaseDump | null> {
   return page.evaluate(async (name) => {
     const known = await indexedDB.databases();

@@ -119,6 +119,28 @@ test.describe("the server verifies the handoff, not the extension", () => {
     }
   });
 
+  test("does not send a token to an origin it was not issued for", async () => {
+    const receiver = await createReceiver();
+    const session = await launchExtensionSession();
+
+    try {
+      const popup = await openPopupPage(session);
+      const token = receiver.issueHandoff({ origin: "https://other.example" });
+      const { response } = await handOff(session, receiver, token);
+      expect(response).toMatchObject({
+        ok: false,
+        error: expect.stringContaining("another origin"),
+      });
+      expect(
+        receiver.requests.some((request) => request.path.includes("/claim")),
+      ).toBe(false);
+      expect(await rows(popup, "calls")).toEqual([]);
+    } finally {
+      await closeExtensionSession(session);
+      await receiver.close();
+    }
+  });
+
   test("does not call the server for a token that is not a handoff", async () => {
     const receiver = await createReceiver();
     const session = await launchExtensionSession();
