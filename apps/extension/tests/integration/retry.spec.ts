@@ -43,8 +43,8 @@ test.describe("a failed upload is tried again", () => {
       const call = await beginCall(session, receiver);
       const before = Date.now();
       await startRecording(call);
-      await waitForChunks(call.popup, 2);
 
+      // Watch from the start: the first backoff may be as short as one second.
       const segmentZero = async () =>
         (await queueOf(call.popup)).find(
           (row) => row.job.kind === "recording.segment" && row.job.seq === 0,
@@ -53,8 +53,8 @@ test.describe("a failed upload is tried again", () => {
       const row = await segmentZero();
       const after = Date.now();
       expect(row?.lastError).toContain("503");
-      // 2^1 s after the first failure.
-      expect(row?.nextAttemptAt).toBeGreaterThanOrEqual(before + 2_000);
+      // Half to all of 2^1 s after the first failure.
+      expect(row?.nextAttemptAt).toBeGreaterThanOrEqual(before + 1_000);
       expect(row?.nextAttemptAt).toBeLessThanOrEqual(after + 2_000);
 
       await expect
