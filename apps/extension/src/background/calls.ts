@@ -52,7 +52,7 @@ async function requireCall(
   return call;
 }
 
-export async function assertNoLiveCall(tx: Transaction): Promise<void> {
+async function assertNoLiveCall(tx: Transaction): Promise<void> {
   if (isLiveCall(await latestCall(tx))) {
     throw new Error("a call is already active");
   }

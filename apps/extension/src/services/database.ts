@@ -6,7 +6,7 @@ import type {
   RecordingRow,
 } from "@/src/domain/model";
 
-export const DATABASE_NAME = "crm_extension" as const;
+const DATABASE_NAME = "crm_extension" as const;
 const DATABASE_VERSION = 1;
 
 interface MetaValues {
