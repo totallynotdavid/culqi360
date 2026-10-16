@@ -401,42 +401,12 @@ const DEFAULT_HALFTONE_SETTINGS: HalftoneStudioSettings = {
   animation: { ...DEFAULT_SOLID_ANIMATION_SETTINGS },
 };
 
-const LEGACY_GLASS_MATERIAL_SETTINGS: HalftoneMaterialSettings = {
-  surface: "glass",
-  color: "#7d7d7d",
-  roughness: 0.1,
-  metalness: 0.1,
-  thickness: 150,
-  refraction: 2,
-  environmentPower: 5,
-};
-
-function materialMatches(
-  value: Partial<HalftoneMaterialSettings> | undefined,
-  target: HalftoneMaterialSettings,
-) {
-  return (
-    value?.surface === target.surface &&
-    value?.color === target.color &&
-    value?.roughness === target.roughness &&
-    value?.metalness === target.metalness &&
-    value?.thickness === target.thickness &&
-    value?.refraction === target.refraction &&
-    value?.environmentPower === target.environmentPower
-  );
-}
-
 export function normalizeHalftoneStudioSettings(
   settings?: HalftoneStudioSettingsOverrides,
 ): HalftoneStudioSettings {
   const sourceMode =
     settings?.sourceMode ?? DEFAULT_HALFTONE_SETTINGS.sourceMode;
-  const mergedMaterial = normalizeMaterialSettings(settings?.material);
-  const material =
-    mergedMaterial.surface === "glass" &&
-    materialMatches(settings?.material, LEGACY_GLASS_MATERIAL_SETTINGS)
-      ? { ...DEFAULT_GLASS_MATERIAL_SETTINGS }
-      : mergedMaterial;
+  const material = normalizeMaterialSettings(settings?.material);
   const lightingDefaults = getDefaultLightingSettings(material.surface);
   const backgroundDefaults = getDefaultBackgroundSettings(material.surface);
   const animationDefaults = getDefaultAnimationSettings(material.surface);
