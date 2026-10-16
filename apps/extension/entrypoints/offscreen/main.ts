@@ -1,8 +1,11 @@
 import { openStream } from "#tab-capture";
 import { isOffscreenMessage, type RuntimeMessage } from "@/src/domain/messages";
+import { mixChannels, type ChannelMix } from "@/src/services/channel-mix";
+import { openMicrophone } from "@/src/services/microphone";
 import {
   beginRecording,
   finishRecording,
+  recordMicrophoneLost,
   storeChunk,
 } from "@/src/services/recording-store";
 
@@ -10,6 +13,18 @@ const CHUNK_MS = 1000;
 const MIME_TYPE = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
   ? "audio/webm;codecs=opus"
   : "audio/webm";
+
+interface Capture {
+  tab: MediaStream;
+  mic: MediaStream;
+  mix: ChannelMix;
+  /**
+   * Set before the tracks are stopped. Chrome does not fire `ended` for
+   * `stop()` (measured), but an `ended` after release is the recorder letting
+   * go, never a lost device, so the listeners must not rely on that.
+   */
+  released: boolean;
+}
 
 interface ActiveRecorder {
   recorder: MediaRecorder;
@@ -33,17 +48,57 @@ function stopTracks(stream: MediaStream): void {
 }
 
 /**
+ * Open the tab stream before requesting the microphone. Its id is single use,
+ * and an id that is never opened keeps the tab blocked ("Cannot capture a tab
+ * with an active stream") for about a minute. Release the tab stream when the
+ * microphone grant is missing so the id is not stranded.
+ */
+async function openCapture(streamId: string): Promise<Capture> {
+  const tab = await openStream(streamId);
+  let mic: MediaStream | null = null;
+  try {
+    mic = await openMicrophone();
+    const mix = await mixChannels({ mic, tab });
+    return { tab, mic, mix, released: false };
+  } catch (error: unknown) {
+    stopTracks(tab);
+    if (mic) {
+      stopTracks(mic);
+    }
+    throw error;
+  }
+}
+
+async function releaseCapture(capture: Capture): Promise<void> {
+  capture.released = true;
+  stopTracks(capture.tab);
+  stopTracks(capture.mic);
+  await capture.mix
+    .close()
+    .catch((error: unknown) =>
+      console.error("audio context was not closed", error),
+    );
+}
+
+function interrupt(state: ActiveRecorder): void {
+  state.stopRequested = false;
+  if (state.recorder.state !== "inactive") {
+    state.recorder.stop();
+  }
+}
+
+/**
  * Store each chunk before notifying the worker. Sequence numbers are assigned
  * after a successful write, so stored numbers remain 0..n-1 without gaps.
  */
 function wireRecorder(input: {
-  recorder: MediaRecorder;
   recordingId: string;
-  stream: MediaStream;
+  capture: Capture;
   state: ActiveRecorder;
   done: () => void;
 }): void {
-  const { recorder, recordingId, state } = input;
+  const { recordingId, capture, state } = input;
+  const { recorder } = state;
   let nextSeq = 0;
   let chunkStartedAt = Date.now();
   let writes: Promise<void> = Promise.resolve();
@@ -59,10 +114,7 @@ function wireRecorder(input: {
     } catch (error: unknown) {
       console.error(`chunk ${seq} was not saved`, error);
       writeFailed = true;
-      state.stopRequested = false;
-      if (recorder.state !== "inactive") {
-        recorder.stop();
-      }
+      interrupt(state);
       return;
     }
     nextSeq += 1;
@@ -78,17 +130,35 @@ function wireRecorder(input: {
     writes = writes.then(() => storeNext(event.data, startedAt));
   };
 
-  recorder.onerror = () => {
-    state.stopRequested = false;
-    if (recorder.state !== "inactive") {
-      recorder.stop();
-    }
-  };
+  recorder.onerror = () => interrupt(state);
+
+  // The mixed stream never ends by itself. Losing the tab must end the
+  // recording as interrupted.
+  for (const track of capture.tab.getAudioTracks()) {
+    track.addEventListener("ended", () => {
+      if (!capture.released) {
+        interrupt(state);
+      }
+    });
+  }
+
+  // The microphone is the agent's side only. Its loss leaves a silent left
+  // channel, but the tab recording remains useful.
+  for (const track of capture.mic.getAudioTracks()) {
+    track.addEventListener("ended", () => {
+      if (capture.released) {
+        return;
+      }
+      recordMicrophoneLost(recordingId).catch((error: unknown) =>
+        console.error("microphone loss was not saved", error),
+      );
+    });
+  }
 
   recorder.onstop = () => {
     writes
-      .then(() => {
-        stopTracks(input.stream);
+      .then(async () => {
+        await releaseCapture(capture);
         return finishRecording(recordingId, !state.stopRequested);
       })
       .catch((error: unknown) => console.error("close was not queued", error))
@@ -107,11 +177,13 @@ async function startRecorder(callId: string, streamId: string): Promise<void> {
     throw new Error("the recorder is already running");
   }
 
-  const stream = await openStream(streamId);
+  const capture = await openCapture(streamId);
   let begunId: string | null = null;
 
   try {
-    const recorder = new MediaRecorder(stream, { mimeType: MIME_TYPE });
+    const recorder = new MediaRecorder(capture.mix.stream, {
+      mimeType: MIME_TYPE,
+    });
     const recording = await beginRecording(callId);
     begunId = recording.id;
     let done: () => void = () => undefined;
@@ -121,17 +193,11 @@ async function startRecorder(callId: string, streamId: string): Promise<void> {
     const state: ActiveRecorder = { recorder, finished, stopRequested: false };
     active = state;
 
-    wireRecorder({
-      recorder,
-      recordingId: recording.id,
-      stream,
-      state,
-      done,
-    });
+    wireRecorder({ recordingId: recording.id, capture, state, done });
     recorder.start(CHUNK_MS);
   } catch (error: unknown) {
     active = null;
-    stopTracks(stream);
+    await releaseCapture(capture);
     if (begunId !== null) {
       // The create job may already be on its way, so the server recording needs
       // its close.

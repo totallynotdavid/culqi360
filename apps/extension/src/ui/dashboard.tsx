@@ -9,6 +9,11 @@ import {
   startCall,
 } from "@/src/client/runtime-client";
 import type { ExtensionState } from "@/src/domain/model";
+import {
+  MICROPHONE_NOT_ALLOWED,
+  microphonePermission,
+  openPermissionPage,
+} from "@/src/services/microphone";
 
 import "./dashboard.css";
 
@@ -41,6 +46,7 @@ function statusLabel(state: ExtensionState | null): string {
 export function Dashboard(props: DashboardProps) {
   const [state, setState] = createSignal<ExtensionState | null>(null);
   const [error, setError] = createSignal<string | null>(null);
+  const [microphoneGranted, setMicrophoneGranted] = createSignal(true);
 
   const refreshState = async () => {
     const response = await getState();
@@ -74,6 +80,16 @@ export function Dashboard(props: DashboardProps) {
     await refreshState();
   };
 
+  const openPermission = async () => {
+    try {
+      await openPermissionPage();
+    } catch (reason: unknown) {
+      setError(
+        reason instanceof Error ? reason.message : "permission page failed",
+      );
+    }
+  };
+
   onSettled(() => {
     void refreshState();
     const intervalId = window.setInterval(() => {
@@ -81,6 +97,32 @@ export function Dashboard(props: DashboardProps) {
     }, 2500);
 
     return () => window.clearInterval(intervalId);
+  });
+
+  onSettled(() => {
+    let permission: PermissionStatus | null = null;
+    const follow = () => setMicrophoneGranted(permission?.state === "granted");
+
+    // A permission state that cannot be read counts as not granted, so the
+    // agent still gets the button that opens the page that can settle it.
+    const watch = async () => {
+      try {
+        permission = await microphonePermission();
+      } catch (reason: unknown) {
+        console.error("microphone permission was not readable", reason);
+        setMicrophoneGranted(false);
+        return;
+      }
+      permission.onchange = follow;
+      follow();
+    };
+    void watch();
+
+    return () => {
+      if (permission) {
+        permission.onchange = null;
+      }
+    };
   });
 
   return (
@@ -187,6 +229,21 @@ export function Dashboard(props: DashboardProps) {
             <strong>{state()?.recording.chunkCount ?? 0}</strong>
           </p>
         </div>
+        <Show when={!microphoneGranted()}>
+          <p class="error" data-testid="microphone-notice">
+            {MICROPHONE_NOT_ALLOWED}
+          </p>
+          <div class="button-row">
+            <button onClick={() => void openPermission()}>
+              Allow microphone
+            </button>
+          </div>
+        </Show>
+        <Show when={state()?.recording.microphoneLost}>
+          <p class="error" data-testid="microphone-lost">
+            Microphone disconnected. Recording the tab only.
+          </p>
+        </Show>
       </section>
 
       <section class="card">

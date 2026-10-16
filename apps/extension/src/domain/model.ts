@@ -36,6 +36,8 @@ export interface RecordingRow {
   startedAt: number;
   status: RecordingStatus;
   interrupted: boolean;
+  /** Set when the microphone track ended mid-call. The tab is still recorded. */
+  microphoneLostAt: number | null;
 }
 
 export interface ChunkRow {
@@ -81,6 +83,7 @@ export interface ExtensionState {
   recording: {
     phase: RecordingPhase;
     chunkCount: number;
+    microphoneLost: boolean;
   };
   queue: {
     pending: number;

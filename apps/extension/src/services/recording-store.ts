@@ -4,6 +4,7 @@ import type { RecordingRow } from "@/src/domain/model";
 import { isLiveCall } from "@/src/domain/model";
 
 import { commit, type Transaction } from "./database";
+import { enqueueCallMetric } from "./events";
 
 /**
  * Why this call cannot start a recording, or null when it can. A recording
@@ -43,10 +44,35 @@ export async function beginRecording(callId: string): Promise<RecordingRow> {
       startedAt: Date.now(),
       status: "recording",
       interrupted: false,
+      microphoneLostAt: null,
     };
     await tx.put("recordings", recording);
     await tx.enqueue({ kind: "recording.create", recordingId: recording.id });
     return recording;
+  });
+}
+
+/**
+ * Marks the recording as tab-only and queues its metric in one transaction.
+ * Repeated notifications leave an already marked recording unchanged.
+ */
+export function recordMicrophoneLost(recordingId: string): Promise<void> {
+  return commit(async (tx) => {
+    const recording = await tx.get("recordings", recordingId);
+    if (
+      recording?.status !== "recording" ||
+      recording.microphoneLostAt != null
+    ) {
+      return;
+    }
+
+    const lostAt = Date.now();
+    await tx.put("recordings", { ...recording, microphoneLostAt: lostAt });
+    await enqueueCallMetric(tx, {
+      event: "microphone_lost",
+      sessionId: recording.callId,
+      at: lostAt,
+    });
   });
 }
 

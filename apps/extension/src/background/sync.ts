@@ -1,8 +1,7 @@
 import { commit } from "@/src/services/database";
+import { enqueueEvent } from "@/src/services/events";
 import { flushDue, flushNow, nextDueAt } from "@/src/services/outbox";
 import { readSession } from "@/src/services/session";
-
-import { enqueueEvent } from "./calls";
 
 export const HEARTBEAT_ALARM = "crm.sync" as const;
 const RETRY_ALARM = "crm.retry" as const;

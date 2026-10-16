@@ -3,15 +3,8 @@ import type { ExecutivePresenceStatus } from "@crm/contracts/extension";
 import type { CallRow } from "@/src/domain/model";
 import { isLiveCall } from "@/src/domain/model";
 import { commit, type Transaction } from "@/src/services/database";
+import { enqueueCallMetric, enqueueEvent } from "@/src/services/events";
 import type { ClaimedHandoff } from "@/src/services/external-auth";
-
-export function enqueueEvent(
-  tx: Transaction,
-  type: string,
-  payload: Record<string, unknown>,
-): Promise<number> {
-  return tx.enqueue({ kind: "event", id: crypto.randomUUID(), type, payload });
-}
 
 function enqueuePresence(
   tx: Transaction,
@@ -113,7 +106,7 @@ export function startCall(): Promise<void> {
     });
     await enqueuePresence(tx, "dialing", call, now);
     if (previousEnd !== null) {
-      await enqueueEvent(tx, "call.metric", {
+      await enqueueCallMetric(tx, {
         event: "between_calls",
         sessionId: call.id,
         idleSeconds: Math.round((now - previousEnd) / 1000),
@@ -163,7 +156,7 @@ export function endCall(input: {
       notes: input.notes ?? null,
       at: now,
     });
-    await enqueueEvent(tx, "call.metric", {
+    await enqueueCallMetric(tx, {
       event: "duration",
       sessionId: call.id,
       durationSeconds: call.connectedAt

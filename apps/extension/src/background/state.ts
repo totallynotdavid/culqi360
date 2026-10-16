@@ -21,7 +21,11 @@ export async function readState(): Promise<ExtensionState> {
 
     return {
       call,
-      recording: { phase: recording?.status ?? "idle", chunkCount },
+      recording: {
+        phase: recording?.status ?? "idle",
+        chunkCount,
+        microphoneLost: recording?.microphoneLostAt != null,
+      },
       queue: {
         pending: queue.filter(
           (row) =>
