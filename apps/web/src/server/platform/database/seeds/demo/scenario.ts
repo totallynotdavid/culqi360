@@ -1182,8 +1182,8 @@ export const LEAD_SPECS: LeadSpec[] = [
       18,
     ),
     proposals: [
-      // The one deliberately USD proposal in the seed -- CURRENCIES includes
-      // USD and venue accounts exercise it, but no proposal used to.
+      // The one deliberately USD proposal in the seed, so the USD path is
+      // exercised by a proposal as well as by venue accounts.
       proposal(1, 0.9, 2.35, "accepted", {
         proposedBy: BACK_OFFICE.JOSEFINA,
         proposedOffsetDays: 15,
@@ -1570,7 +1570,7 @@ export const LEAD_SPECS: LeadSpec[] = [
     updatedBy: BACK_OFFICE.GABRIEL,
     stage: "FULFILLMENT",
     // STOCK reactivation surviving past PRICING: nothing re-derives status
-    // after review, so this is a valid, just previously unseeded, state.
+    // after review, so this is a valid state.
     status: "STOCK",
     priority: "P1",
     createdOffsetDays: 14,
