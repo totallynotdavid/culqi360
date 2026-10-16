@@ -4,31 +4,18 @@ import type {
   SyncHealth,
 } from "@crm/contracts/extension";
 
-export const STORAGE_KEY = "crm_extension_state_v1" as const;
+export type CallPhase = "ready" | "dialing" | "active" | "ended";
 
-export type CallPhase = "dialing" | "active" | "ended";
-
-export type RecordingPhase =
-  | "idle"
-  | "starting"
-  | "recording"
-  | "stopping"
-  | "error";
-
-export type QueueJobType =
-  | "executive.presence"
-  | "executive.heartbeat"
-  | "call.lifecycle"
-  | "call.metric"
-  | "recording.chunk"
-  | "recording.completed";
-
-export interface CallSession {
-  sessionId: string;
+/** Key is the server-minted `callId`. The newest `receivedAt` is current. */
+export interface CallRow {
+  id: string;
   assignmentId: string;
   contactId: string;
   phone: string;
-  startedAt: number;
+  clientName: string | null;
+  organizationLabel: string | null;
+  receivedAt: number;
+  startedAt: number | null;
   connectedAt: number | null;
   endedAt: number | null;
   phase: CallPhase;
@@ -36,164 +23,134 @@ export interface CallSession {
   notes: string | null;
 }
 
-export interface AssignmentHandoff {
-  assignmentId: string;
-  contactId: string;
-  phone: string;
-  clientName: string | null;
-  organizationLabel: string | null;
-  receivedAt: number;
-}
+export type RecordingStatus = "recording" | "closing" | "complete";
 
-export interface RecordingState {
-  phase: RecordingPhase;
-  streamId: string | null;
-  startedAt: number | null;
-  stoppedAt: number | null;
-  error: string | null;
-  chunkCount: number;
-}
-
-export interface QueueJob {
+/**
+ * `id` is local so recording works offline. `remoteId` is the server's
+ * `recordingId`, filled in when the create job succeeds.
+ */
+export interface RecordingRow {
   id: string;
+  callId: string;
+  remoteId: string | null;
+  startedAt: number;
+  status: RecordingStatus;
+  interrupted: boolean;
+}
+
+export interface ChunkRow {
+  recordingId: string;
+  seq: number;
+  blob: Blob;
+  bytes: number;
+  startedAt: number;
+  channels: string;
+}
+
+export type QueueJob =
+  | {
+      kind: "event";
+      id: string;
+      type: string;
+      payload: Record<string, unknown>;
+    }
+  | { kind: "recording.create"; recordingId: string }
+  | { kind: "recording.segment"; recordingId: string; seq: number }
+  | { kind: "recording.close"; recordingId: string; interrupted: boolean };
+
+export interface QueueRow {
   sequence: number;
-  type: QueueJobType;
-  payload: Record<string, unknown>;
+  job: QueueJob;
   createdAt: number;
-  attemptCount: number;
+  attempts: number;
   nextAttemptAt: number;
   lastError: string | null;
 }
 
-export interface SyncConfig {
-  apiBaseUrl: string | null;
+export interface SessionRecord {
+  installationId: string;
+  origin: string;
   sessionToken: string | null;
   refreshToken: string | null;
 }
 
+export type RecordingPhase = "idle" | RecordingStatus;
+
 export interface ExtensionState {
-  schemaVersion: 1;
-  installationId: string;
-  nextEventSequence: number;
-  handoff: AssignmentHandoff | null;
-  currentCall: CallSession | null;
-  previousCallEndedAt: number | null;
-  recording: RecordingState;
-  queue: QueueJob[];
-  syncConfig: SyncConfig;
+  call: CallRow | null;
+  recording: {
+    phase: RecordingPhase;
+    chunkCount: number;
+  };
+  queue: {
+    pending: number;
+  };
   sync: {
+    signedIn: boolean;
     lastSyncAt: number | null;
     lastSyncError: string | null;
   };
 }
 
-export function createInitialState(): ExtensionState {
-  return {
-    schemaVersion: 1,
-    installationId: crypto.randomUUID(),
-    nextEventSequence: 1,
-    handoff: null,
-    currentCall: null,
-    previousCallEndedAt: null,
-    recording: {
-      phase: "idle",
-      streamId: null,
-      startedAt: null,
-      stoppedAt: null,
-      error: null,
-      chunkCount: 0,
-    },
-    queue: [],
-    syncConfig: {
-      apiBaseUrl: null,
-      sessionToken: null,
-      refreshToken: null,
-    },
-    sync: {
-      lastSyncAt: null,
-      lastSyncError: null,
-    },
-  };
+export function isLiveCall(call: CallRow | null): call is CallRow {
+  return call?.phase === "dialing" || call?.phase === "active";
 }
 
-function getPresenceStatus(state: ExtensionState): ExecutivePresenceStatus {
-  const activeCall = state.currentCall;
-  if (activeCall?.phase === "dialing") {
-    return "dialing";
-  }
+function presenceStatus(call: CallRow | null): ExecutivePresenceStatus {
+  if (!call) return "idle";
 
-  if (activeCall?.phase === "active") {
-    return "active";
+  switch (call.phase) {
+    case "ready":
+      return "ready";
+    case "dialing":
+      return "dialing";
+    case "active":
+      return "active";
+    case "ended":
+      return "wrap_up";
+    default:
+      return call.phase satisfies never;
   }
-
-  if (activeCall?.phase === "ended") {
-    return "wrap_up";
-  }
-
-  if (state.handoff) {
-    return "ready";
-  }
-
-  return "idle";
 }
 
-function getPresenceUpdatedAt(state: ExtensionState): number | null {
-  const activeCall = state.currentCall;
-  if (activeCall?.phase === "dialing") {
-    return activeCall.startedAt;
-  }
+function presenceUpdatedAt(call: CallRow | null): number | null {
+  if (!call) return null;
 
-  if (activeCall?.phase === "active") {
-    return activeCall.connectedAt ?? activeCall.startedAt;
+  switch (call.phase) {
+    case "ready":
+      return call.receivedAt;
+    case "dialing":
+      return call.startedAt;
+    case "active":
+      return call.connectedAt ?? call.startedAt;
+    case "ended":
+      return call.endedAt ?? call.startedAt;
+    default:
+      return call.phase satisfies never;
   }
-
-  if (activeCall?.phase === "ended") {
-    return activeCall.endedAt ?? activeCall.startedAt;
-  }
-
-  if (state.handoff) {
-    return state.handoff.receivedAt;
-  }
-
-  return null;
 }
 
-function getSyncHealth(state: ExtensionState): SyncHealth {
-  const hasQueuedBusinessWork = state.queue.some(
-    (job) => job.type !== "executive.heartbeat",
-  );
-
-  if (
-    state.queue.length > 0 &&
-    state.syncConfig.sessionToken === null &&
-    state.syncConfig.refreshToken === null
-  ) {
+function syncHealth(state: ExtensionState): SyncHealth {
+  if (state.queue.pending > 0 && !state.sync.signedIn) {
     return "reauth_required";
   }
-
-  if (state.queue.length > 0 && state.sync.lastSyncError) {
+  if (state.queue.pending > 0 && state.sync.lastSyncError) {
     return "error";
   }
-
-  if (hasQueuedBusinessWork) {
-    return "pending";
-  }
-
-  return "ok";
+  return state.queue.pending > 0 ? "pending" : "ok";
 }
 
 export function getExecutiveState(
   state: ExtensionState,
 ): ExecutiveStateSnapshot {
-  const activeCall = state.currentCall;
+  const call = state.call;
   return {
-    presenceStatus: getPresenceStatus(state),
-    syncHealth: getSyncHealth(state),
-    assignmentId:
-      state.handoff?.assignmentId ?? activeCall?.assignmentId ?? null,
-    contactId: state.handoff?.contactId ?? activeCall?.contactId ?? null,
-    phone: state.handoff?.phone ?? activeCall?.phone ?? null,
-    presenceUpdatedAt: getPresenceUpdatedAt(state),
+    presenceStatus: presenceStatus(call),
+    syncHealth: syncHealth(state),
+    assignmentId: call?.assignmentId ?? null,
+    contactId: call?.contactId ?? null,
+    phone: call?.phone ?? null,
+    presenceUpdatedAt: presenceUpdatedAt(call),
     syncUpdatedAt: state.sync.lastSyncAt,
   };
 }

@@ -6,53 +6,20 @@ import { isBridgeResponse } from "@crm/contracts/extension";
 import type { ExtensionState } from "./model";
 
 export type RuntimeMessage =
-  | {
-      type: "state.get";
-    }
-  | {
-      type: "call.start";
-      assignmentId?: string;
-      contactId?: string;
-      phone?: string;
-    }
-  | {
-      type: "call.connected";
-    }
-  | {
-      type: "call.end";
-      outcome?: string;
-      notes?: string;
-    }
-  | {
-      type: "recording.start";
-      tabId: number;
-    }
-  | {
-      type: "recording.stop";
-    }
-  | {
-      type: "recording.chunk";
-      sessionId: string;
-      chunkId: string;
-      mimeType: string;
-      dataBase64: string;
-      durationMs: number;
-      createdAt: number;
-    }
-  | {
-      type: "recording.completed";
-      sessionId: string;
-      createdAt: number;
-    }
-  | {
-      type: "sync.flush";
-    }
-  | {
-      type: "sync.configure";
-      apiBaseUrl: string;
-      sessionToken: string;
-      refreshToken: string;
-    };
+  | { type: "state.get" }
+  | { type: "call.start" }
+  | { type: "call.connected" }
+  | { type: "call.end"; outcome?: string; notes?: string }
+  | { type: "recording.start"; tabId: number }
+  | { type: "recording.stop" }
+  /** From the offscreen document: the chunk is already stored under this key. */
+  | { type: "recording.chunk"; recordingId: string; seq: number }
+  | { type: "recording.finished"; recordingId: string }
+  | { type: "sync.flush" };
+
+export type OffscreenMessage =
+  | { type: "offscreen.recording.start"; callId: string; streamId: string }
+  | { type: "offscreen.recording.stop" };
 
 export type RuntimeResponse =
   | (Extract<BridgeResponse, { ok: true }> & {
@@ -66,6 +33,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
 export function isRuntimeMessage(value: unknown): value is RuntimeMessage {
   if (!isObject(value) || typeof value.type !== "string") {
     return false;
@@ -73,48 +44,50 @@ export function isRuntimeMessage(value: unknown): value is RuntimeMessage {
 
   switch (value.type) {
     case "state.get":
+    case "call.start":
     case "call.connected":
     case "recording.stop":
     case "sync.flush":
       return true;
-    case "call.start":
-      return (
-        (value.assignmentId === undefined ||
-          typeof value.assignmentId === "string") &&
-        (value.contactId === undefined ||
-          typeof value.contactId === "string") &&
-        (value.phone === undefined || typeof value.phone === "string")
-      );
     case "call.end":
-      return (
-        (value.outcome === undefined || typeof value.outcome === "string") &&
-        (value.notes === undefined || typeof value.notes === "string")
-      );
+      return isOptionalString(value.outcome) && isOptionalString(value.notes);
     case "recording.start":
       return typeof value.tabId === "number";
     case "recording.chunk":
       return (
-        typeof value.sessionId === "string" &&
-        typeof value.chunkId === "string" &&
-        typeof value.mimeType === "string" &&
-        typeof value.dataBase64 === "string" &&
-        typeof value.durationMs === "number" &&
-        typeof value.createdAt === "number"
+        typeof value.recordingId === "string" && typeof value.seq === "number"
       );
-    case "recording.completed":
+    case "recording.finished":
+      return typeof value.recordingId === "string";
+    default:
+      return false;
+  }
+}
+
+export function isOffscreenMessage(value: unknown): value is OffscreenMessage {
+  if (!isObject(value)) {
+    return false;
+  }
+
+  switch (value.type) {
+    case "offscreen.recording.stop":
+      return true;
+    case "offscreen.recording.start":
       return (
-        typeof value.sessionId === "string" &&
-        typeof value.createdAt === "number"
-      );
-    case "sync.configure":
-      return (
-        typeof value.apiBaseUrl === "string" &&
-        typeof value.sessionToken === "string" &&
-        typeof value.refreshToken === "string"
+        typeof value.callId === "string" && typeof value.streamId === "string"
       );
     default:
       return false;
   }
+}
+
+function isExtensionState(value: unknown): value is ExtensionState {
+  return (
+    isObject(value) &&
+    isObject(value.recording) &&
+    isObject(value.queue) &&
+    isObject(value.sync)
+  );
 }
 
 export function isRuntimeResponse(value: unknown): value is RuntimeResponse {
@@ -123,9 +96,7 @@ export function isRuntimeResponse(value: unknown): value is RuntimeResponse {
   }
 
   const state = Reflect.get(value, "state");
-  if (value.ok) {
-    return isObject(state) && state.schemaVersion === 1;
-  }
-
-  return state === undefined || (isObject(state) && state.schemaVersion === 1);
+  return value.ok
+    ? isExtensionState(state)
+    : state === undefined || isExtensionState(state);
 }
