@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import solid from "@solidjs/vite-plugin";
 import { defineConfig } from "wxt";
 
@@ -19,7 +21,20 @@ const extensionHostPermissions = [
   "http://localhost/*",
 ].filter((value): value is string => typeof value === "string" && value !== "");
 
+/**
+ * The test build swaps `#tab-capture` because headless Chromium cannot grant
+ * the active-tab invocation required by `getMediaStreamId`. WXT merges its
+ * aliases over `vite.resolve.alias`, so this must be a top-level alias.
+ */
+const tabCaptureModule =
+  process.env.CRM_FAKE_TAB_CAPTURE === "1"
+    ? "tab-capture.fake.ts"
+    : "tab-capture.ts";
+
 export default defineConfig({
+  alias: {
+    "#tab-capture": path.resolve(__dirname, "src/services", tabCaptureModule),
+  },
   vite: () => ({
     plugins: [solid()],
     resolve: { dedupe: ["solid-js", "@solidjs/web"] },

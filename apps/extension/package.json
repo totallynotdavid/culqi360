@@ -6,14 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
-    "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
-    "build:firefox": "wxt build -b firefox",
+    "build:test": "CRM_FAKE_TAB_CAPTURE=1 wxt build --mode test",
     "zip": "wxt zip",
-    "zip:firefox": "wxt zip -b firefox",
     "typecheck": "tsc --noEmit",
-    "test:integration": "bun run build && playwright test",
-    "test:integration:headed": "bun run build && playwright test --headed",
+    "test:integration": "bun run build:test && playwright test",
+    "test:integration:headed": "bun run build:test && playwright test --headed",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
