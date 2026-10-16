@@ -53,6 +53,15 @@ export interface ExecutiveStateSnapshot {
   syncUpdatedAt: number | null;
 }
 
+/**
+ * The `event` of a `call.metric` job. `microphone_lost` says the agent's
+ * microphone track ended mid-call, so the recording holds only the tab.
+ */
+export type ExtensionCallMetricEvent =
+  | "between_calls"
+  | "duration"
+  | "microphone_lost";
+
 export interface StateGetMessage {
   type: "state.get";
 }

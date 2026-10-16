@@ -1,4 +1,7 @@
-import type { EXTENSION_HANDOFF_TOKEN_ISSUER } from "@crm/contracts/extension";
+import type {
+  EXTENSION_HANDOFF_TOKEN_ISSUER,
+  ExtensionCallMetricEvent,
+} from "@crm/contracts/extension";
 
 import type { InstallationId } from "~/domain/ids";
 import { isPlainRecord } from "~/shared/type-guards";
@@ -112,7 +115,7 @@ export type CallLifecyclePayload =
   | CallLifecycleEndedPayload;
 
 export interface CallMetricPayload {
-  event: "between_calls" | "duration";
+  event: ExtensionCallMetricEvent;
   sessionId: string;
   [key: string]: unknown;
 }
