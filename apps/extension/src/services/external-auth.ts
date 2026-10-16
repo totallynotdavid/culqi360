@@ -5,7 +5,9 @@ import {
   type ExtensionHandoffClaims,
 } from "@crm/contracts/extension";
 
-import { Err, Ok, type Result } from "@/src/domain/result";
+// Relative on purpose: apps/web tests import this file, and the `@/` alias
+// resolves to the web app's root there.
+import { Err, Ok, type Result } from "../domain/result";
 
 export interface ClaimedHandoff {
   claims: ExtensionHandoffClaims;
@@ -66,6 +68,11 @@ export async function claimHandoff(input: {
   const decoded = decodeClaims(input.token);
   if (!decoded.ok) {
     return decoded;
+  }
+  // The claim is posted to `input.origin`, so a token minted for another
+  // origin must not go there.
+  if (decoded.value.origin !== input.origin) {
+    return Err("handoff token was issued for another origin");
   }
 
   let response: Response;
