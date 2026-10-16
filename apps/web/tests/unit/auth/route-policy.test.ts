@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ROLES } from "~/domain/auth/access/rbac";
 import { ROUTE_MANIFEST } from "~/domain/auth/access/route-manifest";
 import {
   canAccessPath,
@@ -7,7 +8,7 @@ import {
   getRoutePermission,
 } from "~/domain/auth/access/route-policy";
 import { SIDEBAR_ENTRIES } from "~/domain/navigation/config";
-import { getHeaderRoute } from "~/domain/navigation/policy";
+import { getHeaderRoute, getSidebarEntries } from "~/domain/navigation/policy";
 
 describe("route permissions", () => {
   it("resolves static and dynamic route permissions", () => {
@@ -64,5 +65,15 @@ describe("nav config structural invariants", () => {
     ).map((r) => r.href);
 
     expect(unregistered).toEqual([]);
+  });
+
+  it("gives every sidebar entry a distinct position within its section", () => {
+    for (const role of ROLES) {
+      for (const section of ["primary", "secondary"] as const) {
+        const orders = getSidebarEntries(role, section).map((e) => e.order);
+
+        expect(new Set(orders).size).toBe(orders.length);
+      }
+    }
   });
 });

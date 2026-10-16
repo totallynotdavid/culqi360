@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { handoffLeadToExtension } from "~/features/extension/runtime";
+import {
+  focusExtensionWindow,
+  handoffLeadToExtension,
+} from "~/features/extension/runtime";
 
 describe("extension runtime bridge", () => {
   beforeEach(() => {
@@ -42,10 +45,66 @@ describe("extension runtime bridge", () => {
 
     const result = await handoffLeadToExtension({ token: "handoff-token" });
 
-    expect(result).toMatchObject({ ok: false });
-    expect(result.executiveState?.presenceStatus).toBe("active");
-    expect(result.executiveState?.assignmentId).toBe(
-      "0199d3a0-0000-7000-8000-000000000042",
-    );
+    expect(result).toMatchObject({
+      status: "refused",
+      reason: "cannot replace handoff during an active call",
+    });
+    expect(result.status === "refused" && result.executiveState).toMatchObject({
+      presenceStatus: "active",
+      assignmentId: "0199d3a0-0000-7000-8000-000000000042",
+    });
+  });
+
+  it("reports an unreachable extension when the runtime call fails", async () => {
+    const runtime = {
+      lastError: { message: "Could not establish connection." },
+      sendMessage: (
+        _extensionId: string,
+        _message: unknown,
+        callback: (response?: unknown) => void,
+      ) => callback(undefined),
+    };
+    Object.assign(globalThis, { chrome: { runtime } });
+
+    const result = await handoffLeadToExtension({ token: "handoff-token" });
+
+    expect(result).toEqual({
+      status: "unreachable",
+      reason: "Could not establish connection.",
+    });
+  });
+
+  it("reports an unreachable extension when the runtime throws while sending", async () => {
+    const runtime = {
+      lastError: undefined,
+      sendMessage: () => {
+        throw new TypeError("Invalid extension id");
+      },
+    };
+    Object.assign(globalThis, { chrome: { runtime } });
+
+    const result = await handoffLeadToExtension({ token: "handoff-token" });
+
+    expect(result).toEqual({
+      status: "unreachable",
+      reason: "Invalid extension id",
+    });
+  });
+
+  it("does not throw when focusing the extension window fails", () => {
+    const runtime = {
+      sendMessage: () => {
+        throw new TypeError("Invalid extension id");
+      },
+    };
+    Object.assign(globalThis, { chrome: { runtime } });
+
+    expect(() => focusExtensionWindow()).not.toThrow();
+  });
+
+  it("reports an unreachable extension when the page has no extension runtime", async () => {
+    const result = await handoffLeadToExtension({ token: "handoff-token" });
+
+    expect(result.status).toBe("unreachable");
   });
 });
