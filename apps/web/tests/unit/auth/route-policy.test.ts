@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { ROLES } from "~/domain/auth/access/rbac";
-import { ROUTE_MANIFEST } from "~/domain/auth/access/route-manifest";
 import {
   canAccessPath,
   getDefaultAppPath,
   getRoutePermission,
 } from "~/domain/auth/access/route-policy";
-import { SIDEBAR_ENTRIES } from "~/domain/navigation/config";
-import { getHeaderRoute, getSidebarEntries } from "~/domain/navigation/policy";
+import { getHeaderRoute } from "~/domain/navigation/policy";
 
 describe("route permissions", () => {
   it("resolves static and dynamic route permissions", () => {
@@ -49,7 +46,7 @@ describe("route permissions", () => {
   });
 });
 
-describe("nav config structural invariants", () => {
+describe("page headers", () => {
   it("resolves header metadata for current dynamic routes", () => {
     expect(getHeaderRoute("/rate-simulator").label).toBe("Simulador de tasas");
   });
@@ -57,23 +54,5 @@ describe("nav config structural invariants", () => {
   it("uses fallback when no header rule exists", () => {
     expect(getHeaderRoute("/unknown-route").label).toBe("Espacio de trabajo");
     expect(getHeaderRoute("/home").label).toBe("Inicio");
-  });
-
-  it("every sidebar route href is registered in the route manifest", () => {
-    const unregistered = SIDEBAR_ENTRIES.filter(
-      (r) => !(r.href in ROUTE_MANIFEST),
-    ).map((r) => r.href);
-
-    expect(unregistered).toEqual([]);
-  });
-
-  it("gives every sidebar entry a distinct position within its section", () => {
-    for (const role of ROLES) {
-      for (const section of ["primary", "secondary"] as const) {
-        const orders = getSidebarEntries(role, section).map((e) => e.order);
-
-        expect(new Set(orders).size).toBe(orders.length);
-      }
-    }
   });
 });

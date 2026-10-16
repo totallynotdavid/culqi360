@@ -1,3 +1,4 @@
+import type { AppPath } from "~/domain/auth/access/route-manifest";
 import type { TileColor } from "~/shared/ui/tile-color";
 
 export type RouteIcon =
@@ -18,14 +19,14 @@ export type RouteIcon =
 export type SidebarSection = "primary" | "secondary";
 
 export interface SidebarChild {
-  href: string;
+  href: AppPath;
   label: string;
   order: number;
 }
 
 export interface SidebarEntry {
   id: string;
-  href: string;
+  href: AppPath;
   activePrefixes: string[];
   label: string;
   navLabel?: string;
