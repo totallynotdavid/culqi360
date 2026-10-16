@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   chromium,
   type BrowserContext,
+  type CDPSession,
   type Page,
   type Worker,
 } from "@playwright/test";
@@ -35,16 +36,54 @@ export interface ExtensionSession {
   context: BrowserContext;
   extensionId: string;
   userDataDir: string;
+  /** Set by `grantMicrophone`. Detaching it takes the grant back. */
+  permissions?: CDPSession;
 }
 
+/**
+ * No `--use-fake-ui-for-media-stream`: it breaks tab-capture `getUserMedia`
+ * (`NotFoundError`), and it hides the missing-grant path. The microphone grant
+ * is given to the extension origin instead, as one Allow click would.
+ */
 function extensionArgs(extensionOutputPath: string): string[] {
   return [
     "--no-sandbox",
     "--use-fake-device-for-media-stream",
-    "--use-fake-ui-for-media-stream",
     `--disable-extensions-except=${extensionOutputPath}`,
     `--load-extension=${extensionOutputPath}`,
   ];
+}
+
+/**
+ * Playwright's `grantPermissions` refuses a `chrome-extension://` origin
+ * ("Permission can't be granted to opaque origins"), so this speaks CDP. Chrome
+ * drops a CDP grant when the session that made it detaches (measured: the same
+ * page asks `denied` again after `cdp.detach()`), so the session and its blank
+ * page stay open until `closeExtensionSession`.
+ */
+export async function grantMicrophone(
+  session: ExtensionSession,
+): Promise<void> {
+  const page = await session.context.newPage();
+  const permissions = await session.context.newCDPSession(page);
+  await permissions.send("Browser.grantPermissions", {
+    origin: `chrome-extension://${session.extensionId}`,
+    permissions: ["audioCapture"],
+  });
+  session.permissions = permissions;
+}
+
+/**
+ * Chrome ends every live microphone track when its permission is reset, which
+ * is the mid-call loss the recorder must survive.
+ */
+export async function revokeMicrophone(
+  session: ExtensionSession,
+): Promise<void> {
+  if (!session.permissions) {
+    throw new Error("the microphone was never granted in this session");
+  }
+  await session.permissions.send("Browser.resetPermissions");
 }
 
 export async function serviceWorkerOf(
@@ -55,7 +94,17 @@ export async function serviceWorkerOf(
   );
 }
 
+/** A session whose extension origin holds the microphone grant. */
 export async function launchExtensionSession(
+  input: { userDataDir?: string } = {},
+): Promise<ExtensionSession> {
+  const session = await launchUngrantedSession(input);
+  await grantMicrophone(session);
+  return session;
+}
+
+/** A session that never clicked Allow, like a fresh install. */
+export async function launchUngrantedSession(
   input: { userDataDir?: string } = {},
 ): Promise<ExtensionSession> {
   const userDataDir =
