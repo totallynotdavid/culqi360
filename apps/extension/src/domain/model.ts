@@ -67,6 +67,16 @@ export interface QueueRow {
   attempts: number;
   nextAttemptAt: number;
   lastError: string | null;
+  /**
+   * Set when the job is parked: the server refused it for good, or it failed
+   * too often. A parked job is never sent again until the agent asks.
+   */
+  deadAt: number | null;
+}
+
+/** A heartbeat only reports presence, so an old one has no value to keep. */
+export function isHeartbeat(job: QueueJob): boolean {
+  return job.kind === "event" && job.type === "executive.heartbeat";
 }
 
 export interface SessionRecord {
@@ -84,9 +94,16 @@ export interface ExtensionState {
     phase: RecordingPhase;
     chunkCount: number;
     microphoneLost: boolean;
+    /** The call is live and has no recording, so a capture can start. */
+    startable: boolean;
+    /** Why the last capture start failed. Shown while a start is still possible. */
+    captureError: string | null;
   };
   queue: {
+    /** Jobs still being sent, without heartbeats. */
     pending: number;
+    /** Parked jobs that wait for the agent to retry them. */
+    dead: number;
   };
   sync: {
     signedIn: boolean;
@@ -136,6 +153,9 @@ function presenceUpdatedAt(call: CallRow | null): number | null {
 function syncHealth(state: ExtensionState): SyncHealth {
   if (state.queue.pending > 0 && !state.sync.signedIn) {
     return "reauth_required";
+  }
+  if (state.queue.dead > 0) {
+    return "error";
   }
   if (state.queue.pending > 0 && state.sync.lastSyncError) {
     return "error";

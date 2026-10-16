@@ -1,4 +1,9 @@
-import type { QueueJob, QueueRow, SessionRecord } from "@/src/domain/model";
+import {
+  isHeartbeat,
+  type QueueJob,
+  type QueueRow,
+  type SessionRecord,
+} from "@/src/domain/model";
 
 import { refreshSession } from "./api";
 import { backoffMs } from "./backoff";
@@ -26,24 +31,68 @@ function recordSuccess(): Promise<void> {
   });
 }
 
+/** The failure that parks a job whatever the server says. */
+const MAX_ATTEMPTS = 20;
+
+/**
+ * Counts the failure. A refusal, or the last allowed attempt, parks the job as
+ * a dead letter with its error. A parked heartbeat is dropped instead: the next
+ * alarm queues a fresh one, and a kept one would stop that. Returns whether the
+ * job left the retry schedule.
+ */
 function recordFailure(
   sequence: number,
-  failure: Extract<Settled, { kind: "retry" }>,
-): Promise<void> {
+  failure: Extract<Settled, { kind: "retry" | "rejected" }>,
+): Promise<boolean> {
   return commit(async (tx) => {
     const row = await tx.get("queue", sequence);
     if (!row) {
-      return;
+      return false;
     }
 
-    const attempts = row.attempts + 1;
-    await tx.put("queue", {
-      ...row,
-      attempts,
-      nextAttemptAt: Date.now() + backoffMs(attempts),
-      lastError: failure.error,
-    });
     await tx.setMeta("lastSyncError", failure.error);
+    const failed = {
+      ...row,
+      attempts: row.attempts + 1,
+      lastError: failure.error,
+    };
+    if (failure.kind === "retry" && failed.attempts < MAX_ATTEMPTS) {
+      await tx.put("queue", {
+        ...failed,
+        nextAttemptAt: Date.now() + backoffMs(failed.attempts),
+      });
+      return false;
+    }
+
+    if (isHeartbeat(row.job)) {
+      await tx.delete("queue", sequence);
+      return true;
+    }
+    await tx.put("queue", { ...failed, deadAt: Date.now() });
+    return true;
+  });
+}
+
+/**
+ * Puts every parked job back on the schedule with a fresh attempt count. Only
+ * the agent asks for this: a dead letter stays out of every pass until then.
+ */
+export function requeueDeadLetters(): Promise<void> {
+  return commit(async (tx) => {
+    const queue = await tx.getAll("queue");
+    const now = Date.now();
+    await Promise.all(
+      queue
+        .filter((row) => row.deadAt != null)
+        .map((row) =>
+          tx.put("queue", {
+            ...row,
+            attempts: 0,
+            nextAttemptAt: now,
+            deadAt: null,
+          }),
+        ),
+    );
   });
 }
 
@@ -61,12 +110,12 @@ async function recoverSession(
   row: QueueRow,
   pass: PassState,
 ): Promise<Settled | null> {
-  const rejected: Settled = {
+  const stillUnauthorized: Settled = {
     kind: "retry",
     error: "server rejected the refreshed session token",
   };
   if (pass.refreshed) {
-    return rejected;
+    return stillUnauthorized;
   }
   pass.refreshed = true;
 
@@ -83,7 +132,7 @@ async function recoverSession(
   await writeSession(refreshed.session);
   pass.session = refreshed.session;
   const outcome = await deliver(row, pass.session);
-  return outcome.kind === "unauthorized" ? rejected : outcome;
+  return outcome.kind === "unauthorized" ? stillUnauthorized : outcome;
 }
 
 async function attempt(
@@ -114,6 +163,9 @@ async function runPass(force: boolean): Promise<PassResult> {
   const queue = await read((tx) => tx.getAll("queue"));
 
   for (const queued of queue) {
+    if (queued.deadAt != null) {
+      continue;
+    }
     const lane = laneOf(queued.job);
     if (held.has(lane)) {
       continue;
@@ -152,8 +204,11 @@ async function settle(
     case "waiting":
       return false;
     case "retry":
-      await recordFailure(row.sequence, outcome);
-      held.add(laneOf(row.job));
+    case "rejected":
+      // A parked job releases its lane, so the jobs behind it still go out.
+      if (!(await recordFailure(row.sequence, outcome))) {
+        held.add(laneOf(row.job));
+      }
       return false;
     default:
       return outcome satisfies never;
@@ -197,7 +252,7 @@ export function flushNow(): Promise<void> {
 export async function nextDueAt(): Promise<number | null> {
   const queue = await read((tx) => tx.getAll("queue"));
   const waiting = queue
-    .filter((row) => row.nextAttemptAt > Date.now())
+    .filter((row) => row.deadAt == null && row.nextAttemptAt > Date.now())
     .map((row) => row.nextAttemptAt);
   return waiting.length === 0 ? null : Math.min(...waiting);
 }

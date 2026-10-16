@@ -15,7 +15,9 @@ export type RuntimeMessage =
   /** From the offscreen document: the chunk is already stored under this key. */
   | { type: "recording.chunk"; recordingId: string; seq: number }
   | { type: "recording.finished"; recordingId: string }
-  | { type: "sync.flush" };
+  | { type: "sync.flush" }
+  /** Sends the parked jobs again. `sync.flush` never touches them. */
+  | { type: "queue.retryDead" };
 
 export type OffscreenMessage =
   | { type: "offscreen.recording.start"; callId: string; streamId: string }
@@ -48,6 +50,7 @@ export function isRuntimeMessage(value: unknown): value is RuntimeMessage {
     case "call.connected":
     case "recording.stop":
     case "sync.flush":
+    case "queue.retryDead":
       return true;
     case "call.end":
       return isOptionalString(value.outcome) && isOptionalString(value.notes);

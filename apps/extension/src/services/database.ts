@@ -13,6 +13,7 @@ interface MetaValues {
   nextSequence: number;
   lastSyncAt: number | null;
   lastSyncError: string | null;
+  captureError: string | null;
   /** Set once the v1 queue is in this database, so a crash cannot import it twice. */
   importedV1: boolean;
 }
@@ -106,11 +107,25 @@ function wrap(transaction: IDBTransaction): Transaction {
         attempts: 0,
         nextAttemptAt: dueAt ?? createdAt,
         lastError: null,
+        deadAt: null,
       });
       return sequence;
     },
   };
   return tx;
+}
+
+/**
+ * Asks the browser to exempt this origin's storage from eviction, because
+ * recorded audio is the only copy until the server completes the recording.
+ * `persist` does not exist in a worker (measured), so the offscreen document
+ * asks. `unlimitedStorage` lifts the quota, not eviction. A refusal is logged.
+ */
+export async function requestPersistentStorage(): Promise<void> {
+  const granted = await navigator.storage.persist().catch(() => false);
+  if (!granted) {
+    console.warn("the browser did not make extension storage persistent");
+  }
 }
 
 function createSchema(database: IDBDatabase): void {

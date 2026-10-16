@@ -5,11 +5,25 @@ import {
 
 import type { SessionRecord } from "@/src/domain/model";
 
-/** How a request ended. A 401 means the tokens need to be refreshed. */
+/**
+ * How a request ended. A 401 means the tokens need to be refreshed. `retry` is
+ * a failure that may pass (408, 425, 429, 5xx, a lost connection). `rejected`
+ * is any other 4xx: the server read the request and refused it, so sending the
+ * same bytes again cannot succeed.
+ */
 export type Reply =
   | { kind: "ok"; response: Response }
   | { kind: "unauthorized" }
-  | { kind: "retry"; error: string };
+  | { kind: "retry"; error: string }
+  | { kind: "rejected"; error: string };
+
+const RETRYABLE_CLIENT_STATUSES = new Set([408, 425, 429]);
+
+function isRejection(status: number): boolean {
+  return (
+    status >= 400 && status < 500 && !RETRYABLE_CLIENT_STATUSES.has(status)
+  );
+}
 
 async function describeFailure(
   label: string,
@@ -33,7 +47,8 @@ async function classify(label: string, response: Response): Promise<Reply> {
   if (response.status === 401) {
     return { kind: "unauthorized" };
   }
-  return { kind: "retry", error: await describeFailure(label, response) };
+  const error = await describeFailure(label, response);
+  return { kind: isRejection(response.status) ? "rejected" : "retry", error };
 }
 
 export async function callApi(

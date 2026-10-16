@@ -1,6 +1,12 @@
+import { isHeartbeat } from "@/src/domain/model";
 import { commit } from "@/src/services/database";
 import { enqueueEvent } from "@/src/services/events";
-import { flushDue, flushNow, nextDueAt } from "@/src/services/outbox";
+import {
+  flushDue,
+  flushNow,
+  nextDueAt,
+  requeueDeadLetters,
+} from "@/src/services/outbox";
 import { readSession } from "@/src/services/session";
 
 export const HEARTBEAT_ALARM = "crm.sync" as const;
@@ -41,6 +47,11 @@ export async function syncNow(): Promise<void> {
   await scheduleRetryWake();
 }
 
+export async function retryDeadLetters(): Promise<void> {
+  await requeueDeadLetters();
+  await syncNow();
+}
+
 export async function enqueueHeartbeat(): Promise<void> {
   if ((await readSession())?.sessionToken == null) {
     return;
@@ -48,10 +59,7 @@ export async function enqueueHeartbeat(): Promise<void> {
 
   await commit(async (tx) => {
     const queue = await tx.getAll("queue");
-    const waiting = queue.some(
-      (row) =>
-        row.job.kind === "event" && row.job.type === "executive.heartbeat",
-    );
+    const waiting = queue.some((row) => isHeartbeat(row.job));
     if (!waiting) {
       await enqueueEvent(tx, "executive.heartbeat", { occurredAt: Date.now() });
     }

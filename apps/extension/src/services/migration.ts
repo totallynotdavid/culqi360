@@ -165,6 +165,7 @@ function toQueueRow(
     attempts: job.attemptCount,
     nextAttemptAt: job.nextAttemptAt,
     lastError: job.lastError,
+    deadAt: null,
   };
 }
 
