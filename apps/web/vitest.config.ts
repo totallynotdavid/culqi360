@@ -1,4 +1,5 @@
 import codspeedPlugin from "@codspeed/vitest-plugin";
+import solid from "@solidjs/vite-plugin";
 import {
   defineConfig,
   type TestProjectInlineConfiguration,
@@ -31,13 +32,15 @@ const projects: TestProjectInlineConfiguration[] = [
   },
   {
     // Browser builds of Solid, so effects run and cleanups fire. The unit
-    // project resolves the server build, where effects never run.
+    // project resolves the server build, where effects never run. Component
+    // tests opt into a DOM with `@vitest-environment happy-dom`.
     extends: true,
+    plugins: [solid()],
     resolve: { conditions: ["browser"] },
     ssr: { resolve: { conditions: ["browser"] } },
     test: {
       name: "client",
-      include: ["tests/client/**/*.test.ts"],
+      include: ["tests/client/**/*.test.{ts,tsx}"],
       environment: "node",
       server: { deps: { inline: [/solid-js/, /@solidjs/] } },
     },
