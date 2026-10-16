@@ -14,8 +14,10 @@ stores, records and uploads, and the states it moves through.
   worker, which registers
   [`src/background/runtime.ts`](src/background/runtime.ts).
 - [`entrypoints/offscreen/main.ts`](entrypoints/offscreen/main.ts) records the
-  tab. Popup and side-panel entrypoints are also under
-  [`entrypoints/`](entrypoints/).
+  agent's microphone and the tab. Popup and side-panel entrypoints are also
+  under [`entrypoints/`](entrypoints/).
+- [`entrypoints/permission/main.ts`](entrypoints/permission/main.ts) is the
+  visible page that asks for the microphone, since an offscreen document cannot.
 - [`src/domain/model.ts`](src/domain/model.ts) and
   [`src/domain/messages.ts`](src/domain/messages.ts) hold the state model and
   the message contracts.
@@ -52,6 +54,9 @@ The integration command builds the extension in test mode (`build:test` sets
 receiver. The test build replaces one module, `#tab-capture`
 ([`src/services/tab-capture.ts`](src/services/tab-capture.ts)), with
 [`tab-capture.fake.ts`](src/services/tab-capture.fake.ts), because a headless
-browser cannot be granted a tab-capture stream and the fake records Chromium's
-fake microphone instead. Install the browser once with
+browser cannot be granted a tab-capture stream, and the fake returns a steady
+880 Hz tone as the tab. The microphone is Chromium's fake device, and the tests
+grant it to the extension origin with CDP `Browser.grantPermissions`. They do
+not pass `--use-fake-ui-for-media-stream`, which breaks tab-capture
+`getUserMedia`. Install the browser once with
 `bunx playwright install chromium`.

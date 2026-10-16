@@ -195,10 +195,40 @@ attempt.
 
 ### Extension recording and upload
 
-The offscreen document records the tab with `MediaRecorder` in 1 s chunks. Each
-chunk goes into IndexedDB with its job in one transaction, and only then does
-the document tell the worker the chunk key, so no audio crosses a message hop
-before it is on disk. A chunk sequence number is taken only after its write
+The offscreen document records the agent's microphone and the tab together. One
+`AudioContext`
+([`channel-mix.ts`](../apps/extension/src/services/channel-mix.ts)) merges the
+microphone into the left channel and the tab into the right, and `MediaRecorder`
+encodes that two-channel stream as Opus in 1 s chunks. Each chunk row and its
+upload carry the layout `mic-left,tab-right` (the `x-channels` header). The tab
+source is also connected to the context's `destination`, because capturing a tab
+mutes the tab's own output for the agent and the routed copy plays it again.
+
+An offscreen document cannot ask for the microphone. The side panel shows
+`microphone not allowed` with a button that opens
+[`permission.html`](../apps/extension/entrypoints/permission/index.html), a
+visible extension page that asks once. After the extension origin holds the
+grant the offscreen document opens the microphone with no page. Without the
+grant the recorder fails with exactly `microphone not allowed`, and the tab
+stream is released, so a retry is not blocked by an unused stream id.
+
+If the microphone track ends mid-call, the recording goes on with the tab only
+and a silent left channel. The offscreen document is the only writer of
+`microphoneLostAt`. Its `ended` listener calls `recordMicrophoneLost`, which in
+one IndexedDB transaction sets the field on the recording row and queues a
+`call.metric` event with `event: "microphone_lost"`. The field moves once, from
+null to a timestamp, and only while the row is `recording`, so a second `ended`
+event, or one after the close was queued, changes nothing. The worker and the
+side panel only read it: the worker copies it into the state as
+`recording.microphoneLost`, and the panel shows the notice on its next poll.
+Stopping the tracks at the end of a recording or after a failed start is not a
+loss: the document marks the capture released first, and its listeners ignore
+any `ended` that follows. If the tab track ends while recording, the recording
+closes as interrupted.
+
+Each chunk goes into IndexedDB with its job in one transaction, and only then
+does the document tell the worker the chunk key, so no audio crosses a message
+hop before it is on disk. A chunk sequence number is taken only after its write
 succeeds, so stored sequence numbers are 0..n-1 without gaps. After a failed
 write no later chunk is stored and the recording closes as interrupted.
 
