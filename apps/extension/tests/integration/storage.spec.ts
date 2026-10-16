@@ -12,8 +12,15 @@ import {
   sendRuntimeMessage,
   serviceWorkerOf,
 } from "./support/extension-fixture";
+import { openOffscreenDocument } from "./support/offscreen";
 import { createReceiver } from "./support/receiver";
-import { beginCall, rows } from "./support/scenario";
+import {
+  beginCall,
+  rows,
+  startRecording,
+  stopRecording,
+  waitForChunks,
+} from "./support/scenario";
 
 test.describe("one IndexedDB store holds all durable state", () => {
   test("storage.local keeps only the installation session", async () => {
@@ -80,6 +87,58 @@ test.describe("one IndexedDB store holds all durable state", () => {
         Array.from({ length: sequences.length }, (_, index) => index + 1),
       );
       expect(queue.length).toBeGreaterThan(before);
+    } finally {
+      await closeExtensionSession(session);
+      await receiver.close();
+    }
+  });
+});
+
+test.describe("the database is protected from quota and eviction", () => {
+  test("the extension's quota is lifted above an ordinary page's", async () => {
+    const receiver = await createReceiver();
+    const session = await launchExtensionSession();
+
+    try {
+      const worker = await serviceWorkerOf(session.context);
+      const page = await session.context.newPage();
+      await page.goto(`${receiver.origin}/`);
+
+      const estimateQuota = async () =>
+        (await navigator.storage.estimate()).quota ?? 0;
+      // An ordinary page gets 10 GiB here. With `unlimitedStorage` the quota
+      // follows the free disk, so this needs a host with more than 20 GiB.
+      const pageQuota = await page.evaluate(estimateQuota);
+      expect(await worker.evaluate(estimateQuota)).toBeGreaterThan(
+        2 * pageQuota,
+      );
+    } finally {
+      await closeExtensionSession(session);
+      await receiver.close();
+    }
+  });
+
+  test("the recorder asks the browser for persistent storage before it saves audio", async () => {
+    const receiver = await createReceiver();
+    const session = await launchExtensionSession();
+
+    try {
+      const offscreen = await openOffscreenDocument(session);
+      await offscreen.evaluate(`(() => {
+        globalThis.persistCalls = 0;
+        const persist = StorageManager.prototype.persist;
+        StorageManager.prototype.persist = function () {
+          globalThis.persistCalls += 1;
+          return persist.call(this);
+        };
+      })()`);
+
+      const call = await beginCall(session, receiver);
+      await startRecording(call);
+      await waitForChunks(call.popup, 1);
+
+      expect(await offscreen.evaluate<number>("persistCalls")).toBe(1);
+      await stopRecording(call);
     } finally {
       await closeExtensionSession(session);
       await receiver.close();
