@@ -1,7 +1,9 @@
 import { openStream } from "#tab-capture";
 import { isOffscreenMessage, type RuntimeMessage } from "@/src/domain/messages";
 import { mixChannels, type ChannelMix } from "@/src/services/channel-mix";
+import { requestPersistentStorage } from "@/src/services/database";
 import { openMicrophone } from "@/src/services/microphone";
+import { holdRecordingLock } from "@/src/services/recording-lock";
 import {
   beginRecording,
   finishRecording,
@@ -96,6 +98,7 @@ function wireRecorder(input: {
   capture: Capture;
   state: ActiveRecorder;
   done: () => void;
+  releaseLock: () => void;
 }): void {
   const { recordingId, capture, state } = input;
   const { recorder } = state;
@@ -164,6 +167,9 @@ function wireRecorder(input: {
       .catch((error: unknown) => console.error("close was not queued", error))
       .finally(() => {
         active = null;
+        // Release the lock after storing the close. A free lock beside a
+        // `recording` row tells the worker that the recorder is dead.
+        input.releaseLock();
         // The stop request is answered first, then the worker may close this
         // document.
         input.done();
@@ -178,6 +184,15 @@ async function startRecorder(callId: string, streamId: string): Promise<void> {
   }
 
   const capture = await openCapture(streamId);
+  await requestPersistentStorage();
+
+  // Take the lock after opening the stream, which must not wait, and before
+  // creating the recording row. Every `recording` row then has a holder.
+  const releaseLock = await holdRecordingLock(callId);
+  if (releaseLock === null) {
+    await releaseCapture(capture);
+    throw new Error("another recorder already holds this call");
+  }
   let begunId: string | null = null;
 
   try {
@@ -193,7 +208,13 @@ async function startRecorder(callId: string, streamId: string): Promise<void> {
     const state: ActiveRecorder = { recorder, finished, stopRequested: false };
     active = state;
 
-    wireRecorder({ recordingId: recording.id, capture, state, done });
+    wireRecorder({
+      recordingId: recording.id,
+      capture,
+      state,
+      done,
+      releaseLock,
+    });
     recorder.start(CHUNK_MS);
   } catch (error: unknown) {
     active = null;
@@ -203,6 +224,7 @@ async function startRecorder(callId: string, streamId: string): Promise<void> {
       // its close.
       await finishRecording(begunId, true).catch(() => undefined);
     }
+    releaseLock();
     throw error;
   }
 }
