@@ -37,7 +37,7 @@ export const PLANNER_SCENARIOS = [
   },
 ] as const;
 
-export const EXPAND_RECIPIENTS = 12;
+const EXPAND_RECIPIENTS = 12;
 
 export type PlannerScenarioName = (typeof PLANNER_SCENARIOS)[number]["name"];
 

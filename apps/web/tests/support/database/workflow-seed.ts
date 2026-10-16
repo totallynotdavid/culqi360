@@ -70,7 +70,7 @@ type UserSeed = {
   createdAt?: Date;
 };
 
-export async function seedOrganization(
+async function seedOrganization(
   runtime: TestRuntime,
   input: OrganizationSeed,
 ): Promise<SeededOrganizationRef> {
@@ -97,7 +97,7 @@ export async function seedOrganization(
   return { id, ruc, legalName };
 }
 
-export async function seedLead(runtime: TestRuntime, input: LeadSeed) {
+async function seedLead(runtime: TestRuntime, input: LeadSeed) {
   const createdAt = input.createdAt ?? runtime.now.get();
   const updatedAt = input.updatedAt ?? createdAt;
   const organizationId = resolveLeadOrganizationId(input);
@@ -162,7 +162,7 @@ function resolveLeadOrganizationId(input: LeadSeed): OrganizationId {
   throw new Error("missing_seed_lead_organization");
 }
 
-export function buildDefaultRuc(key: string): string {
+function buildDefaultRuc(key: string): string {
   let hash = 0;
   for (let index = 0; index < key.length; index += 1) {
     hash = (hash * 131 + key.charCodeAt(index)) % 1_000_000_000;

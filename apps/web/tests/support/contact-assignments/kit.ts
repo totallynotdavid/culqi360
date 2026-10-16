@@ -1,12 +1,6 @@
 import type { TestDbContext } from "@tests/support/runtime/db";
 
-import type {
-  ContactAssignmentId,
-  OrganizationPersonId,
-  UserId,
-} from "~/domain/ids";
-
-export type { ContactAssignmentId };
+import type { OrganizationPersonId, UserId } from "~/domain/ids";
 
 export type ContactAssignmentSeedRow = {
   userId: UserId;

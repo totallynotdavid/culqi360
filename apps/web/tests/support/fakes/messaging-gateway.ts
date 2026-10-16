@@ -111,7 +111,3 @@ export function createScriptedMessagingGateway() {
     },
   };
 }
-
-export type ScriptedMessagingGateway = ReturnType<
-  typeof createScriptedMessagingGateway
->;

@@ -11,7 +11,7 @@ import { Err, type Result } from "~/shared/result";
 import { TEST_FIXTURES, type TestDbContext } from "../runtime/db";
 import { createTestRepositories } from "../runtime/repos";
 
-export function createTransactionRunner(ctx: TestDbContext) {
+function createTransactionRunner(ctx: TestDbContext) {
   class TestRollbackError<TError> extends Error {
     constructor(readonly error: TError) {
       super("rollback");

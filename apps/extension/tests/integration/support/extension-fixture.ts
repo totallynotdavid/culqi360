@@ -25,7 +25,7 @@ const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
  * invocation that `chrome.tabCapture.getMediaStreamId` needs. Everything else
  * is the production code.
  */
-export const TEST_EXTENSION_PATH = path.resolve(
+const TEST_EXTENSION_PATH = path.resolve(
   currentDirectory,
   "../../../.output/chrome-mv3-test",
 );

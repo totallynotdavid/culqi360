@@ -46,7 +46,7 @@ interface PasskeyCredentialResponse {
   clientExtensionResults: Record<string, never>;
 }
 
-export function expiresAtFromNow(nowMs: number): Date {
+function expiresAtFromNow(nowMs: number): Date {
   return new Date(nowMs + 60_000);
 }
 

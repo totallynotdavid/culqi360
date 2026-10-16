@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 // Shared state from globalSetup to Playwright workers.
-export const MANIFEST_PATH = resolve(process.cwd(), ".e2e-manifest.json");
+const MANIFEST_PATH = resolve(process.cwd(), ".e2e-manifest.json");
 
 export interface GuardCount {
   table: string;

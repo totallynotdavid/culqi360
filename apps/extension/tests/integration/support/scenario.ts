@@ -74,7 +74,7 @@ export async function flush(scenario: CallScenario): Promise<void> {
   expectOk(await sendRuntimeMessage(scenario.popup, { type: "sync.flush" }));
 }
 
-export async function database(page: Page): Promise<DatabaseDump> {
+async function database(page: Page): Promise<DatabaseDump> {
   const dump = await dumpDatabase(page);
   if (!dump) {
     throw new Error("the extension database does not exist");
