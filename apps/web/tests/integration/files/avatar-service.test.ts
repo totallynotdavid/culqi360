@@ -109,7 +109,7 @@ describe("avatar service", () => {
     expect(Array.from(newBytes)).toEqual([1, 2, 3]);
   });
 
-  // Use an invalid legacy key to force blob deletion to fail.
+  // A key outside the blob root forces the deletion to fail.
   it("keeps the upload successful when deleting the previous blob fails", async () => {
     const { service } = makeService();
 

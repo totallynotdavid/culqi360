@@ -65,8 +65,6 @@ async fn signed_request(body: &serde_json::Value, server: &TestServer) -> axum_t
         .await
 }
 
-// happy paths
-
 #[tokio::test]
 async fn search_by_dni_returns_matching_row() {
     let server = make_server(100);
@@ -170,8 +168,6 @@ async fn short_text_query_returns_400() {
         signed_request(&json!({"intent":"people","query":"ro","limit":20}), &server).await;
     response.assert_status_bad_request();
 }
-
-// rate limiting
 
 #[tokio::test]
 async fn rate_limit_is_enforced_after_capacity_exhausted() {

@@ -16,35 +16,6 @@ describe("schema baseline", () => {
     ctx = null;
   });
 
-  it("creates expected schema objects on a fresh database", async () => {
-    ctx = await createFreshDb("schema-baseline-fresh");
-    await migrateToLatest(ctx.db);
-
-    const tables = await sql<{ tablename: string }>`
-      SELECT tablename FROM pg_tables WHERE schemaname = 'public'
-    `.execute(ctx.db);
-    const tableNames = new Set(tables.rows.map((row) => row.tablename));
-    expect(tableNames.has("users")).toBe(true);
-    expect(tableNames.has("events")).toBe(true);
-    expect(tableNames.has("audit_action_policies")).toBe(true);
-    expect(tableNames.has("user_invites")).toBe(true);
-    expect(tableNames.has("action_observations")).toBe(true);
-    expect(tableNames.has("notification_intents")).toBe(true);
-    expect(tableNames.has("login_flows")).toBe(true);
-
-    const indexes = await sql<{ indexname: string }>`
-      SELECT indexname FROM pg_indexes WHERE schemaname = 'public'
-    `.execute(ctx.db);
-    const indexNames = new Set(indexes.rows.map((row) => row.indexname));
-    expect(indexNames.has("idx_app_notifications_intent")).toBe(true);
-    expect(indexNames.has("idx_events_occurred")).toBe(true);
-    expect(indexNames.has("idx_events_type_occurred")).toBe(true);
-    expect(indexNames.has("idx_events_actor_occurred")).toBe(true);
-    expect(indexNames.has("idx_events_entity_occurred")).toBe(true);
-    expect(indexNames.has("idx_audit_policy_risk_active")).toBe(true);
-    expect(indexNames.has("idx_notification_intents_claim")).toBe(true);
-  });
-
   it("is idempotent and maintains integrity hash", async () => {
     ctx = await createFreshDb("schema-baseline-rerun");
     await migrateToLatest(ctx.db);

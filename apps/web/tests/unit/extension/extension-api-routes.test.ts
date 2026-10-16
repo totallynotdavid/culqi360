@@ -18,41 +18,19 @@ function invalidJsonRequest(url: string): Request {
 }
 
 describe("extension api routes", () => {
-  it("returns 400 for malformed JSON in the handoff token route", async () => {
-    const response = await postHandoffToken({
-      request: invalidJsonRequest(
-        "http://localhost/api/extension/handoff-token",
-      ),
-    });
+  it.each([
+    ["handoff token", postHandoffToken, "/api/extension/handoff-token"],
+    ["claim", postClaim, "/api/extension/session/claim"],
+    ["refresh", postRefresh, "/api/extension/session/refresh"],
+    ["events", postEvents, "/api/extension/events"],
+  ])(
+    "returns 400 for malformed JSON in the %s route",
+    async (_, post, path) => {
+      const response = await post({
+        request: invalidJsonRequest(`http://localhost${path}`),
+      });
 
-    expect(response.status).toBe(400);
-  });
-
-  it("returns 400 for malformed JSON in the claim route", async () => {
-    const response = await postClaim({
-      request: invalidJsonRequest(
-        "http://localhost/api/extension/session/claim",
-      ),
-    });
-
-    expect(response.status).toBe(400);
-  });
-
-  it("returns 400 for malformed JSON in the refresh route", async () => {
-    const response = await postRefresh({
-      request: invalidJsonRequest(
-        "http://localhost/api/extension/session/refresh",
-      ),
-    });
-
-    expect(response.status).toBe(400);
-  });
-
-  it("returns 400 for malformed JSON in the events route", async () => {
-    const response = await postEvents({
-      request: invalidJsonRequest("http://localhost/api/extension/events"),
-    });
-
-    expect(response.status).toBe(400);
-  });
+      expect(response.status).toBe(400);
+    },
+  );
 });

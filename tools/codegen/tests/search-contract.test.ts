@@ -10,8 +10,6 @@ import {
 } from "../src/search-contract/parse.ts";
 import { parseProjectionSpec } from "../src/search-projection/parse.ts";
 
-// fixtures
-
 const CANONICAL = parseCanonicalContract({
   fields: ["person_dni", "company_ruc", "company_name", "phone"],
 });
@@ -91,8 +89,6 @@ function makeLoaded(
   ];
 }
 
-// happy path
-
 describe("checkSearchContract — valid", () => {
   test("returns ok:true with a summary string", () => {
     const result = checkSearchContract(
@@ -107,8 +103,6 @@ describe("checkSearchContract — valid", () => {
     }
   });
 });
-
-// source contract violations
 
 describe("checkSearchContract — source contract errors", () => {
   test("errors when enabled source has no contract entry", () => {
@@ -186,8 +180,6 @@ describe("checkSearchContract — source contract errors", () => {
     }
   });
 });
-
-// projection violations
 
 describe("checkSearchContract — projection errors", () => {
   test("errors when projection field references unknown canonical field", () => {

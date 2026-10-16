@@ -20,7 +20,6 @@ fn make_hmac(key_id: &str, secret: &str) -> HmacVerifier {
     )
 }
 
-/// Returns a valid HeaderMap + the timestamp used to sign.
 fn signed_headers(key_id: &str, secret: &str, body: &[u8]) -> HeaderMap {
     let ts = now_secs();
     let sig = sign(secret, ts, body).expect("hmac sign");
@@ -30,8 +29,6 @@ fn signed_headers(key_id: &str, secret: &str, body: &[u8]) -> HeaderMap {
     h.insert("x-signature", sig.parse().unwrap());
     h
 }
-
-// happy path
 
 #[test]
 fn valid_request_returns_key_id() {
@@ -44,80 +41,43 @@ fn valid_request_returns_key_id() {
     assert_eq!(result.unwrap(), "web");
 }
 
-// missing headers
-
 #[test]
-fn missing_key_id_returns_unauthorized() {
+fn invalid_credentials_return_unauthorized() {
     let body = b"payload";
-    let mut h = signed_headers("web", "secret", body);
-    h.remove("x-key-id");
-    let hmac = make_hmac("web", "secret");
-    let limiter = RateLimiter::new(100);
+    type Tamper = fn(&mut HeaderMap);
+    let cases: [(&str, Tamper); 5] = [
+        ("missing key id", |h| {
+            h.remove("x-key-id");
+        }),
+        ("missing timestamp", |h| {
+            h.remove("x-timestamp");
+        }),
+        ("missing signature", |h| {
+            h.remove("x-signature");
+        }),
+        ("wrong signature", |h| {
+            h.insert("x-signature", "deadbeef".parse().unwrap());
+        }),
+        ("unknown key id", |h| {
+            h.insert("x-key-id", "unknown".parse().unwrap());
+        }),
+    ];
 
-    assert!(matches!(
-        verify_signed_request(&h, body, &hmac, &limiter),
-        Err(ApiError::Unauthorized(_))
-    ));
+    for (name, tamper) in cases {
+        let mut headers = signed_headers("web", "secret", body);
+        tamper(&mut headers);
+        let hmac = make_hmac("web", "secret");
+        let limiter = RateLimiter::new(100);
+
+        assert!(
+            matches!(
+                verify_signed_request(&headers, body, &hmac, &limiter),
+                Err(ApiError::Unauthorized(_))
+            ),
+            "{name} must be unauthorized"
+        );
+    }
 }
-
-#[test]
-fn missing_timestamp_returns_unauthorized() {
-    let body = b"payload";
-    let mut h = signed_headers("web", "secret", body);
-    h.remove("x-timestamp");
-    let hmac = make_hmac("web", "secret");
-    let limiter = RateLimiter::new(100);
-
-    assert!(matches!(
-        verify_signed_request(&h, body, &hmac, &limiter),
-        Err(ApiError::Unauthorized(_))
-    ));
-}
-
-#[test]
-fn missing_signature_returns_unauthorized() {
-    let body = b"payload";
-    let mut h = signed_headers("web", "secret", body);
-    h.remove("x-signature");
-    let hmac = make_hmac("web", "secret");
-    let limiter = RateLimiter::new(100);
-
-    assert!(matches!(
-        verify_signed_request(&h, body, &hmac, &limiter),
-        Err(ApiError::Unauthorized(_))
-    ));
-}
-
-// bad credentials
-
-#[test]
-fn wrong_signature_returns_unauthorized() {
-    let body = b"payload";
-    let mut h = signed_headers("web", "secret", body);
-    h.insert("x-signature", "deadbeef".parse().unwrap());
-    let hmac = make_hmac("web", "secret");
-    let limiter = RateLimiter::new(100);
-
-    assert!(matches!(
-        verify_signed_request(&h, body, &hmac, &limiter),
-        Err(ApiError::Unauthorized(_))
-    ));
-}
-
-#[test]
-fn unknown_key_id_returns_unauthorized() {
-    let body = b"payload";
-    let h = signed_headers("unknown", "secret", body);
-    let hmac = make_hmac("web", "secret");
-    let limiter = RateLimiter::new(100);
-
-    assert!(matches!(
-        verify_signed_request(&h, body, &hmac, &limiter),
-        Err(ApiError::Unauthorized(_))
-    ));
-}
-
-// rate limiting of auth failures
 
 #[test]
 fn repeated_auth_failures_trigger_rate_limit() {

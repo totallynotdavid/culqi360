@@ -282,14 +282,6 @@ mod tests {
     }
 
     #[test]
-    fn config_loads_with_minimal_required_env() {
-        let _guard = env_lock().lock().unwrap();
-        set_base_env();
-
-        EngineConfig::load().expect("config should load with minimal required env");
-    }
-
-    #[test]
     fn explicit_db_paths_override_defaults() {
         let _guard = env_lock().lock().unwrap();
         set_base_env();
@@ -303,22 +295,13 @@ mod tests {
     }
 
     #[test]
-    fn local_mode_is_the_default() {
+    fn local_mode_is_the_default_and_binds_loopback_port_3001() {
         let _guard = env_lock().lock().unwrap();
         set_base_env();
 
         let cfg = EngineConfig::load().expect("config");
 
         assert_eq!(cfg.connect_mode, ConnectMode::Local);
-    }
-
-    #[test]
-    fn local_mode_defaults_to_loopback_host_and_port_3001() {
-        let _guard = env_lock().lock().unwrap();
-        set_base_env();
-
-        let cfg = EngineConfig::load().expect("config");
-
         assert_eq!(cfg.host, "127.0.0.1");
         assert_eq!(cfg.port, 3001);
     }

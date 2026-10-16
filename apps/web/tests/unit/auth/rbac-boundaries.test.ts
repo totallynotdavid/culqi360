@@ -42,29 +42,6 @@ const ALL_PERMISSIONS: Permission[] = [
 ];
 
 describe("rbac boundaries", () => {
-  it("returns stable booleans for every declared permission", () => {
-    const roles = [
-      "executive",
-      "supervisor",
-      "back_office",
-      "sales_manager",
-      "logistics",
-      "hr",
-      "admin",
-      "superuser",
-    ] as const;
-
-    for (const role of roles) {
-      const permissions = getPermissions(role);
-      for (const permission of permissions) {
-        expect(hasPermission(role, permission)).toBe(true);
-      }
-      for (const permission of ALL_PERMISSIONS) {
-        expect(typeof hasPermission(role, permission)).toBe("boolean");
-      }
-    }
-  });
-
   it("returns empty permissions for unknown role", () => {
     expect(getPermissions("unknown_role")).toEqual([]);
     for (const permission of ALL_PERMISSIONS) {

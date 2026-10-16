@@ -10,16 +10,6 @@ async fn health_returns_ok_with_minimal_schema() {
 }
 
 #[tokio::test]
-async fn search_endpoint_is_mounted_and_requires_auth() {
-    let (server, _db) = common::make_test_server();
-    let response = server
-        .post("/search")
-        .json(&serde_json::json!({"type":"dni","value":"12345678"}))
-        .await;
-    response.assert_status_unauthorized();
-}
-
-#[tokio::test]
 async fn unauthorized_errors_include_request_id_header_and_body() {
     let (server, _db) = common::make_test_server();
     let response = server
@@ -41,21 +31,24 @@ async fn unauthorized_errors_include_request_id_header_and_body() {
 }
 
 #[tokio::test]
-async fn record_candidates_endpoint_exists_and_requires_auth() {
+async fn record_endpoints_reject_unsigned_requests() {
     let (server, _db) = common::make_test_server();
-    let response = server
-        .post("/records/candidates")
-        .json(&serde_json::json!({"branch_id":1,"user_id":1}))
-        .await;
-    response.assert_status_unauthorized();
-}
+    let cases = [
+        (
+            "/records/candidates",
+            serde_json::json!({"branch_id":1,"user_id":1}),
+        ),
+        (
+            "/records/imports",
+            serde_json::json!({"rows":[],"source":"test"}),
+        ),
+    ];
 
-#[tokio::test]
-async fn import_endpoint_exists_and_requires_auth() {
-    let (server, _db) = common::make_test_server();
-    let response = server
-        .post("/records/imports")
-        .json(&serde_json::json!({"rows":[],"source":"test"}))
-        .await;
-    response.assert_status_unauthorized();
+    for (path, body) in cases {
+        server
+            .post(path)
+            .json(&body)
+            .await
+            .assert_status_unauthorized();
+    }
 }

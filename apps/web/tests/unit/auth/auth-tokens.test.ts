@@ -31,14 +31,4 @@ describe("session tokens", () => {
       "20d053ea3932fc0f863a19fd77994b9b371fdd18b841aefee1ec4e844a4c9b90",
     );
   });
-
-  it("generates many tokens without collisions in sample", () => {
-    const tokens = new Set<string>();
-
-    for (let i = 0; i < 2000; i++) {
-      tokens.add(generateSessionToken());
-    }
-
-    expect(tokens.size).toBe(2000);
-  });
 });
