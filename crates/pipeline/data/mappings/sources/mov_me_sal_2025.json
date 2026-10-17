@@ -14,5 +14,5 @@
   },
   "phone_columns": [],
   "phone_prefixes": [],
-  "doc_type_map": {"C": "CE", "PTP": "PTP"}
+  "doc_type_map": { "C": "CE", "PTP": "PTP" }
 }

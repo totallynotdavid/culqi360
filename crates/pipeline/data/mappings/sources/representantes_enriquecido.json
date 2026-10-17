@@ -13,11 +13,6 @@
     "role_name": "cargo",
     "role_start_date": "fecha_desde"
   },
-  "phone_columns": [
-    "TELEFONO_IBK",
-    "TELEFONO_CIP"
-  ],
-  "phone_prefixes": [
-    "TELEFONO"
-  ]
+  "phone_columns": ["TELEFONO_IBK", "TELEFONO_CIP"],
+  "phone_prefixes": ["TELEFONO"]
 }

@@ -13,5 +13,5 @@
   },
   "phone_columns": [],
   "phone_prefixes": [],
-  "doc_type_map": {"01": "DNI", "02": "CE"}
+  "doc_type_map": { "01": "DNI", "02": "CE" }
 }

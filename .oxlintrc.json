@@ -1,13 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "import",
-    "node",
-    "promise",
-    "typescript",
-    "vitest",
-    "jsx-a11y"
-  ],
+  "plugins": ["import", "node", "promise", "typescript", "vitest", "jsx-a11y"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -21,10 +14,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/tests/**/*.ts",
-        "**/tests/**/*.tsx"
-      ],
+      "files": ["**/tests/**/*.ts", "**/tests/**/*.tsx"],
       "rules": {
         "eslint/no-await-in-loop": "off"
       }
@@ -36,6 +26,6 @@
     ".vinxi/**",
     ".output/**",
     "coverage/**",
-    "app.config.timestamp_*.js",
+    "app.config.timestamp_*.js"
   ]
 }
