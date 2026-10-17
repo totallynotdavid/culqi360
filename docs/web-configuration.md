@@ -2,8 +2,8 @@
 
 The web server and the maintenance worker read their settings from environment
 variables. The development scripts load the repository-root `.env`, the test
-scripts load `.env.test`, and `bun run build` loads `.env.production`, which you
-create when you build outside a container. The production scripts (`start`,
+scripts load `.env.test`, and `mise run build` loads `.env.production`, which
+you create when you build outside a container. The production scripts (`start`,
 `provision:prod`, `worker:maintenance:prod`) read the process environment.
 
 [`env.ts`](../apps/web/src/server/platform/config/env.ts) is the canonical
@@ -33,7 +33,8 @@ WhatsApp disabled. Then no notification provider credentials are needed.
 | `WEB_UPLOADS_ROOT`      | Optional          | `.local-storage/documents` | Stores uploaded and generated files.                                                                     |
 | `INSTALLATION_PASSWORD` | Installation seed | None                       | Sets the password of every user the seed creates. It must have at least eight characters after trimming. |
 
-`bun run dev`, `db:reset` and `provision:prod` run the installation seed.
+`mise run dev`, `mise run db:reset` and `provision:prod` run the installation
+seed.
 
 `APP_PUBLIC_ORIGIN` must be an HTTP or HTTPS origin with no path, query, or
 fragment. Its default, `http://localhost:3000`, is where the development server

@@ -13,35 +13,40 @@ Run the smallest check that covers the change. Run the full check when a change
 crosses package boundaries or changes a generated contract:
 
 ```sh
-bun run check
+mise run check
 ```
 
-It runs the Rust checks (`cargo xtask-check`, `xtask-fmt`, `xtask-clippy`), the
-type check of every TypeScript package, the contract checks, the lint checks and
-the TypeScript and Markdown format checks.
+It runs `lint`, `typecheck`, `test` and `build`, and writes no tracked file.
+`lint` checks TypeScript, JSON, YAML and Markdown formatting with oxfmt, runs
+oxlint, `cargo fmt` and clippy, checks the generated contracts and scans the
+tree for secrets with gitleaks. `test` needs no services. CI runs
+`mise run check` and, with PostgreSQL, `mise run test:integration`.
+
+`mise run fix` applies the safe lint fixes and formats every file.
 
 Focused checks:
 
-| Area              | Command                                                                        |
-| ----------------- | ------------------------------------------------------------------------------ |
-| TypeScript        | `bun run typecheck` (every package, see [`@crm/tsconfig`][tsconfig])           |
-| Web               | `bun run check:lint`, `bun run test`                                           |
-| Web benchmarks    | `bun run --cwd apps/web test:perf`                                             |
-| Web end-to-end    | `bun run --cwd apps/web test:e2e`                                              |
-| Engine            | `bun run check:engine`, `bun run test:engine`                                  |
-| Contracts         | `bun run check:contracts`, `bun run check:search-contract`                     |
-| Browser extension | `bun run --cwd apps/extension typecheck`, `bun run test:extension:integration` |
+| Area              | Command                                                               |
+| ----------------- | --------------------------------------------------------------------- |
+| TypeScript        | `mise run typecheck` (every package, see [`@crm/tsconfig`][tsconfig]) |
+| Web               | `mise run lint:web`, `mise run test:ts`                               |
+| Web with database | `mise run test:integration`                                           |
+| Web benchmarks    | `mise run test:perf`                                                  |
+| Web end-to-end    | `bun run --cwd apps/web test:e2e`                                     |
+| Rust              | `mise run lint:rust`, `mise run test:rust`                            |
+| Contracts         | `mise run lint:contracts`                                             |
+| Formatting        | `mise run lint:format`                                                |
+| Secrets           | `mise run lint:secrets`                                               |
+| Browser extension | `mise run typecheck`, `mise run test:extension`                       |
 
 [tsconfig]: ../packages/tsconfig/readme.md
 
-`typecheck` and `check:lint` generate the email templates first. The web Vitest
-projects and the email-composer Vitest config generate them in global setup, so
-the tests run without a prepared checkout. The
-[end-to-end guide](../docs/e2e-testing.md) covers the Playwright suite and the
-[benchmark guide](../docs/web-benchmarks.md) the `test:perf` suite.
+The lint, typecheck, test, build and dev tasks generate the email templates
+first. The [end-to-end guide](../docs/e2e-testing.md) covers the Playwright
+suite and the [benchmark guide](../docs/web-benchmarks.md) the `test:perf`
+suite.
 
-Format TypeScript, Markdown and Rust with `bun run format`. The pipeline has
-more commands in [its README](../crates/pipeline/readme.md).
+The pipeline has more commands in [its README](../crates/pipeline/readme.md).
 
 ## Documentation
 

@@ -86,8 +86,8 @@
           fi
 
           mise install
-          bun install
-          bun run generate
+          mise run install
+          mise run generate
         '';
       };
 

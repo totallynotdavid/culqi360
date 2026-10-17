@@ -8,7 +8,7 @@ disposable: a schema change rebuilds the database from the current schema.
 Run this once from the repository root after cloning:
 
 ```sh
-bun run dev:infra:setup
+mise run dev:infra:setup
 ```
 
 The command initializes `.pgdata`, starts PostgreSQL long enough to create the
@@ -18,7 +18,7 @@ or seed data.
 Start development with:
 
 ```sh
-bun run dev
+mise run dev
 ```
 
 The `dev` script of `apps/web` waits for PostgreSQL, initializes the current
@@ -30,7 +30,7 @@ already initialized), then starts Vite.
 With PostgreSQL running, run from the repository root:
 
 ```sh
-bun run db:reset
+mise run db:reset
 ```
 
 It drops the database named in `WEB_DB_URL` (default `crm`), disconnecting its
@@ -40,8 +40,8 @@ run with `NODE_ENV=production`. It never recreates the `postgres` maintenance
 database.
 
 To discard the whole local cluster instead, stop PostgreSQL, run
-`bun run clean:db` (it removes `.pgdata` only) and repeat
-`bun run dev:infra:setup`.
+`mise run clean:db` (it removes `.pgdata` only) and repeat
+`mise run dev:infra:setup`.
 
 ## Change the schema
 
@@ -55,16 +55,16 @@ modules.
 After you change a schema module:
 
 1. Update its matching database types.
-2. Run `bun run db:reset`, which creates and seeds the new schema.
+2. Run `mise run db:reset`, which creates and seeds the new schema.
 3. Restart the web server and the worker.
 4. Run the focused tests for the changed domain.
-5. Run `bun run check` for contract, generation, or cross-subsystem changes.
+5. Run `mise run check` for contract, generation, or cross-subsystem changes.
 
 Schema initialization (the `migrate` script of `apps/web`, which `dev` and
 `db:reset` run) builds an empty database and records a hash of the schema
 modules. On a database that is already built it compares that hash with the
-current code and stops with an error that points at `bun run db:reset` when they
-differ. The running web server and worker do not check.
+current code and stops with an error that points at `mise run db:reset` when
+they differ. The running web server and worker do not check.
 
 In production the `prepare` service runs the same initialization
 ([Deployment](deployment.md#application-stack)). A deployment that changes the

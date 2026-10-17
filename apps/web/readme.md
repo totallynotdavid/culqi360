@@ -8,10 +8,10 @@ assignment, record imports and data-source ingestion.
 ## Run
 
 The [root readme](../../readme.md#get-started) owns the setup and start
-sequence. `bun run dev` serves the web server at <http://localhost:3000>. The
+sequence. `mise run dev` serves the web server at <http://localhost:3000>. The
 [database guide](../../docs/database.md) covers initialization, seed and reset.
 
-To run the web server alone, use `bun run dev:web` and `bun run dev:worker`.
+To run the web server alone, use `mise run dev:web` and `mise run dev:worker`.
 Both need PostgreSQL.
 
 A production build is served by [`server.ts`](server.ts), a Bun adapter that

@@ -1,10 +1,11 @@
 # Web benchmarks
 
 The web application has CPU benchmarks under
-[`apps/web/tests/bench/`](../apps/web/tests/bench/). Run them from `apps/web`:
+[`apps/web/tests/bench/`](../apps/web/tests/bench/). Run them with PostgreSQL
+running:
 
 ```sh
-bun run test:perf
+mise run test:perf
 ```
 
 The command loads `.env.test`, runs `vitest bench` once with

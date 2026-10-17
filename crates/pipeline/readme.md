@@ -27,13 +27,13 @@ because their snapshots live outside the repository: `celulares`,
 `claro_post_202508`, `consolidado_ruc_representantes_ok`,
 `representantes_enriquecido`, `osiptel` and `padron_ruc_202601`.
 
-- `bun run pipeline:verify-manifest` and `bun run pipeline:normalize-sample`
+- `mise run pipeline:verify-manifest` and `mise run pipeline:normalize-sample`
   pass `--allow-missing-optional`. They check the mappings and skip absent
   optional inputs with a warning. Both run on a clean checkout.
   `verify-manifest` prints one JSON line, an array with a result per source.
 - `refresh`, `build` and direct Cargo commands are strict. They need every
   enabled raw input.
-- `bun run pipeline:fixture` runs `refresh --slice 10k` with
+- `mise run pipeline:fixture` runs `refresh --slice 10k` with
   [`data/fixture/pipeline.toml`](data/fixture/pipeline.toml), whose `raw_dir` is
   the synthetic files in [`data/fixture/raw/`](data/fixture/raw/). It needs no
   real data and promotes a small database to
@@ -44,7 +44,7 @@ because their snapshots live outside the repository: `celulares`,
 Run commands from the repository root:
 
 ```sh
-bun run pipeline:engine <command>
+mise run pipeline -- <command>
 ```
 
 This is `cargo run -p pipeline -- <command>`. The commands and their defaults:
@@ -72,10 +72,9 @@ from [`pipeline.toml`](pipeline.toml):
 does not create the full production-size dataset. Shortcuts:
 
 ```sh
-bun run pipeline:refresh
-bun run pipeline:refresh:10k
-bun run pipeline:refresh:100k
-bun run pipeline:engine validate --profile standard
+mise run pipeline:refresh
+mise run pipeline:refresh:10k
+mise run pipeline -- validate --profile standard
 ```
 
 ## Full rebuild and promotion

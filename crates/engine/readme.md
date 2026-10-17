@@ -15,11 +15,11 @@ database at startup, so restart it after a promotion.
 From the repository root:
 
 ```sh
-bun run dev:engine
+mise run dev:engine
 ```
 
 The engine exits at startup when `ENGINE_CONTACTS_DB_PATH` does not exist. A
-clean checkout has no contacts database. `bun run pipeline:fixture` builds a
+clean checkout has no contacts database. `mise run pipeline:fixture` builds a
 small one from synthetic data (see
 [Pipeline](../pipeline/readme.md#source-files)). The engine also needs
 `ENGINE_HMAC_KEYS_JSON`, which is in `.env.example`.
@@ -27,8 +27,8 @@ small one from synthetic data (see
 Check and test:
 
 ```sh
-bun run check:engine
-bun run test:engine
+mise run lint:rust
+mise run test:rust
 ```
 
 ## Endpoints

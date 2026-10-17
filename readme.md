@@ -15,9 +15,9 @@ You need [mise](https://mise.jdx.dev) and a checkout of this repository.
 
 ```sh
 mise install
-bun install
+mise run install
 cp .env.example .env
-bun run generate
+mise run generate
 ```
 
 `generate` writes the checked-in contracts and the ignored email template
@@ -28,8 +28,8 @@ says which values are required and how to generate each secret. Then create the
 local database and start everything:
 
 ```sh
-bun run dev:infra:setup
-bun run dev
+mise run dev:infra:setup
+mise run dev
 ```
 
 `dev` runs PostgreSQL, the engine, the web application and the maintenance
@@ -49,8 +49,8 @@ engine without the real data, build the database from the synthetic fixture in
 invented people and companies, so search returns a handful of results.
 
 ```sh
-bun run pipeline:fixture           # writes crates/engine/data/contacts.sqlite
-bun run dev:engine                 # or restart `bun run dev`
+mise run pipeline:fixture          # writes crates/engine/data/contacts.sqlite
+mise run dev:engine                # or restart `mise run dev`
 ```
 
 The engine health endpoint needs no signature and reports the fixture's 11 rows:
@@ -67,7 +67,7 @@ The real data comes from the raw source snapshots listed in
 [`source-manifest.json`](crates/pipeline/data/mappings/source-manifest.json).
 The repository does not hold them. Ask a maintainer for the snapshots. With them
 in [`crates/pipeline/data/raw/`](crates/pipeline/data/raw/) under the names in
-the manifest, run `bun run pipeline:refresh:10k`, which samples 10,000 rows per
+the manifest, run `mise run pipeline:refresh:10k`, which samples 10,000 rows per
 source. `--raw-dir` points the pipeline at another directory. The
 [pipeline guide](crates/pipeline/readme.md#source-files) lists the other slices.
 
@@ -86,10 +86,10 @@ source. `--raw-dir` points the pipeline at another directory. The
 ## Run one part
 
 ```sh
-bun run dev:infra
-bun run dev:engine
-bun run dev:web
-bun run dev:worker
+mise run dev:infra
+mise run dev:engine
+mise run dev:web
+mise run dev:worker
 ```
 
 The web application and the worker need PostgreSQL. Search and candidate
@@ -98,7 +98,7 @@ assignment also need the engine and a contacts database.
 ## Check your change
 
 ```sh
-bun run check
+mise run check
 ```
 
 The [contributing guide](.github/contributing.md) lists the focused checks.

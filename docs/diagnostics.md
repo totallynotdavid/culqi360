@@ -18,10 +18,10 @@ The browser bundle cannot read server variables, so it reads the `VITE_` forms,
 scopes. An entry is either a scope or `hydration:<scope>`.
 
 ```sh
-VITE_DEBUG_DIAGNOSTICS=hydration bun run dev
-DEBUG_DIAGNOSTICS=requests bun run dev
-DEBUG_DIAGNOSTICS=requests DEBUG_DIAGNOSTICS_REQUESTS=verbose bun run dev
-DEBUG_DIAGNOSTICS=requests DEBUG_DIAGNOSTICS_REQUESTS_SLOW_MS=500 bun run dev
+VITE_DEBUG_DIAGNOSTICS=hydration mise run dev
+DEBUG_DIAGNOSTICS=requests mise run dev
+DEBUG_DIAGNOSTICS=requests DEBUG_DIAGNOSTICS_REQUESTS=verbose mise run dev
+DEBUG_DIAGNOSTICS=requests DEBUG_DIAGNOSTICS_REQUESTS_SLOW_MS=500 mise run dev
 ```
 
 ## Request tracing
