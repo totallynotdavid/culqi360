@@ -50,10 +50,10 @@ Give the package a `typecheck` script:
 From the repository root:
 
 ```sh
-bun run typecheck
+mise run typecheck:ts
 ```
 
 It compiles the email templates, then runs `typecheck` in every workspace
 package and type checks the scripts in [`tools/`](../../tools/) with
-[`tools/tsconfig.json`](../../tools/tsconfig.json). `bun run check` runs it
-before the lint and format checks.
+[`tools/tsconfig.json`](../../tools/tsconfig.json). `mise run check` runs it
+with the lint, test and build checks.

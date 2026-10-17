@@ -6,8 +6,8 @@ contracts into checked-in Rust and TypeScript.
 
 ## Engine contracts
 
-Edit the JSON under `contracts/engine/`, then run `bun run generate:contracts`.
-Do not edit the generated files. `bun run check:contracts` regenerates in memory
+Edit the JSON under `contracts/engine/`, then run `mise run generate:contracts`.
+Do not edit the generated files. `mise run lint:contracts` regenerates in memory
 and fails when a committed file differs. The docblock in
 [`generate.ts`](../tools/codegen/bin/generate.ts) maps each contract to its
 generated files.
@@ -20,7 +20,7 @@ contracts, with `include_str!` in
 [`contract_guard.rs`](../crates/pipeline/src/contract_guard.rs) and validates
 its source mappings against them.
 
-`bun run check:search-contract` checks, for every enabled source in
+`mise run lint:contracts` also checks, for every enabled source in
 [`source-manifest.json`](../crates/pipeline/data/mappings/source-manifest.json),
 that the source mapping, the canonical and source contracts, and both projection
 contracts agree.

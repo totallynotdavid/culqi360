@@ -58,7 +58,7 @@ After you change a schema module:
 2. Run `bun run db:reset`, which creates and seeds the new schema.
 3. Restart the web server and the worker.
 4. Run the focused tests for the changed domain.
-5. Run `bun run check` for contract, generation, or cross-subsystem changes.
+5. Run `mise run check` for contract, generation, or cross-subsystem changes.
 
 Schema initialization (the `migrate` script of `apps/web`, which `dev` and
 `db:reset` run) builds an empty database and records a hash of the schema
@@ -79,9 +79,12 @@ use or reset the development `crm` database. See
 
 ## Test databases
 
-The web test setup acquires a disposable PostgreSQL server for local managed
-test runs. Its state defaults to `.vitest-db/postgres-server` in the checkout.
-`TEST_DB_SERVER_ROOT` is a test-only override for that managed-server root. Use
-it when a test needs its server state in a temporary directory or needs multiple
-processes to share one managed server. It does not configure the development
-database or the CI service database.
+`mise run test:integration` runs the web contract, integration and journey
+suites. Their setup acquires a disposable PostgreSQL server (the PostgreSQL that
+`mise install` builds) for local managed test runs. In CI it uses the job's
+service database. The managed server's state defaults to
+`.vitest-db/postgres-server` in the checkout. `TEST_DB_SERVER_ROOT` is a
+test-only override for that managed-server root. Use it when a test needs its
+server state in a temporary directory or needs multiple processes to share one
+managed server. It does not configure the development database or the CI service
+database.
