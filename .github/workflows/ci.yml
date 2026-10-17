@@ -1,0 +1,192 @@
+name: ci
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The integration job uses the Postgres service below. The mise-pinned
+  # PostgreSQL compiles from source, so no job installs it.
+  MISE_DISABLE_TOOLS: postgres
+
+jobs:
+  changes:
+    name: Changed areas
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      rust: ${{ steps.filter.outputs.rust }}
+      contracts: ${{ steps.filter.outputs.contracts }}
+      python: ${{ steps.filter.outputs.python }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dorny/paths-filter@v4.0.3
+        id: filter
+        with:
+          filters: |
+            web:
+              - "apps/**"
+              - "packages/**"
+              - "tools/**"
+              - "contracts/**"
+              - "package.json"
+              - "bun.lock"
+              - ".oxlintrc.json"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+            rust:
+              - "crates/**"
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".cargo/**"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+            contracts:
+              - "contracts/**"
+              - "tools/codegen/**"
+              - "crates/leads/src/contracts_generated.rs"
+              - "crates/search/src/*_contract_generated.rs"
+              - "apps/web/src/contracts/**"
+              - "package.json"
+              - "bun.lock"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+            python:
+              - "**/*.py"
+              - "pyproject.toml"
+              - "uv.lock"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+
+  web:
+    name: Web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run check:web
+
+  integration:
+    name: Integration
+    needs: changes
+    if:
+      ${{ !cancelled() && (github.event_name != 'pull_request' ||
+      needs.changes.outputs.web == 'true') }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run test:integration
+
+  rust:
+    name: Rust
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run check:rust
+
+  contracts:
+    name: Contracts
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run check:contracts
+
+  python:
+    name: Python
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run check:python
+
+  format:
+    name: Format
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run lint:format
+
+  secrets:
+    name: Secrets
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run secrets
+
+  check:
+    name: Check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@v5.2.0
+      - run: mise run install
+      - run: mise run check

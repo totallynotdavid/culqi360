@@ -49,16 +49,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: jdx/mise-action@v5.2.0
+        with:
+          install_args: rust python
 
       - name: build benchmark binary
         shell: bash
-        run: cargo build -p engine --bin bench-search --release
+        run: mise run build:bench-search
 
       - name: build pipeline binary
         if: ${{ inputs.refresh_dataset && inputs.mode == 'smoke' }}
         shell: bash
-        run: cargo build -p pipeline --release
+        run: mise run build:pipeline
 
       - name: refresh smoke dataset
         if: ${{ inputs.refresh_dataset && inputs.mode == 'smoke' }}
@@ -114,7 +116,9 @@ jobs:
       - name: upload benchmark report
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: bench-search-${{ inputs.mode }}-${{ inputs.operation }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name:
+            bench-search-${{ inputs.mode }}-${{ inputs.operation }}-${{
+            github.run_id }}-${{ github.run_attempt }}
           path: target/bench-search-report-${{ inputs.mode }}.json
           if-no-files-found: error
           retention-days: 30
@@ -129,7 +133,9 @@ jobs:
         if: ${{ inputs.operation == 'bootstrap' }}
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: bench-baseline-${{ inputs.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name:
+            bench-baseline-${{ inputs.mode }}-${{ github.run_id }}-${{
+            github.run_attempt }}
           path: ${{ env.BASELINE_PATH }}
           if-no-files-found: error
           retention-days: 30
