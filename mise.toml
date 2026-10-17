@@ -2,28 +2,216 @@
 experimental = true
 
 [tools]
-rust = "1.99.0"
+rust = { version = "1.99.0", components = "clippy,rustfmt" }
 bun = "1.4.2"
 uv = "0.12.24"
 python = "3.15.0"
 postgres = "18.6"
+gitleaks = "8.30.1"
 
-[tasks.test]
-description = "Run the web, engine and pipeline test suites"
-run = ["bun run test", "bun run test:engine", "bun run test:pipeline"]
+[tasks.install]
+description = "Install JavaScript and Rust dependencies from the lockfiles"
+run = ["bun install --frozen-lockfile", "cargo fetch --locked"]
 
 [tasks.lint]
-description = "Run the web, package, engine and pipeline linters"
-run = ["bun run check:lint", "bun run lint:engine", "bun run lint:pipeline"]
+description = "Check formatting, lint rules, generated contracts and secrets"
+depends = ["lint:*"]
+
+[tasks."lint:web"]
+description = "Lint the web application with type information"
+depends = ["generate:templates"]
+run = "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --deny-warnings apps/web/src apps/web/tests"
+
+[tasks."lint:packages"]
+description = "Lint the workspace packages and tools"
+run = "bunx oxlint -c .oxlintrc.json --deny-warnings packages tools"
+
+[tasks."lint:format"]
+description = "Check TypeScript, JSON, YAML and Markdown formatting"
+run = "bunx oxfmt --check ."
+
+[tasks."lint:rust"]
+description = "Check Rust formatting and run clippy"
+run = [
+  "cargo fmt --all --check",
+  "cargo clippy --workspace --all-targets --all-features --quiet -- -D warnings",
+]
+
+[tasks."lint:contracts"]
+description = "Check the generated contract files and the search contract"
+run = [
+  "bun run tools/codegen/bin/generate.ts --check",
+  "bun run tools/codegen/bin/check-search-contract.ts",
+]
+
+[tasks."lint:secrets"]
+description = "Scan the files git tracks, and untracked files it does not ignore, for secrets"
+# gitleaks dir ignores .gitignore and cannot take a file list. Scan a copy of
+# Git-tracked and non-ignored untracked files instead.
+run = """
+scan_dir="$(mktemp -d)"
+trap 'rm -rf "$scan_dir"' EXIT
+git ls-files -z --cached --others --exclude-standard \\
+  | tar --null --files-from=- --ignore-failed-read --warning=no-failed-read -cf - \\
+  | tar -xf - -C "$scan_dir"
+cd "$scan_dir"
+gitleaks dir --no-banner --redact .
+"""
+
+[tasks.fix]
+description = "Apply safe lint fixes and format every file"
+depends = ["generate:templates"]
+run = [
+  "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --fix apps/web/src apps/web/tests",
+  "bunx oxlint -c .oxlintrc.json --fix packages tools",
+  "bunx oxfmt .",
+  "cargo fmt --all",
+]
 
 [tasks.typecheck]
 description = "Typecheck every workspace package and tool"
-run = "bun run typecheck"
+depends = ["typecheck:*"]
+
+[tasks."typecheck:packages"]
+description = "Typecheck the apps and packages"
+depends = ["generate:templates"]
+run = "bun run --filter '*' typecheck"
+
+[tasks."typecheck:tools"]
+description = "Typecheck the review and data-conversion tools"
+run = "bunx tsc --noEmit -p tools"
+
+[tasks.test]
+description = "Run the unit and component tests that need no services"
+depends = ["test:ts", "test:rust"]
+
+[tasks."test:ts"]
+description = "Run the web unit and client tests and the package tests"
+depends = ["generate:templates"]
+run = "bun run --filter '*' test"
+
+[tasks."test:rust"]
+description = "Run the Rust workspace tests"
+run = "cargo test --workspace"
+
+[tasks."test:integration"]
+description = "Run the web contract, integration and journey tests (PostgreSQL)"
+depends = ["generate:templates"]
+run = "bun run --cwd apps/web test:integration"
+
+[tasks."test:perf"]
+description = "Run the web benchmarks (PostgreSQL)"
+depends = ["generate:templates"]
+run = "bun run --cwd apps/web test:perf"
+
+[tasks."test:extension"]
+description = "Run the browser extension tests in Chromium"
+run = "bun run --cwd apps/extension test:integration"
 
 [tasks.build]
 description = "Build the web application"
-run = "bun run build"
+depends = ["generate:templates"]
+run = "bun run --cwd apps/web build"
+
+[tasks."build:bench-search"]
+description = "Build the search benchmark binary"
+run = "cargo build -p engine --bin bench-search --release"
+
+[tasks."build:pipeline"]
+description = "Build the pipeline binary"
+run = "cargo build -p pipeline --release"
 
 [tasks.check]
-description = "Run every default CI check"
-run = ["bun run check", "mise run test", "mise run build"]
+description = "Run every check CI runs, without writing tracked files"
+depends = ["lint", "typecheck", "test", "build"]
+
+[tasks.generate]
+description = "Regenerate the contract files and the email templates"
+depends = ["generate:contracts", "generate:templates"]
+
+[tasks."generate:contracts"]
+description = "Regenerate the contract files"
+run = "bun run tools/codegen/bin/generate.ts"
+
+[tasks."generate:templates"]
+description = "Compile the email templates"
+run = "bun run --cwd packages/email-composer build:emails"
+
+[tasks.dev]
+description = "Run PostgreSQL, the engine, the web server and the worker"
+depends = ["dev:infra", "dev:engine", "dev:web", "dev:worker"]
+
+[tasks."dev:infra"]
+description = "Run the local PostgreSQL server"
+run = "postgres -D .pgdata -k /tmp"
+
+[tasks."dev:infra:setup"]
+description = "Create the local PostgreSQL data directory and the crm database"
+run = [
+  "initdb -D .pgdata -U postgres --auth=trust",
+  "pg_ctl -D .pgdata -o '-k /tmp' -l .pgdata/server.log start",
+  "createdb -h /tmp -U postgres crm",
+  "pg_ctl -D .pgdata stop",
+]
+
+[tasks."dev:engine"]
+description = "Run the engine"
+run = "cargo run -p engine --bin engine"
+
+[tasks."dev:web"]
+description = "Run the web development server"
+depends = ["generate:templates"]
+run = "bun run --cwd apps/web dev"
+
+[tasks."dev:worker"]
+description = "Run the maintenance worker"
+depends = ["generate:templates"]
+run = "bun run --cwd apps/web worker:maintenance"
+
+[tasks.preview]
+description = "Start an authenticated preview session (pass --role or --as)"
+run = "bun --cwd apps/web --env-file=../../.env tools/preview/cli.ts"
+
+[tasks."db:reset"]
+description = "Drop, migrate and seed the development database"
+run = "bun run --cwd apps/web db:reset"
+
+[tasks.pipeline]
+description = "Run a pipeline command (pass it after --)"
+run = "cargo run -p pipeline --"
+
+[tasks."pipeline:refresh"]
+description = "Refresh the contacts database from the 100k slice"
+run = "cargo run -p pipeline -- refresh --slice 100k"
+
+[tasks."pipeline:refresh:10k"]
+description = "Refresh the contacts database from the 10k slice"
+run = "cargo run -p pipeline -- refresh --slice 10k"
+
+[tasks."pipeline:fixture"]
+description = "Refresh the contacts database from the fixture data"
+run = "cargo run -p pipeline -- refresh --config crates/pipeline/data/fixture/pipeline.toml --slice 10k"
+
+[tasks."pipeline:verify-manifest"]
+description = "Verify the pipeline manifest"
+run = "cargo run -p pipeline -- verify-manifest --allow-missing-optional"
+
+[tasks."pipeline:normalize-sample"]
+description = "Validate the pipeline output with the quick profile"
+run = "cargo run -p pipeline -- validate --profile quick --allow-missing-optional"
+
+[tasks."refs:fetch"]
+description = "Fetch the reference data"
+run = "bun run --cwd packages/fetch-refs fetch"
+
+[tasks."clean:db"]
+description = "Delete the local PostgreSQL data directory"
+run = "rm -rf .pgdata"
+
+[tasks."clean:modules"]
+description = "Delete every node_modules directory"
+run = "rm -rf node_modules apps/*/node_modules packages/*/node_modules"
+
+[tasks.clean]
+description = "Delete the local database and the installed modules"
+depends = ["clean:db", "clean:modules"]

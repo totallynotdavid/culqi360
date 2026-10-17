@@ -53,7 +53,7 @@ async function withMaintenance<T>(
     await client.connect();
   } catch (error) {
     throw new Error(
-      "Postgres is not reachable. Start it first (e.g. `bun run dev:infra` from the repo root).",
+      "Postgres is not reachable. Start it first (e.g. `mise run dev:infra` from the repo root).",
       { cause: error },
     );
   }

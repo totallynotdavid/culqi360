@@ -26,7 +26,7 @@ describe("recreateDatabase", () => {
       ctx.db,
     );
 
-    await expect(migrateToLatest(ctx.db)).rejects.toThrow("bun run db:reset");
+    await expect(migrateToLatest(ctx.db)).rejects.toThrow("mise run db:reset");
 
     // The pool must be closed first: FORCE drops its sessions mid-flight.
     const { dbName } = ctx;

@@ -104,7 +104,7 @@ function printRoleList(
   }
 
   console.log("");
-  console.log("Pick one: bun run preview --role <role>");
+  console.log("Pick one: mise run preview --role <role>");
 }
 
 async function main(): Promise<void> {

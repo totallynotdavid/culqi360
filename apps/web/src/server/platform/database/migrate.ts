@@ -15,7 +15,7 @@ export async function migrateToLatest(db: Kysely<Database>) {
   if (stored !== null) {
     throw new Error(
       "Schema changed since the database was built.\n" +
-        "  ⇢ Run `bun run db:reset` to rebuild the development database",
+        "  ⇢ Run `mise run db:reset` to rebuild the development database",
     );
   }
 

@@ -29,8 +29,8 @@ pub async fn run() -> Result<(), StartupError> {
     if !Path::new(&cfg.contacts_db_path).exists() {
         return Err(StartupError::Database(format!(
             "contacts database not found at {}\n  \
-            Build the synthetic fixture with: bun run pipeline:fixture\n  \
-            Build from raw snapshots with: bun run pipeline:refresh",
+            Build the synthetic fixture with: mise run pipeline:fixture\n  \
+            Build from raw snapshots with: mise run pipeline:refresh",
             cfg.contacts_db_path
         )));
     }

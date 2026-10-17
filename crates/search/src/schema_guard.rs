@@ -19,7 +19,7 @@ pub fn validate(conn: &Connection) -> Result<(), StartupError> {
             return Err(StartupError::Database(format!(
                 "missing required table: {name}\n  \
                 contacts.sqlite is missing or was built by an older pipeline.\n  \
-                Refresh it with: bun run pipeline:refresh"
+                Refresh it with: mise run pipeline:refresh"
             )));
         }
     }

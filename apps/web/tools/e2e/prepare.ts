@@ -70,7 +70,7 @@ async function withMaintenance<T>(
   } catch (error) {
     throw new Error(
       `Postgres is not reachable at ${maintenanceUrl}. ` +
-        "Start it first (e.g. `bun run dev:infra` from the repo root).",
+        "Start it first (e.g. `mise run dev:infra` from the repo root).",
       { cause: error },
     );
   }
