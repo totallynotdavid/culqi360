@@ -7,13 +7,29 @@ visibility: internal
 tags: ["record-index", "data-grid", "ui"]
 ---
 
-El bloque principal de trabajo del día fue `record-index` y DataGrid. Se añadieron redimensionado de columnas, paginación y manejo dinámico de columnas, junto con controles nuevos en el menú de opciones para visibilidad de columnas y copia de enlace de vista. También se reestructuró el `view-bar` en componentes dedicados (`filter-menu`, `sort-menu`, `options-dropdown`, primitivas de menú) para separar responsabilidades y facilitar cambios futuros.
+El bloque principal de trabajo del día fue `record-index` y DataGrid. Se
+añadieron redimensionado de columnas, paginación y manejo dinámico de columnas,
+junto con controles nuevos en el menú de opciones para visibilidad de columnas y
+copia de enlace de vista. También se reestructuró el `view-bar` en componentes
+dedicados (`filter-menu`, `sort-menu`, `options-dropdown`, primitivas de menú)
+para separar responsabilidades y facilitar cambios futuros.
 
-En el panel lateral se incorporó un menú de opciones en el footer con acciones según rol, y se ajustó la disponibilidad de reasignación para usar la verificación de permiso correcta (`canReassignLead`). En paralelo, se simplificó el scoping de supervisión eliminando equipos supervisados y se endurecieron pruebas/controles para que `lead:reassign` quede restringido a admin (a solicitud de Hector).
+En el panel lateral se incorporó un menú de opciones en el footer con acciones
+según rol, y se ajustó la disponibilidad de reasignación para usar la
+verificación de permiso correcta (`canReassignLead`). En paralelo, se simplificó
+el scoping de supervisión eliminando equipos supervisados y se endurecieron
+pruebas/controles para que `lead:reassign` quede restringido a admin (a
+solicitud de Hector).
 
-También entró una base nueva para imágenes responsivas con el paquete `packages/images` y su plugin de Vite, además de mejoras de overflow responsivo en tabs y ajustes de observación de resize/reactividad. En workflow y detalle de registro, se agruparon campos y se estandarizó el render de valores con componentes compartidos para reducir diferencias de presentación.
+También entró una base nueva para imágenes responsivas con el paquete
+`packages/images` y su plugin de Vite, además de mejoras de overflow responsivo
+en tabs y ajustes de observación de resize/reactividad. En workflow y detalle de
+registro, se agruparon campos y se estandarizó el render de valores con
+componentes compartidos para reducir diferencias de presentación.
 
-Como mantenimiento, se movió el seed monolítico a una estructura modular, se aplicaron ajustes de lint (`eslint-plugin-solid`) y pequeños fixes de estilos/etiquetas y referencias de assets.
+Como mantenimiento, se movió el seed monolítico a una estructura modular, se
+aplicaron ajustes de lint (`eslint-plugin-solid`) y pequeños fixes de
+estilos/etiquetas y referencias de assets.
 
 <Collapsible title="Mejoras">
 

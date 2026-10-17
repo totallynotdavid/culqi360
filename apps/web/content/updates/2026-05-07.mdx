@@ -1,5 +1,7 @@
 ---
-title: "Nueva architectura para notificaciones, sistema de actualizaciones y snack bars"
+title:
+  "Nueva architectura para notificaciones, sistema de actualizaciones y snack
+  bars"
 date: "2026-05-07"
 kind: release
 cadence: nightly
@@ -7,13 +9,29 @@ visibility: internal
 tags: ["notificaciones", "updates", "ui"]
 ---
 
-El bloque más grande del día fue notificaciones. Se reemplazó el modelo basado en colas de campañas por un _outbox_ orientado a _intents_, con cambios en varios módulos como el planner, executor, processor, runtime y repositorios de entrega. También se rediseñó y ajustó el esquema de base de datos de notificaciones y se migró el identificador de broadcast a UUID para alinear integridad entre repos y eventos.
+El bloque más grande del día fue notificaciones. Se reemplazó el modelo basado
+en colas de campañas por un _outbox_ orientado a _intents_, con cambios en
+varios módulos como el planner, executor, processor, runtime y repositorios de
+entrega. También se rediseñó y ajustó el esquema de base de datos de
+notificaciones y se migró el identificador de broadcast a UUID para alinear
+integridad entre repos y eventos.
 
-En paralelo se incorporó un sistema de updates basado en contenido. Se añadieron tipos, esquema, repositorio y query layer para consumir entradas de `content/updates`, además de una ruta pública dedicada (`/updates`) [¡esta sección!] con componentes de layout, filtros, listados, renderizado de archivos markdown y SEO JSON-LD.
+En paralelo se incorporó un sistema de updates basado en contenido. Se añadieron
+tipos, esquema, repositorio y query layer para consumir entradas de
+`content/updates`, además de una ruta pública dedicada (`/updates`) [¡esta
+sección!] con componentes de layout, filtros, listados, renderizado de archivos
+markdown y SEO JSON-LD.
 
-A nivel de interfaz, se retiró el sistema de toast y se introdujo `snack-bar-manager` como capa de feedback global con provider, componentes, estilos y hook de uso. Este cambio se integró con ajustes de animaciones de presencia (`animate-presence`, `presence-child`, `use-presence`, `animated`) para mantener transiciones consistentes.
+A nivel de interfaz, se retiró el sistema de toast y se introdujo
+`snack-bar-manager` como capa de feedback global con provider, componentes,
+estilos y hook de uso. Este cambio se integró con ajustes de animaciones de
+presencia (`animate-presence`, `presence-child`, `use-presence`, `animated`)
+para mantener transiciones consistentes.
 
-Para validar el nuevo pipeline de entrega de notificaciones, se añadió una suite de benchmarks (`planner` y `processor-smoke`) con fixtures dedicadas. También se actualizaron acciones y pruebas de outbox/import para mantener compatibilidad con la nueva ruta de planificación y ejecución.
+Para validar el nuevo pipeline de entrega de notificaciones, se añadió una suite
+de benchmarks (`planner` y `processor-smoke`) con fixtures dedicadas. También se
+actualizaron acciones y pruebas de outbox/import para mantener compatibilidad
+con la nueva ruta de planificación y ejecución.
 
 <Collapsible title="Mejoras">
 

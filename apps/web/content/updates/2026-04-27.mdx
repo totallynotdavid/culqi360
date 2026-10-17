@@ -7,11 +7,24 @@ visibility: internal
 tags: ["workflow", "negociacion", "observabilidad"]
 ---
 
-La base técnica empezó con la migración de workflow a `commandApi/queryApi` y continuó con ejecución transaccional en Kysely. Ese cambio tocó varias áreas del servidor como runtime, repositorios, comandos, consultas y pruebas de integración para que las mutaciones compartan un camino consistente de ejecución y persistencia.
+La base técnica empezó con la migración de workflow a `commandApi/queryApi` y
+continuó con ejecución transaccional en Kysely. Ese cambio tocó varias áreas del
+servidor como runtime, repositorios, comandos, consultas y pruebas de
+integración para que las mutaciones compartan un camino consistente de ejecución
+y persistencia.
 
-Sobre esa base se implementó el flujo de negociación: creación de rondas, soporte de archivos adjuntos con carga/descarga y almacenamiento asociado, y picker de bancos para operaciones de abono. A nivel de UI, el mayor impacto estuvo en `quoted-section.tsx`, `sale-section.tsx`, `quotation-section.tsx` y `commercial-input-section.tsx`, con ajustes de estructura y estilos para incorporar los nuevos estados y acciones.
+Sobre esa base se implementó el flujo de negociación: creación de rondas,
+soporte de archivos adjuntos con carga/descarga y almacenamiento asociado, y
+picker de bancos para operaciones de abono. A nivel de UI, el mayor impacto
+estuvo en `quoted-section.tsx`, `sale-section.tsx`, `quotation-section.tsx` y
+`commercial-input-section.tsx`, con ajustes de estructura y estilos para
+incorporar los nuevos estados y acciones.
 
-Algo a destacar es que se añadió observabilidad con Sentry en cliente y servidor, incluyendo tracing y replay, junto con simplificación del manejo de errores. En paralelo entraron ajustes de consistencia en capacidades, invitaciones y consultas de workflow para mantener el comportamiento alineado con los nuevos límites transaccionales.
+Algo a destacar es que se añadió observabilidad con Sentry en cliente y
+servidor, incluyendo tracing y replay, junto con simplificación del manejo de
+errores. En paralelo entraron ajustes de consistencia en capacidades,
+invitaciones y consultas de workflow para mantener el comportamiento alineado
+con los nuevos límites transaccionales.
 
 <Collapsible title="Mejoras">
 

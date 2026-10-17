@@ -7,11 +7,20 @@ visibility: internal
 tags: ["workflow", "acceso", "testing"]
 ---
 
-El cambio principal fue centralizar la política de acceso a acciones de workflow. Se introdujo una capa dedicada (`lead-action-policy.ts`) y se actualizaron `action-availability` y comandos asociados para usar una decisión de permisos unificada. Esto también amplió visibilidad para supervisores en escenarios definidos por política.
+El cambio principal fue centralizar la política de acceso a acciones de
+workflow. Se introdujo una capa dedicada (`lead-action-policy.ts`) y se
+actualizaron `action-availability` y comandos asociados para usar una decisión
+de permisos unificada. Esto también amplió visibilidad para supervisores en
+escenarios definidos por política.
 
-El segundo grupo de cambios estuvo enfocado en la estabilidad de las pruebas: se desactivó el caching de entorno durante tests y se eliminó el reset manual de caché. Con eso, la resolución de variables será más predecible por ejecución y a la vez se reduce el acoplamiento entre casos.
+El segundo grupo de cambios estuvo enfocado en la estabilidad de las pruebas: se
+desactivó el caching de entorno durante tests y se eliminó el reset manual de
+caché. Con eso, la resolución de variables será más predecible por ejecución y a
+la vez se reduce el acoplamiento entre casos.
 
-El resto del trabajo fue en reforzar la cobertura y soporte de la nueva política con tests unitarios e integración, además de ajustes en negociación y límites RBAC relacionados.
+El resto del trabajo fue en reforzar la cobertura y soporte de la nueva política
+con tests unitarios e integración, además de ajustes en negociación y límites
+RBAC relacionados.
 
 <Collapsible title="Mejoras">
 

@@ -1,5 +1,6 @@
 ---
-title: "Seeding por escenarios, UUID en organizaciones y flujo de venta por etapas"
+title:
+  "Seeding por escenarios, UUID en organizaciones y flujo de venta por etapas"
 date: "2026-04-30"
 kind: release
 cadence: nightly
@@ -7,13 +8,26 @@ visibility: internal
 tags: ["workflow", "database", "sales"]
 ---
 
-El bloque más grande del día fue datos y seeding. Se separó el esquema de seeds en escenarios y capas (`bootstrap` vs `demo`), con compiladores y persistencia por dominio (`core`, `organizations`, `workflow-leads`, `workflow-commercial`, `history-events`, `search-overlays`). Este cambio reemplaza el flujo monolítico previo y permite preparar datasets más controlados para desarrollo y pruebas.
+El bloque más grande del día fue datos y seeding. Se separó el esquema de seeds
+en escenarios y capas (`bootstrap` vs `demo`), con compiladores y persistencia
+por dominio (`core`, `organizations`, `workflow-leads`, `workflow-commercial`,
+`history-events`, `search-overlays`). Este cambio reemplaza el flujo monolítico
+previo y permite preparar datasets más controlados para desarrollo y pruebas.
 
-Por el lado de la base de datos, las organizaciones fueron migradas a UUID. El ajuste impactó esquema, tipos y repositorios relacionados, además de pruebas de integración que dependen de locking, asignaciones y rutas de consulta sobre entidades organizacionales.
+Por el lado de la base de datos, las organizaciones fueron migradas a UUID. El
+ajuste impactó esquema, tipos y repositorios relacionados, además de pruebas de
+integración que dependen de locking, asignaciones y rutas de consulta sobre
+entidades organizacionales.
 
-En workflow comercial, se partió la creación de venta en etapas y se añadió manejo de sedes (venues) con tab dedicado, formulario y repositorios específicos (`sale-venue-repo`, `create-sale-venue`). También se actualizó la sección comercial para usar un picker de banco y sostener el nuevo recorrido de entrada de datos.
+En workflow comercial, se partió la creación de venta en etapas y se añadió
+manejo de sedes (venues) con tab dedicado, formulario y repositorios específicos
+(`sale-venue-repo`, `create-sale-venue`). También se actualizó la sección
+comercial para usar un picker de banco y sostener el nuevo recorrido de entrada
+de datos.
 
-Además de esas tres líneas principales, se actualizaron queries/presenters de workflow, fixtures y kits de prueba para mantener consistencia con los nuevos contratos de datos y comandos.
+Además de esas tres líneas principales, se actualizaron queries/presenters de
+workflow, fixtures y kits de prueba para mantener consistencia con los nuevos
+contratos de datos y comandos.
 
 <Collapsible title="Mejoras">
 

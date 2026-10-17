@@ -7,11 +7,19 @@ visibility: internal
 tags: ["workflow", "record-show", "testing"]
 ---
 
-El cambio principal del día fue una limpieza de `workflow-detail`: se reorganizaron componentes y se eliminó lógica heredada del bloque de interacciones. Se retiraron paneles/formularios antiguos (`interactions-panel`, `interaction-form`, estado y disponibilidad), junto con secciones _legacy_ de línea de tiempo, resumen y cotizaciones dentro de ese flujo.
+El cambio principal del día fue una limpieza de `workflow-detail`: se
+reorganizaron componentes y se eliminó lógica heredada del bloque de
+interacciones. Se retiraron paneles/formularios antiguos (`interactions-panel`,
+`interaction-form`, estado y disponibilidad), junto con secciones _legacy_ de
+línea de tiempo, resumen y cotizaciones dentro de ese flujo.
 
-En paralelo, se extrajo el formateador de fechas relativas a un módulo dedicado (`format-relative-date.ts`) y se añadió cobertura unitaria específica para ese comportamiento. Esto desacopla la lógica de presentación del summary card y facilita reutilización en otros puntos de la UI.
+En paralelo, se extrajo el formateador de fechas relativas a un módulo dedicado
+(`format-relative-date.ts`) y se añadió cobertura unitaria específica para ese
+comportamiento. Esto desacopla la lógica de presentación del summary card y
+facilita reutilización en otros puntos de la UI.
 
-El resto fueron ajustes menores de integración en `record-show`, side panel y utilidades compartidas para mantener consistencia tras la reorganización.
+El resto fueron ajustes menores de integración en `record-show`, side panel y
+utilidades compartidas para mantener consistencia tras la reorganización.
 
 <Collapsible title="Mejoras">
 

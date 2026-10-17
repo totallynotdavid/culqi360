@@ -7,13 +7,29 @@ visibility: internal
 tags: ["records", "workflow", "ui"]
 ---
 
-El bloque más grande del día fue archivos y adjuntos de venta. Se agregó el flujo completo de comprobantes en `actions/workflow/files.ts`, nuevas pestañas y componentes de UI en `features/side-panel/.../tabs/*`, y se separó `server/files/repo.ts` en repositorios modulares (`artifacts.ts`, `sales.ts`, `tokens.ts`, `events.ts`, `mappers.ts`, `types.ts`). También se ajustaron políticas, validaciones y pruebas unitarias de descarga, solicitud y carga de artefactos.
+El bloque más grande del día fue archivos y adjuntos de venta. Se agregó el
+flujo completo de comprobantes en `actions/workflow/files.ts`, nuevas pestañas y
+componentes de UI en `features/side-panel/.../tabs/*`, y se separó
+`server/files/repo.ts` en repositorios modulares (`artifacts.ts`, `sales.ts`,
+`tokens.ts`, `events.ts`, `mappers.ts`, `types.ts`). También se ajustaron
+políticas, validaciones y pruebas unitarias de descarga, solicitud y carga de
+artefactos.
 
-En paralelo se consolidó la migración funcional de `leads` a `records` en rutas, API y navegación. Ese cambio convivió con una actualización fuerte del `record-show` y del side panel: nuevas acciones de cabecera, navegación contextual, favoritos (alta/baja), y componentes enlazables con `RecordLinkChip`.
+En paralelo se consolidó la migración funcional de `leads` a `records` en rutas,
+API y navegación. Ese cambio convivió con una actualización fuerte del
+`record-show` y del side panel: nuevas acciones de cabecera, navegación
+contextual, favoritos (alta/baja), y componentes enlazables con
+`RecordLinkChip`.
 
-Otro bloque de alto impacto fue el workspace del DataGrid. Se actualizó el menú flotante con posicionamiento según viewport, controles de ordenamiento y refinamientos de filtros/columnas. En la capa de datos, se añadió tracking de creador (`createdBy`/`createdByName`) para vistas de workflow.
+Otro bloque de alto impacto fue el workspace del DataGrid. Se actualizó el menú
+flotante con posicionamiento según viewport, controles de ordenamiento y
+refinamientos de filtros/columnas. En la capa de datos, se añadió tracking de
+creador (`createdBy`/`createdByName`) para vistas de workflow.
 
-Como mantenimiento estructural, se modularizó el seed de base de datos (`seed.ts` dividido en `seeds/01-base-data.ts` y `seeds/02-demo-workflow.ts`), se migraron IDs de artefactos a UUID string con validación explícita, y se reforzó compatibilidad de IDs numéricos/string en entidades y DataGrid.
+Como mantenimiento estructural, se modularizó el seed de base de datos
+(`seed.ts` dividido en `seeds/01-base-data.ts` y `seeds/02-demo-workflow.ts`),
+se migraron IDs de artefactos a UUID string con validación explícita, y se
+reforzó compatibilidad de IDs numéricos/string en entidades y DataGrid.
 
 <Collapsible title="Mejoras">
 
