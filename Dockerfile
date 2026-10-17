@@ -1,4 +1,33 @@
-FROM oven/bun:1.4.3 AS production-deps
+# The bun version comes from mise.toml, so the image and the checks run the same
+# release. The mise binary is static, so the stage copies it from the mise image.
+FROM debian:trixie-slim AS bun-binary
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/jdx/mise:2026.10.12 /usr/local/bin/mise /usr/local/bin/mise
+
+WORKDIR /pins
+COPY mise.toml ./
+RUN mise trust \
+    && mise install bun \
+    && cp "$(mise which bun)" /usr/local/bin/bun
+
+FROM debian:trixie-slim AS base
+
+# Native tools such as Sentry CLI need the system CA bundle.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 1000 bun \
+    && useradd --system --uid 1000 --gid bun --create-home bun
+
+COPY --from=bun-binary /usr/local/bin/bun /usr/local/bin/bun
+
+ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
+
+FROM base AS production-deps
 
 WORKDIR /app
 
@@ -15,18 +44,14 @@ COPY tools/codegen/package.json ./tools/codegen/package.json
 
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
-FROM oven/bun:1.4.3 AS build
+FROM base AS build
 
 WORKDIR /app
-
-# Native tools such as Sentry CLI need the system CA bundle.
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
 RUN bun install --frozen-lockfile
-RUN bun run generate:templates
+RUN bun run --cwd packages/email-composer build:emails
 
 # Source-map upload only. The Sentry DSN is read at runtime, not baked in.
 ARG SENTRY_ORG
@@ -39,7 +64,7 @@ ENV SENTRY_ORG=$SENTRY_ORG \
 
 RUN bun run --cwd apps/web build:container
 
-FROM oven/bun:1.4.3 AS runtime
+FROM base AS runtime
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

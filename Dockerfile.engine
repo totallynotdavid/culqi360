@@ -1,9 +1,21 @@
-FROM rust:1.99.0-bookworm AS build
+# The Rust version comes from mise.toml, so the image and the checks run the
+# same release. The mise binary is static, so the stage copies it from the mise
+# image.
+FROM debian:bookworm-slim AS build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/jdx/mise:2026.10.12 /usr/local/bin/mise /usr/local/bin/mise
 
 WORKDIR /app
 
+COPY mise.toml ./
+RUN mise trust && mise install rust
+
 COPY . .
-RUN cargo build --locked --release -p engine --bin engine
+RUN mise exec rust -- cargo build --locked --release -p engine --bin engine
 
 FROM debian:bookworm-slim AS runtime
 
