@@ -32,9 +32,5 @@
     "role_name",
     "role_start_date"
   ],
-  "contact": [
-    "phone",
-    "phone_columns",
-    "phone_prefixes"
-  ]
+  "contact": ["phone", "phone_columns", "phone_prefixes"]
 }

@@ -15,8 +15,9 @@
     "newlinesBetween": true
   },
   "ignorePatterns": [
-    "**/*.md",
-    "apps/web/content/**/*.mdx",
+    "**/*.toml",
+    ".github/workflows/pullfrog.yml",
+    "apps/web/content/**",
     "apps/web/test-results/**",
     "apps/web/playwright-report/**",
     "packages/email-composer/src/templates/**/*.mjml"
