@@ -22,6 +22,17 @@ updates:
           - minor
           - patch
 
+  - package-ecosystem: uv
+    directories:
+      - /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
   - package-ecosystem: docker
     directories:
       - /
