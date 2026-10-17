@@ -1,0 +1,25 @@
+[extend]
+useDefault = true
+
+# Each entry matches the exact value the repository holds, not a path or a
+# pattern, so a new credential anywhere (tests included) is still reported.
+
+[[allowlists]]
+description = "Data source identifiers in the pipeline mappings and the web fixtures."
+regexTarget = "match"
+regexes = [
+  '''source_key"\s*:\s*"(bitel_post_ms_2025|celulares|claro_post_202508|consolidado_ruc_representantes_bppo|consolidado_ruc_representantes_ok|mov_me_sal_2025|movistar_post_202508|osiptel|osiptel_scan_sunat|padron_ruc_202601|representantes_enriquecido)"''',
+]
+
+[[allowlists]]
+description = "Fulfillment record keys in a web test."
+regexTarget = "match"
+regexes = ['''key: "fulfillment-p1-(litoral|sierra)"''']
+
+[[allowlists]]
+description = "Two fixed values the tests use as a made-up password and HMAC secret."
+regexTarget = "match"
+regexes = [
+  '''password: "StrongPass123"''',
+  '''[hH]macSecret: "k7vB9pL2mN5qR4xT1yZ8wS3uJ6hA0gC9"''',
+]
