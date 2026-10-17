@@ -21,7 +21,9 @@ def fetch_values(conn: sqlite3.Connection, sql: str, limit: int) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate benchmark workload from SQLite dataset")
+    parser = argparse.ArgumentParser(
+        description="Generate benchmark workload from SQLite dataset"
+    )
     parser.add_argument("--db-path", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=6)
@@ -128,7 +130,14 @@ def main() -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(json.dumps({"output": str(output_path), "counts": {k: len(v) for k, v in payload.items()}}))
+    print(
+        json.dumps(
+            {
+                "output": str(output_path),
+                "counts": {k: len(v) for k, v in payload.items()},
+            }
+        )
+    )
     return 0
 
 

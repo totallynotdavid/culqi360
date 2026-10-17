@@ -94,16 +94,20 @@ def ingest_txt(
 
 
 def build_shared_string_db(conn: sqlite3.Connection, xlsx_path: Path) -> int:
-    conn.execute("CREATE TABLE shared_strings(id INTEGER PRIMARY KEY, value TEXT NOT NULL)")
+    conn.execute(
+        "CREATE TABLE shared_strings(id INTEGER PRIMARY KEY, value TEXT NOT NULL)"
+    )
     total = 0
     with ZipFile(xlsx_path) as zf, zf.open("xl/sharedStrings.xml") as fh:
         idx = -1
-        for event, element in ET.iterparse(fh, events=("end",)):
+        for _event, element in ET.iterparse(fh, events=("end",)):
             if element.tag != f"{NS}si":
                 continue
             idx += 1
             value = "".join(t.text or "" for t in element.iter(f"{NS}t"))
-            conn.execute("INSERT INTO shared_strings(id, value) VALUES(?1, ?2)", (idx, value))
+            conn.execute(
+                "INSERT INTO shared_strings(id, value) VALUES(?1, ?2)", (idx, value)
+            )
             total += 1
             element.clear()
     conn.commit()
@@ -160,7 +164,9 @@ def parse_xlsx_header(
                     if col in colset:
                         t = element.attrib.get("t", "")
                         v_node = element.find(f"{NS}v")
-                        raw = "" if v_node is None or v_node.text is None else v_node.text
+                        raw = (
+                            "" if v_node is None or v_node.text is None else v_node.text
+                        )
                         if t == "s":
                             header_map[col] = shared_value(conn, raw, cache)
                         else:
@@ -202,9 +208,13 @@ def ingest_xlsx(
                     if col in colset:
                         t = element.attrib.get("t", "")
                         v_node = element.find(f"{NS}v")
-                        raw = "" if v_node is None or v_node.text is None else v_node.text
+                        raw = (
+                            "" if v_node is None or v_node.text is None else v_node.text
+                        )
                         if t == "s":
-                            row_values[col] = shared_value(conn_shared, raw, shared_cache)
+                            row_values[col] = shared_value(
+                                conn_shared, raw, shared_cache
+                            )
                         else:
                             row_values[col] = raw
                 element.clear()
@@ -240,7 +250,11 @@ def write_output(
     rows = 0
     with out_path.open("w", encoding="utf-8", newline="") as fh:
         fh.write("\t".join(header) + "\n")
-        query = "SELECT row_tsv FROM merged_rows ORDER BY row_tsv" if sort_output else "SELECT row_tsv FROM merged_rows"
+        query = (
+            "SELECT row_tsv FROM merged_rows ORDER BY row_tsv"
+            if sort_output
+            else "SELECT row_tsv FROM merged_rows"
+        )
         cursor = conn.execute(query)
         for (row_tsv,) in cursor:
             fh.write(row_tsv + "\n")

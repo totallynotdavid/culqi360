@@ -56,16 +56,19 @@ def extract_rows(input_path: Path, output_path: Path, row_cap: int | None) -> No
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     written = 0
-    with input_path.open("r", encoding="utf-8", errors="replace") as src, output_path.open(
-        "w", encoding="utf-8", newline=""
-    ) as dst:
+    with (
+        input_path.open("r", encoding="utf-8", errors="replace") as src,
+        output_path.open("w", encoding="utf-8", newline="") as dst,
+    ):
         writer = csv.writer(dst)
 
         for line in src:
             if row_cap is not None and written >= row_cap:
                 break
             stripped = line.strip()
-            if not stripped.startswith(INSERT_PREFIX) or not stripped.endswith(INSERT_SUFFIX):
+            if not stripped.startswith(INSERT_PREFIX) or not stripped.endswith(
+                INSERT_SUFFIX
+            ):
                 continue
 
             payload = stripped[len(INSERT_PREFIX) : -len(INSERT_SUFFIX)]

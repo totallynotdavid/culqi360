@@ -60,7 +60,9 @@ def main() -> int:
     if not db_path.exists():
         raise SystemExit(f"db path does not exist: {db_path}")
     if not doc_contract_path.exists():
-        raise SystemExit(f"doc projection contract path does not exist: {doc_contract_path}")
+        raise SystemExit(
+            f"doc projection contract path does not exist: {doc_contract_path}"
+        )
     if not company_contract_path.exists():
         raise SystemExit(
             f"company projection contract path does not exist: {company_contract_path}"
@@ -82,7 +84,9 @@ def main() -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(json.dumps({"manifest": str(output_path), "projection_rows": projection_rows}))
+    print(
+        json.dumps({"manifest": str(output_path), "projection_rows": projection_rows})
+    )
     return 0
 
 
