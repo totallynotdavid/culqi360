@@ -3,8 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "generate": "bun run bin/generate.ts",
-    "check": "bun run bin/generate.ts --check && bun run bin/check-search-contract.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

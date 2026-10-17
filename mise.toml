@@ -2,28 +2,160 @@
 experimental = true
 
 [tools]
-rust = "1.99.0"
-bun = "1.4.2"
+rust = { version = "1.99.0", components = "rustfmt,clippy" }
+bun = "1.4.3"
 uv = "0.12.24"
 python = "3.15.0"
 postgres = "18.6"
+gitleaks = "8.30.1"
 
-[tasks.test]
-description = "Run the web, engine and pipeline test suites"
-run = ["bun run test", "bun run test:engine", "bun run test:pipeline"]
+[tasks.install]
+description = "Install dependencies from bun.lock, Cargo.lock and uv.lock"
+run = [
+  "bun install --frozen-lockfile",
+  "cargo fetch --locked",
+  "uv sync --locked",
+]
+
+[tasks.generate]
+description = "Regenerate the contracts and the email templates"
+depends = ["generate:*"]
+
+[tasks."generate:templates"]
+description = "Compile the email templates into TypeScript modules"
+run = "bun run --cwd packages/email-composer build:emails"
+
+[tasks."generate:contracts"]
+description = "Regenerate the TypeScript and Rust contracts from contracts/engine"
+run = "bun run tools/codegen/bin/generate.ts"
 
 [tasks.lint]
-description = "Run the web, package, engine and pipeline linters"
-run = ["bun run check:lint", "bun run lint:engine", "bun run lint:pipeline"]
+description = "Check every linter and formatter without writing"
+depends = ["lint:*"]
+
+[tasks."lint:ts"]
+description = "Lint the web app, packages and tools with oxlint"
+depends = ["generate:templates"]
+run = [
+  "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --deny-warnings apps/web/src apps/web/tests",
+  "bunx oxlint -c .oxlintrc.json --deny-warnings packages tools",
+]
+
+[tasks."lint:format"]
+description = "Check TypeScript, Markdown, JSON and YAML formatting with oxfmt"
+run = "bunx oxfmt --check ."
+
+[tasks."lint:rust"]
+description = "Check Rust formatting and run clippy on the whole workspace"
+run = ["cargo xtask-fmt", "cargo xtask-clippy"]
+
+[tasks."lint:py"]
+description = "Lint and format-check the Python scripts with ruff"
+run = ["uv run ruff check --no-fix .", "uv run ruff format --check ."]
+
+[tasks."lint:contracts"]
+description = "Check the generated contracts and the search contract are in sync"
+run = [
+  "bun run tools/codegen/bin/generate.ts --check",
+  "bun run tools/codegen/bin/check-search-contract.ts",
+]
+
+[tasks.fix]
+description = "Regenerate generated files, apply safe lint fixes and run the formatters"
+depends = ["generate"]
+run = [
+  "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --fix apps/web/src apps/web/tests",
+  "bunx oxlint -c .oxlintrc.json --fix packages tools",
+  "cargo clippy --fix --allow-dirty --allow-staged --workspace --all-targets --all-features --quiet",
+  "cargo xtask-format",
+  "uv run ruff check --fix .",
+  "uv run ruff format .",
+  "bunx oxfmt .",
+]
 
 [tasks.typecheck]
-description = "Typecheck every workspace package and tool"
-run = "bun run typecheck"
+description = "Type check TypeScript and Python"
+depends = ["typecheck:*"]
+
+[tasks."typecheck:ts"]
+description = "Type check every workspace package and the scripts in tools"
+depends = ["generate:templates"]
+run = [
+  "bun run --filter '*' typecheck",
+  "bunx tsc --noEmit -p tools",
+]
+
+[tasks."typecheck:py"]
+description = "Type check the Python scripts with mypy strict"
+run = "uv run mypy"
+
+[tasks.test]
+description = "Run the unit tests of every package; needs no services"
+depends = ["test:ts", "test:rust"]
+
+[tasks."test:ts"]
+description = "Run the Vitest and Bun unit suites of every workspace package"
+depends = ["generate:templates"]
+env = { CRM_EMAIL_TEMPLATES_GENERATED = "1" }
+run = "bun run --filter '*' test"
+
+[tasks."test:integration"]
+description = "Run the web contract, integration and journey suites; needs PostgreSQL"
+depends = ["generate:templates"]
+env = { CRM_EMAIL_TEMPLATES_GENERATED = "1" }
+run = "bun run --cwd apps/web test:integration"
+
+[tasks."test:rust"]
+description = "Run the Rust workspace tests"
+run = "cargo test --workspace --locked"
+
+[tasks."test:e2e"]
+description = "Run the web Playwright suite (needs a browser and a running database)"
+run = "bun run --cwd apps/web test:e2e"
+
+[tasks."test:extension"]
+description = "Run the browser extension Playwright suite (needs Chromium)"
+run = "bun run --cwd apps/extension test:integration"
+
+[tasks."test:perf"]
+description = "Run the web benchmarks"
+depends = ["generate:templates"]
+run = "bun run --cwd apps/web test:perf"
 
 [tasks.build]
 description = "Build the web application"
-run = "bun run build"
+depends = ["generate:templates"]
+wait_for = ["lint:ts", "typecheck:ts", "test:ts"]
+run = "bun run --cwd apps/web build"
+
+[tasks."build:bench-search"]
+description = "Build the search benchmark binary in release mode"
+run = "cargo build -p engine --bin bench-search --release"
+
+[tasks."build:pipeline"]
+description = "Build the data pipeline binary in release mode"
+run = "cargo build -p pipeline --release"
+
+[tasks.secrets]
+description = "Scan the git history for committed secrets"
+run = "gitleaks detect --no-banner --redact"
+
+[tasks."check:web"]
+description = "Lint, type check, test and build the TypeScript code"
+depends = ["lint:ts", "typecheck:ts", "test:ts", "build"]
+
+[tasks."check:rust"]
+description = "Lint and test the Rust workspace"
+depends = ["lint:rust", "test:rust"]
+
+[tasks."check:python"]
+description = "Lint and type check the Python scripts"
+depends = ["lint:py", "typecheck:py"]
+
+[tasks."check:contracts"]
+description = "Check the generated contracts are in sync"
+depends = ["lint:contracts"]
 
 [tasks.check]
-description = "Run every default CI check"
-run = ["bun run check", "mise run test", "mise run build"]
+description = "Run every check CI runs; writes no tracked file"
+depends = ["lint", "typecheck", "test", "build", "secrets"]
