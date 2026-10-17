@@ -1,4 +1,7 @@
-FROM rust:1.99.0-bookworm AS build
+# RUST_VERSION is the Rust version declared in mise.toml. Compose passes it from `.env`.
+ARG RUST_VERSION
+
+FROM rust:${RUST_VERSION}-bookworm AS build
 
 WORKDIR /app
 

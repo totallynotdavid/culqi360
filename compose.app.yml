@@ -4,6 +4,7 @@ x-app: &app
     context: .
     dockerfile: Dockerfile
     args:
+      BUN_VERSION: ${BUN_VERSION:?Set BUN_VERSION}
       SENTRY_ORG: ${SENTRY_ORG:-}
       SENTRY_PROJECT: ${SENTRY_PROJECT:-}
       SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
@@ -52,6 +53,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        BUN_VERSION: ${BUN_VERSION:?Set BUN_VERSION}
         SENTRY_ORG: ${SENTRY_ORG:-}
         SENTRY_PROJECT: ${SENTRY_PROJECT:-}
         SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
@@ -77,9 +79,12 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
-      - traefik.http.routers.crm-${DEPLOYMENT_NAME:?Set DEPLOYMENT_NAME}.entrypoints=web
-      - traefik.http.routers.crm-${DEPLOYMENT_NAME:?Set DEPLOYMENT_NAME}.rule=Host(`${APP_DOMAIN:?Set APP_DOMAIN}`)
-      - traefik.http.services.crm-${DEPLOYMENT_NAME:?Set DEPLOYMENT_NAME}.loadbalancer.server.port=3000
+      - traefik.http.routers.crm-${DEPLOYMENT_NAME:?Set
+        DEPLOYMENT_NAME}.entrypoints=web
+      - traefik.http.routers.crm-${DEPLOYMENT_NAME:?Set
+        DEPLOYMENT_NAME}.rule=Host(`${APP_DOMAIN:?Set APP_DOMAIN}`)
+      - traefik.http.services.crm-${DEPLOYMENT_NAME:?Set
+        DEPLOYMENT_NAME}.loadbalancer.server.port=3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,8 +96,8 @@ services:
         - bun
         - -e
         - >-
-          const response = await fetch("http://127.0.0.1:3000/");
-          if (response.status >= 500) process.exit(1);
+          const response = await fetch("http://127.0.0.1:3000/"); if
+          (response.status >= 500) process.exit(1);
       interval: 15s
       timeout: 5s
       retries: 6

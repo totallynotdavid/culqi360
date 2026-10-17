@@ -13,6 +13,10 @@ Copy each template to `.env` in the stack's working directory. The web
 [configuration](web-configuration.md) describes the application values. The
 [engine readme](../crates/engine/readme.md) describes the engine values.
 
+The images build with the toolchain versions in [`mise.toml`](../mise.toml). Set
+`BUN_VERSION` in the application `.env` and `RUST_VERSION` in the engine `.env`
+to those versions. Compose refuses to build while either is empty.
+
 ## Application stack
 
 The stack runs four services. `postgres` uses the `postgres:18-bookworm` image.

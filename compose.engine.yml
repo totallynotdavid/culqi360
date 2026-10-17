@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.engine
+      args:
+        RUST_VERSION: ${RUST_VERSION:?Set RUST_VERSION}
     restart: unless-stopped
 
     env_file:

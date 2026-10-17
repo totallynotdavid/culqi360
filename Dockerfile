@@ -1,4 +1,7 @@
-FROM oven/bun:1.4.3 AS production-deps
+# BUN_VERSION is the Bun version declared in mise.toml. Compose passes it from `.env`.
+ARG BUN_VERSION
+
+FROM oven/bun:${BUN_VERSION} AS production-deps
 
 WORKDIR /app
 
@@ -15,7 +18,7 @@ COPY tools/codegen/package.json ./tools/codegen/package.json
 
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
-FROM oven/bun:1.4.3 AS build
+FROM oven/bun:${BUN_VERSION} AS build
 
 WORKDIR /app
 
@@ -26,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY . .
 
 RUN bun install --frozen-lockfile
-RUN bun run generate:templates
+RUN bun run --cwd packages/email-composer build:emails
 
 # Source-map upload only. The Sentry DSN is read at runtime, not baked in.
 ARG SENTRY_ORG
@@ -39,7 +42,7 @@ ENV SENTRY_ORG=$SENTRY_ORG \
 
 RUN bun run --cwd apps/web build:container
 
-FROM oven/bun:1.4.3 AS runtime
+FROM oven/bun:${BUN_VERSION} AS runtime
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
