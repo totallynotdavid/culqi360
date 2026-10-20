@@ -29,9 +29,6 @@ once and promote its report:
 bash ops/bench/promote_baseline.sh <report.json> /srv/crm/bench/baselines/smoke.json
 ```
 
-The GitHub Actions workflow uses the same path. A `gate` checks that the file
-already exists. Run the same mode with `operation=bootstrap` first when it does
-not; the workflow writes the new baseline there and uploads it as an artifact.
 Runs are written under `/srv/crm/bench/runs` by default.
 
 Full mode reads `/srv/crm/full/contacts.sqlite` unless `FULL_DB_PATH` or the
@@ -68,6 +65,5 @@ The command requires the selected manifest and workload files. Set
 `STRICT_BASELINE=1` to make the benchmark fail when no baseline exists. A run
 that regresses against an existing baseline fails either way.
 
-There is no GitHub Actions workflow for this benchmark. The runner requires the
-host-local datasets and baselines described above, so use the local command when
-those files are available.
+This benchmark has no GitHub Actions workflow. Run it locally on a host with the
+datasets and baselines described above.
