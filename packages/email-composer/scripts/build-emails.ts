@@ -2,7 +2,7 @@
  * Build-time script: compiles .mjml templates → TypeScript modules exporting
  * typed render functions. No runtime MJML dependency needed in production.
  *
- * Run via:  bun scripts/build-emails.ts
+ * Run: `bun scripts/build-emails.ts`.
  *
  * Conventions in .mjml source:
  *   {{param}}                    required string parameter
