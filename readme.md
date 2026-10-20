@@ -17,7 +17,7 @@ You need [mise](https://mise.jdx.dev) and a checkout of this repository.
 mise install
 bun install
 cp .env.example .env
-bun run generate
+mise run generate
 ```
 
 `generate` writes the checked-in contracts and the ignored email template
@@ -98,7 +98,7 @@ assignment also need the engine and a contacts database.
 ## Check your change
 
 ```sh
-bun run check
+mise run check
 ```
 
 The [contributing guide](.github/contributing.md) lists the focused checks.

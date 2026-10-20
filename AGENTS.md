@@ -66,9 +66,9 @@ Working approach
     generated indexes. Do not run full repo checks unless behavior changed.
   - Broad refactors or redesigns: finish the design first, then run the relevant
     checks at the end.
-  - Run `bun run check` only for cross-subsystem changes, generation or contract
-    changes, or repo-wide tooling changes.
-- Use `bun run test` for Vitest-based tests. Do not use `bun test`.
+  - Run `mise run check` only for cross-subsystem changes, generation or
+    contract changes, or repo-wide tooling changes.
+- Use `mise run test` for repository tests. Do not use `bun test`.
 
 ## WHEN checking UI changes live
 

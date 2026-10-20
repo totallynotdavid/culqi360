@@ -58,7 +58,7 @@ After you change a schema module:
 2. Run `bun run db:reset`, which creates and seeds the new schema.
 3. Restart the web server and the worker.
 4. Run the focused tests for the changed domain.
-5. Run `bun run check` for contract, generation, or cross-subsystem changes.
+5. Run `mise run check` for contract, generation, or cross-subsystem changes.
 
 Schema initialization (the `migrate` script of `apps/web`, which `dev` and
 `db:reset` run) builds an empty database and records a hash of the schema

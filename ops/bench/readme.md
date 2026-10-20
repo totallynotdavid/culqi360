@@ -68,18 +68,6 @@ The command requires the selected manifest and workload files. Set
 `STRICT_BASELINE=1` to make the benchmark fail when no baseline exists. A run
 that regresses against an existing baseline fails either way.
 
-## GitHub Actions
-
-The `bench search` workflow is manually dispatched on the self-hosted benchmark
-runner. Its inputs are:
-
-```text
-mode=smoke|full
-operation=gate|bootstrap
-refresh_dataset=true|false   (default true)
-```
-
-For a gate, the selected baseline must already exist at
-`/srv/crm/bench/baselines/<mode>.json`. `bootstrap` writes a new baseline at
-that path. Refreshing smoke mode rebuilds its sample dataset; refreshing full
-mode updates metadata for the existing full database.
+There is no GitHub Actions workflow for this benchmark. The runner requires the
+host-local datasets and baselines described above, so use the local command when
+those files are available.

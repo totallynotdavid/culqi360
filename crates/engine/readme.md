@@ -27,8 +27,8 @@ small one from synthetic data (see
 Check and test:
 
 ```sh
-bun run check:engine
-bun run test:engine
+mise run lint:rust
+mise run test
 ```
 
 ## Endpoints

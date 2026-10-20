@@ -351,7 +351,7 @@ TypeScript packages under [`packages/`](../packages/) are Bun workspace members
 that the applications import:
 
 - [`contracts`](../packages/contracts/): extension bridge types.
-- `email-composer`: email templates. `bun run generate:templates` compiles them
+- `email-composer`: email templates. `mise run generate:templates` compiles them
   into `src/templates/compiled/`, which git ignores.
 - `fetch-refs`: `bun run refs:fetch` downloads third-party reference
   documentation (OWASP, SolidJS, Twenty) for local reading.

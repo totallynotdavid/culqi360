@@ -2,8 +2,8 @@
 
 The web server and the maintenance worker read their settings from environment
 variables. The development scripts load the repository-root `.env`, the test
-scripts load `.env.test`, and `bun run build` loads `.env.production`, which you
-create when you build outside a container. The production scripts (`start`,
+scripts load `.env.test`, and `mise run build` loads `.env.production`, which
+you create when you build outside a container. The production scripts (`start`,
 `provision:prod`, `worker:maintenance:prod`) read the process environment.
 
 [`env.ts`](../apps/web/src/server/platform/config/env.ts) is the canonical

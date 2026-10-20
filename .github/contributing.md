@@ -13,7 +13,7 @@ Run the smallest check that covers the change. Run the full check when a change
 crosses package boundaries or changes a generated contract:
 
 ```sh
-bun run check
+mise run check
 ```
 
 It runs the Rust checks (`cargo xtask-check`, `xtask-fmt`, `xtask-clippy`), the
@@ -24,12 +24,12 @@ Focused checks:
 
 | Area              | Command                                                                        |
 | ----------------- | ------------------------------------------------------------------------------ |
-| TypeScript        | `bun run typecheck` (every package, see [`@crm/tsconfig`][tsconfig])           |
-| Web               | `bun run check:lint`, `bun run test`                                           |
-| Web benchmarks    | `bun run --cwd apps/web test:perf`                                             |
+| TypeScript        | `mise run typecheck` (every package, see [`@crm/tsconfig`][tsconfig])          |
+| Web               | `mise run lint`, `mise run test`                                               |
+| Web benchmarks    | `mise run test:perf`                                                           |
 | Web end-to-end    | `bun run --cwd apps/web test:e2e`                                              |
-| Engine            | `bun run check:engine`, `bun run test:engine`                                  |
-| Contracts         | `bun run check:contracts`, `bun run check:search-contract`                     |
+| Engine            | `mise run lint:rust`, `mise run test`                                          |
+| Contracts         | `mise run lint:contracts`                                                      |
 | Browser extension | `bun run --cwd apps/extension typecheck`, `bun run test:extension:integration` |
 
 [tsconfig]: ../packages/tsconfig/readme.md
@@ -40,8 +40,8 @@ the tests run without a prepared checkout. The
 [end-to-end guide](../docs/e2e-testing.md) covers the Playwright suite and the
 [benchmark guide](../docs/web-benchmarks.md) the `test:perf` suite.
 
-Format TypeScript, Markdown and Rust with `bun run format`. The pipeline has
-more commands in [its README](../crates/pipeline/readme.md).
+Format TypeScript, Markdown and Rust with `mise run fix`. The pipeline has more
+commands in [its README](../crates/pipeline/readme.md).
 
 ## Documentation
 
