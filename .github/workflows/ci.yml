@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  MISE_DISABLE_TOOLS: postgres
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ENGINE_HMAC_KEY_ID: web
+      ENGINE_HMAC_SECRET: ci-engine-hmac-secret
+      GOOGLE_CLIENT_ID: ci-build-client
+      GOOGLE_CLIENT_SECRET: ci-build-client-secret
+      GOOGLE_REDIRECT_URI: http://localhost:3000/api/auth/google/callback
+      NOTIFICATION_ROUTES: ""
+      SESSION_SECRET: ci-build-session-secret
+      TOTP_ENCRYPTION_KEY: ci-build-totp-encryption-key
+      WEB_DB_URL: postgres://postgres@localhost:5432/crm
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: ci-build-webhook-token
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+
+      - name: install dependencies
+        run: mise run install
+
+      - name: check
+        run: mise run check
