@@ -60,7 +60,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -75,7 +75,7 @@ jobs:
         run: bun run --cwd packages/email-composer build:emails
 
       - name: run benchmarks
-        uses: CodSpeedHQ/action@v5.4.2
+        uses: CodSpeedHQ/action@821a40cd6c80e3cfe387caf55668287addd808da # v5.5.0
         with:
           mode: simulation
           run: bun run test:perf
