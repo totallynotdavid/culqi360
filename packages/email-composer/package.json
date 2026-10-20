@@ -6,7 +6,6 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build:emails": "bun run scripts/build-emails.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

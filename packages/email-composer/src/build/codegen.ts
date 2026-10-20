@@ -71,7 +71,7 @@ export function genModule(
 
   return [
     `// SOURCE: src/templates/${file} + ${name}.txt`,
-    `// Regenerate: bun run build:emails (from packages/email-composer)`,
+    `// Regenerate: bun scripts/build-emails.ts (from packages/email-composer)`,
     ``,
     `import { esc } from "../../utils.js";`,
     ``,

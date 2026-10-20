@@ -10,7 +10,7 @@ export default function generateEmailTemplates(): void {
     return;
   }
 
-  execFileSync("bun", ["run", "build:emails"], {
+  execFileSync("bun", ["scripts/build-emails.ts"], {
     cwd: packageDir,
     stdio: "inherit",
   });

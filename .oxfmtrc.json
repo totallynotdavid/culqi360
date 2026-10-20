@@ -15,7 +15,6 @@
     "newlinesBetween": true
   },
   "ignorePatterns": [
-    "**/*.md",
     "apps/web/content/**/*.mdx",
     "apps/web/test-results/**",
     "apps/web/playwright-report/**",

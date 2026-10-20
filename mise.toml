@@ -8,22 +8,102 @@ uv = "0.13.1"
 python = "3.15.0"
 postgres = "18.6"
 
-[tasks.test]
-description = "Run the web, engine and pipeline test suites"
-run = ["bun run test", "bun run test:engine", "bun run test:pipeline"]
+[tasks.install]
+description = "Install Bun and Rust dependencies from their lockfiles"
+run = [
+  "bun install --frozen-lockfile",
+  "bun packages/email-composer/scripts/build-emails.ts",
+  "cargo fetch --locked",
+]
+
+[tasks.generate]
+description = "Regenerate contracts and email templates"
+run = ["mise run generate:contracts", "mise run generate:templates"]
+
+[tasks."generate:templates"]
+description = "Compile the email templates"
+run = "bun packages/email-composer/scripts/build-emails.ts"
+
+[tasks."generate:contracts"]
+description = "Regenerate the TypeScript and Rust contracts"
+run = "bun tools/codegen/bin/generate.ts"
 
 [tasks.lint]
-description = "Run the web, package, engine and pipeline linters"
-run = ["bun run check:lint", "bun run lint:engine", "bun run lint:pipeline"]
+description = "Run every read-only linter and formatter check"
+depends = ["lint:*"]
+
+[tasks."lint:typescript"]
+description = "Lint the web app, packages and tools"
+run = [
+  "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --deny-warnings apps/web/src apps/web/tests",
+  "bunx oxlint -c .oxlintrc.json --deny-warnings packages tools",
+]
+
+[tasks."lint:format"]
+description = "Check TypeScript, Markdown and JSON formatting"
+run = "bunx oxfmt --check apps packages tools contracts *.json '**/*.md' '!apps/web/content/**'"
+
+[tasks."lint:rust"]
+description = "Check Rust formatting and lint the workspace"
+run = ["cargo xtask-check", "cargo xtask-fmt", "cargo xtask-clippy"]
+
+[tasks."lint:contracts"]
+description = "Check generated contracts are in sync"
+run = [
+  "bun tools/codegen/bin/generate.ts --check",
+  "bun tools/codegen/bin/check-search-contract.ts",
+]
+
+[tasks.fix]
+description = "Apply safe lint fixes and format source files"
+run = [
+  "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --fix apps/web/src apps/web/tests",
+  "bunx oxlint -c .oxlintrc.json --fix packages tools",
+  "cargo xtask-format",
+  "bunx oxfmt apps packages tools contracts *.json '**/*.md' '!apps/web/content/**'",
+]
 
 [tasks.typecheck]
-description = "Typecheck every workspace package and tool"
-run = "bun run typecheck"
+description = "Typecheck every TypeScript package and tool"
+depends = ["typecheck:typescript"]
+
+[tasks."typecheck:typescript"]
+description = "Typecheck every TypeScript project"
+run = [
+  "bunx tsc --noEmit -p apps/extension/tsconfig.json",
+  "bunx tsc --noEmit -p apps/web/tsconfig.json",
+  "bunx tsc --noEmit -p packages/contracts/tsconfig.json",
+  "bunx tsc --noEmit -p packages/email-composer/tsconfig.json",
+  "bunx tsc --noEmit -p packages/fetch-refs/tsconfig.json",
+  "bunx tsc --noEmit -p packages/images/tsconfig.json",
+  "bunx tsc --noEmit -p packages/message-channels/tsconfig.json",
+  "bunx tsc --noEmit -p tools/codegen/tsconfig.json",
+  "bunx tsc --noEmit -p tools/tsconfig.json",
+]
+
+[tasks.test]
+description = "Run the web, package, engine and pipeline test suites"
+run = [
+  "CRM_EMAIL_TEMPLATES_GENERATED=1 bun --cwd apps/web --env-file=../../.env.test --bun vitest run --project unit --project client --project contract --project integration --project journey",
+  "CRM_EMAIL_TEMPLATES_GENERATED=1 bun --cwd packages/email-composer --bun vitest run",
+  "bun --cwd packages/message-channels --bun vitest run",
+  "bun --cwd tools/codegen test",
+  "cargo test --workspace --locked",
+]
+
+[tasks."test:perf"]
+description = "Run the web benchmarks"
+run = "CRM_EMAIL_TEMPLATES_GENERATED=1 bun --cwd apps/web --env-file=../../.env.test vitest bench --run --config vitest.bench.config.ts"
 
 [tasks.build]
 description = "Build the web application"
-run = "bun run build"
+run = "bun --cwd apps/web --env-file=../../.env.production --bun vite build --configLoader native --config vite.config.ts"
 
 [tasks.check]
-description = "Run every default CI check"
-run = ["bun run check", "mise run test", "mise run build"]
+description = "Run every repository check without writing files"
+run = [
+  "mise run lint",
+  "mise run typecheck",
+  "mise run test",
+  "mise run build",
+]

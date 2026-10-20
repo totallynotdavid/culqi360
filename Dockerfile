@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY . .
 
 RUN bun install --frozen-lockfile
-RUN bun run generate:templates
+RUN bun packages/email-composer/scripts/build-emails.ts
 
 # Source-map upload only. The Sentry DSN is read at runtime, not baked in.
 ARG SENTRY_ORG
