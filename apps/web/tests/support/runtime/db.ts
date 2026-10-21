@@ -115,6 +115,31 @@ async function withMaintenanceClient<T>(
   }
 }
 
+// Kysely's destroy() resolves when the pool has sent Terminate to every client,
+// before the backends exit. A FORCE drop in that window kills a backend whose
+// client has no error listener, which raises an uncaught "terminating
+// connection" error (57P01). Poll pg_stat_activity until the sessions are gone,
+// then drop.
+async function dropDatabaseAfterPoolClose(dbName: string): Promise<void> {
+  assertSafeDbName(dbName);
+
+  await withMaintenanceClient(async (client) => {
+    for (let attempt = 0; attempt < 250; attempt += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const { rowCount } = await client.query(
+        "SELECT 1 FROM pg_stat_activity WHERE datname = $1",
+        [dbName],
+      );
+      if (rowCount === 0) {
+        break;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    await client.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
+  });
+}
+
 async function seedFixtures(db: Kysely<Database>) {
   const now = new Date();
 
@@ -434,11 +459,7 @@ export async function cleanupTestDb(
   }
 
   await ctx.db.destroy();
-  assertSafeDbName(ctx.dbName);
-
-  await withMaintenanceClient(async (client) => {
-    await client.query(`DROP DATABASE IF EXISTS "${ctx.dbName}" WITH (FORCE)`);
-  });
+  await dropDatabaseAfterPoolClose(ctx.dbName);
 
   await rm(ctx.storageRoot, { force: true, recursive: true });
 }
@@ -472,9 +493,5 @@ export async function cleanupFreshDb(
   }
 
   await ctx.db.destroy();
-  assertSafeDbName(ctx.dbName);
-
-  await withMaintenanceClient(async (client) => {
-    await client.query(`DROP DATABASE IF EXISTS "${ctx.dbName}" WITH (FORCE)`);
-  });
+  await dropDatabaseAfterPoolClose(ctx.dbName);
 }
