@@ -17,8 +17,9 @@ mise run check
 ```
 
 It runs the Rust checks (`cargo xtask-check`, `xtask-fmt`, `xtask-clippy`), the
-type check of every TypeScript package, the contract checks, the lint checks and
-the TypeScript and Markdown format checks.
+type check of every TypeScript package and the Python scripts, the contract
+checks, the lint checks and the TypeScript and Markdown format checks. CI also
+scans the full git history for committed secrets with gitleaks.
 
 Focused checks:
 
@@ -29,6 +30,7 @@ Focused checks:
 | Web benchmarks    | `mise run test:perf`                                                           |
 | Web end-to-end    | `bun run --cwd apps/web test:e2e`                                              |
 | Engine            | `mise run lint:rust`, `mise run test`                                          |
+| Python scripts    | `mise run lint:python`, `mise run typecheck:python`                            |
 | Contracts         | `mise run lint:contracts`                                                      |
 | Browser extension | `bun run --cwd apps/extension typecheck`, `bun run test:extension:integration` |
 

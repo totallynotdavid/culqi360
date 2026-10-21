@@ -50,12 +50,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
 
       - name: install dependencies
         run: mise run install
+
+      # History scanning needs the fetch-depth 0 checkout above. This runs in
+      # CI rather than the check task because a local tree can be a filtered
+      # or shallow clone.
+      - name: secrets
+        run: mise x gitleaks@8.30.1 -- gitleaks detect --no-banner --redact
 
       - name: check
         run: mise run check
