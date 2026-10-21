@@ -10,7 +10,7 @@ resolver = "3"
 
 [workspace.dependencies]
 axum               = { version = "=0.8.9", features = ["macros"] }
-tokio              = { version = "=1.53.2", features = ["full"] }
+tokio              = { version = "=1.54.0", features = ["full"] }
 tokio-util         = { version = "=0.7.20", features = ["io"] }
 futures-util       = { version = "=0.3.34", default-features = false, features = ["std"] }
 serde              = { version = "=1.0.229", features = ["derive"] }
@@ -19,7 +19,7 @@ rusqlite           = { version = "=0.40.2", features = ["bundled"] }
 r2d2               = "=0.8.10"
 r2d2_sqlite        = "=0.35.0"
 hmac               = "=0.13.0"
-sha2               = "=0.11.0"
+sha2               = "=0.11.1"
 hex                = "=0.4.3"
 thiserror          = "=2.0.21"
 dashmap            = "=6.2.1"
@@ -32,7 +32,7 @@ tempfile           = "=3.27.0"
 axum-test          = "=21.1.0"
 csv                = "=1.4.0"
 encoding_rs        = "=0.8.42"
-toml               = "=1.1.6"
+toml               = "=1.1.8"
 
 [profile.release]
 opt-level = 3
