@@ -51,7 +51,7 @@
         "@sentry/bun": "^11.8.0",
         "@simplewebauthn/server": "^14.0.3",
         "@solidjs/meta": "^1.0.0-next.2",
-        "@solidjs/router": "^2.0.0-next.38",
+        "@solidjs/router": "^2.0.0-next.39",
         "@solidjs/web": "^2.0.0-rc.14",
         "@totallynotdavid/solid-motion": "0.1.1",
         "arctic": "^3.7.0",
@@ -686,7 +686,7 @@
 
     "@solidjs/meta": ["@solidjs/meta@1.0.0-next.2", "", { "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-4aqPczFqDdep4JTAUXfh4nyfq7InbTgimd7NuN6ZWWE29UPv0uR5dyr53yFcf2YgVXjFdX+JGhXtsE0njGL+fA=="],
 
-    "@solidjs/router": ["@solidjs/router@2.0.0-next.38", "", { "peerDependencies": { "@solidjs/web": "^2.0.0-rc.14", "filesystem-routing": ">=0.4.0", "solid-js": "^2.0.0-rc.14" }, "optionalPeers": ["filesystem-routing"] }, "sha512-MGDqgWqSLthgYQKFB0lYoxSwG0RKKPKQu1G8qXhSFw5zKGUCuGpHHzPZQiiY3BBVFBhlFsbFoQpuIPAcC0FbmA=="],
+    "@solidjs/router": ["@solidjs/router@2.0.0-next.39", "", { "peerDependencies": { "@solidjs/web": "^2.0.0-rc.15", "filesystem-routing": ">=0.4.0", "solid-js": "^2.0.0-rc.15" }, "optionalPeers": ["filesystem-routing"] }, "sha512-yIGOKEVyD55okI38X3f5jiz7wShuoMxdLHZO69JPYVQdvkX7p5FKE/HC1nxF6XZVVCGfnHaCY0bScCFU0lP+8g=="],
 
     "@solidjs/signals": ["@solidjs/signals@2.0.0-rc.15", "", {}, "sha512-rMhLaYnBvpb9sB3NJGPsqIxjgr0XKU2nvBS7jhWX2fKx+K/m5O0VoAuCgYuTie3BMBZU9vX08NdnFXg508pcew=="],
 
