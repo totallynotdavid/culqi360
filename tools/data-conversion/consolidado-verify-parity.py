@@ -6,9 +6,9 @@ import csv
 import hashlib
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from zipfile import ZipFile
-import xml.etree.ElementTree as ET
 
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 NUM_RE = re.compile(r"\D+")
@@ -68,7 +68,11 @@ def summarize_xlsx(path: Path, columns: list[str]) -> dict[str, int]:
                     column = match.group(1)
                     if column in colset:
                         value_node = element.find(f"{NS}v")
-                        value = "" if value_node is None or value_node.text is None else value_node.text
+                        value = (
+                            ""
+                            if value_node is None or value_node.text is None
+                            else value_node.text
+                        )
                         current_row[column] = value
                 element.clear()
                 continue
@@ -77,7 +81,9 @@ def summarize_xlsx(path: Path, columns: list[str]) -> dict[str, int]:
                 if row_number == 1:
                     element.clear()
                     continue
-                parts = [normalize_digits(current_row.get(column, "")) for column in columns]
+                parts = [
+                    normalize_digits(current_row.get(column, "")) for column in columns
+                ]
                 hv = hash_parts(parts)
                 xor_hash ^= hv
                 sum_hash = (sum_hash + hv) & ((1 << 64) - 1)
@@ -136,7 +142,7 @@ def main() -> None:
         "BA",
         "BB",
     ]
-    txt_indexes = [21, 23] + list(range(27, 54))
+    txt_indexes = [21, 23, *range(27, 54)]
 
     txt_summary = summarize_txt(Path(args.txt), txt_indexes)
     xlsx_summary = summarize_xlsx(Path(args.xlsx), xlsx_columns)

@@ -9,11 +9,12 @@ python = "3.15.0"
 postgres = "18.6"
 
 [tasks.install]
-description = "Install Bun and Rust dependencies from their lockfiles"
+description = "Install Bun, Rust and Python dependencies from their lockfiles"
 run = [
   "bun install --frozen-lockfile",
   "bun packages/email-composer/scripts/build-emails.ts",
   "cargo fetch --locked",
+  "uv sync --locked",
 ]
 
 [tasks.generate]
@@ -47,6 +48,10 @@ run = "bunx oxfmt --check 'apps/**/*' 'packages/**/*' 'tools/**/*' 'contracts/**
 description = "Check Rust formatting and lint the workspace"
 run = ["cargo xtask-check", "cargo xtask-fmt", "cargo xtask-clippy"]
 
+[tasks."lint:python"]
+description = "Lint and format-check the Python scripts with ruff"
+run = ["uv run ruff check --no-fix .", "uv run ruff format --check ."]
+
 [tasks."lint:contracts"]
 description = "Check generated contracts are in sync"
 run = [
@@ -60,12 +65,14 @@ run = [
   "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --fix apps/web/src apps/web/tests",
   "bunx oxlint -c .oxlintrc.json --fix packages tools",
   "cargo xtask-format",
+  "uv run ruff check --fix .",
+  "uv run ruff format .",
   "bunx oxfmt 'apps/**/*' 'packages/**/*' 'tools/**/*' 'contracts/**/*' *.json '**/*.md' '!apps/web/content/**'",
 ]
 
 [tasks.typecheck]
-description = "Typecheck every TypeScript package and tool"
-depends = ["typecheck:typescript"]
+description = "Typecheck TypeScript and Python"
+depends = ["typecheck:typescript", "typecheck:python"]
 
 [tasks."typecheck:typescript"]
 description = "Typecheck every TypeScript project"
@@ -80,6 +87,10 @@ run = [
   "bunx tsc --noEmit -p tools/codegen/tsconfig.json",
   "bunx tsc --noEmit -p tools/tsconfig.json",
 ]
+
+[tasks."typecheck:python"]
+description = "Type check the Python scripts with mypy strict"
+run = "uv run mypy"
 
 [tasks.test]
 description = "Run the web, package, engine and pipeline test suites"

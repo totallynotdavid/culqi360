@@ -6,6 +6,7 @@ import csv
 import json
 from collections import Counter
 from pathlib import Path
+from typing import TypedDict
 
 SUMMARY_FIELDS = [
     "total_rows",
@@ -39,12 +40,19 @@ def error_counts(errors_csv: Path) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
-def load_summaries(run_dir: Path) -> dict[tuple[str, str], dict[str, object]]:
-    items: dict[tuple[str, str], dict[str, object]] = {}
+class RunSummary(TypedDict):
+    summary: dict[str, object]
+    error_counts: dict[str, int]
+
+
+def load_summaries(run_dir: Path) -> dict[tuple[str, str], RunSummary]:
+    items: dict[tuple[str, str], RunSummary] = {}
     for summary_path in sorted(run_dir.glob("*/*/summary.json")):
         source_key = summary_path.parent.parent.name
         snapshot_label = summary_path.parent.name
-        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary: dict[str, object] = json.loads(
+            summary_path.read_text(encoding="utf-8")
+        )
         errors = error_counts(summary_path.parent / "errors.csv")
         items[(source_key, snapshot_label)] = {
             "summary": summary,

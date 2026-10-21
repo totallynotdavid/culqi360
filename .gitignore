@@ -5,6 +5,7 @@
 
 # deps
 node_modules/
+.venv/
 
 # build
 target/

@@ -7,9 +7,9 @@ import json
 import re
 import sqlite3
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from zipfile import ZipFile
-import xml.etree.ElementTree as ET
 
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 DIGIT_RE = re.compile(r"\D+")
@@ -93,7 +93,11 @@ def collect_needed_shared_indexes(xlsx_path: Path) -> set[int]:
                     element.clear()
                     continue
                 value_node = element.find(f"{NS}v")
-                if value_node is not None and value_node.text and value_node.text.isdigit():
+                if (
+                    value_node is not None
+                    and value_node.text
+                    and value_node.text.isdigit()
+                ):
                     needed.add(int(value_node.text))
                 element.clear()
                 continue
@@ -113,7 +117,7 @@ def resolve_shared_strings_subset(xlsx_path: Path, needed: set[int]) -> dict[int
     max_needed = max(needed)
     with ZipFile(xlsx_path) as zf, zf.open("xl/sharedStrings.xml") as fh:
         index = -1
-        for event, element in ET.iterparse(fh, events=("end",)):
+        for _event, element in ET.iterparse(fh, events=("end",)):
             if element.tag != f"{NS}si":
                 continue
             index += 1
@@ -202,8 +206,16 @@ def ingest_xlsx(
                     col = match.group(1)
                     if col in colset:
                         value_node = element.find(f"{NS}v")
-                        raw = "" if value_node is None or value_node.text is None else value_node.text
-                        if col == "W" and element.attrib.get("t") == "s" and raw.isdigit():
+                        raw = (
+                            ""
+                            if value_node is None or value_node.text is None
+                            else value_node.text
+                        )
+                        if (
+                            col == "W"
+                            and element.attrib.get("t") == "s"
+                            and raw.isdigit()
+                        ):
                             current_row[col] = shared_subset.get(int(raw), "")
                         else:
                             current_row[col] = raw
@@ -218,7 +230,10 @@ def ingest_xlsx(
                 ruc = normalize_digits(current_row.get("V", ""))
                 doc_type = normalize_doc_type(current_row.get("W", ""))
                 doc_num = normalize_digits(current_row.get("X", ""))
-                phones = [normalize_phone_token(current_row.get(col, "")) for col in phone_cols]
+                phones = [
+                    normalize_phone_token(current_row.get(col, ""))
+                    for col in phone_cols
+                ]
                 key = build_key([ruc, doc_type, doc_num, *phones])
                 upsert_count(conn, key, "xlsx", f"xlsx_row={row_number}")
                 total += 1
@@ -255,7 +270,9 @@ def main() -> None:
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.NamedTemporaryFile(prefix="consolidado-diff-", suffix=".sqlite") as tmp:
+    with tempfile.NamedTemporaryFile(
+        prefix="consolidado-diff-", suffix=".sqlite"
+    ) as tmp:
         conn = sqlite3.connect(tmp.name)
         conn.execute("PRAGMA journal_mode = OFF")
         conn.execute("PRAGMA synchronous = OFF")

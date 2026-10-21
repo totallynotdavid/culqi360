@@ -28,7 +28,8 @@ def collect_error_counts(errors_csv: Path) -> dict[str, int]:
 
 
 def load_summary(summary_path: Path) -> dict[str, object]:
-    return json.loads(summary_path.read_text(encoding="utf-8"))
+    summary: dict[str, object] = json.loads(summary_path.read_text(encoding="utf-8"))
+    return summary
 
 
 def main() -> None:
