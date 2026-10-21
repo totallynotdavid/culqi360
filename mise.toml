@@ -41,7 +41,7 @@ run = [
 
 [tasks."lint:format"]
 description = "Check TypeScript, Markdown and JSON formatting"
-run = "bunx oxfmt --check apps packages tools contracts *.json '**/*.md' '!apps/web/content/**'"
+run = "bunx oxfmt --check 'apps/**/*' 'packages/**/*' 'tools/**/*' 'contracts/**/*' *.json '**/*.md' '!apps/web/content/**'"
 
 [tasks."lint:rust"]
 description = "Check Rust formatting and lint the workspace"
@@ -60,7 +60,7 @@ run = [
   "bunx oxlint -c apps/web/.oxlintrc.json --type-aware --tsconfig apps/web/tsconfig.json --fix apps/web/src apps/web/tests",
   "bunx oxlint -c .oxlintrc.json --fix packages tools",
   "cargo xtask-format",
-  "bunx oxfmt apps packages tools contracts *.json '**/*.md' '!apps/web/content/**'",
+  "bunx oxfmt 'apps/**/*' 'packages/**/*' 'tools/**/*' 'contracts/**/*' *.json '**/*.md' '!apps/web/content/**'",
 ]
 
 [tasks.typecheck]
