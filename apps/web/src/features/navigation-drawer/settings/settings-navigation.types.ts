@@ -1,4 +1,4 @@
-import type { JSX } from "@solidjs/web";
+import type { IconComponent } from "~/components/icons/icon-base";
 
 export type SettingsNavSectionId =
   | "account"
@@ -10,7 +10,7 @@ export interface SettingsNavItem {
   id: string;
   label: string;
   href?: string;
-  icon: (props: { class?: string; size?: number }) => JSX.Element;
+  icon: IconComponent;
   section: SettingsNavSectionId;
   onClick?: () => void | Promise<void>;
   indentationLevel?: 1 | 2;

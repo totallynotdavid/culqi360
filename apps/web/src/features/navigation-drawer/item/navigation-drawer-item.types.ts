@@ -1,5 +1,6 @@
 import type { JSX } from "@solidjs/web";
 
+import type { IconComponent } from "~/components/icons/icon-base";
 import type { TileColor } from "~/shared/ui/tile-color";
 
 export type NavigationDrawerSubItemState =
@@ -13,16 +14,6 @@ export type NavigationDrawerItemModifier = "new" | "soon";
 
 export type NavigationDrawerItemVariant = "default" | "tertiary";
 
-export interface NavigationDrawerIconProps {
-  class?: string;
-  size?: number;
-  strokeWidth?: number;
-}
-
-export type NavigationDrawerIcon = (
-  props: NavigationDrawerIconProps,
-) => JSX.Element;
-
 export interface NavigationDrawerItemProps {
   class?: string;
   label: string;
@@ -31,7 +22,7 @@ export interface NavigationDrawerItemProps {
   subItemState?: NavigationDrawerSubItemState;
   to?: string;
   onClick?: () => void;
-  Icon?: NavigationDrawerIcon;
+  Icon?: IconComponent;
   tileColor?: TileColor;
   active?: boolean;
   modifier?: NavigationDrawerItemModifier;
@@ -50,7 +41,7 @@ export interface NavigationDrawerItemFrameBaseProps {
   secondaryLabel?: string;
   indentationLevel: 1 | 2;
   subItemState?: NavigationDrawerSubItemState;
-  Icon?: NavigationDrawerIcon;
+  Icon?: IconComponent;
   tileColor?: TileColor;
   active?: boolean;
   modifier?: NavigationDrawerItemModifier;
