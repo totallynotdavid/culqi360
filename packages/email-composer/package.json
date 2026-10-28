@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@crm/tsconfig": "workspace:*",
-    "@types/mjml": "^5.0.0",
+    "@types/mjml": "^5.4.2",
     "mjml": "^5.4.1",
     "vitest": "^5.0.5"
   }
