@@ -107,7 +107,7 @@ function companyResult(ruc: string, overlay: CompanyOverlay): SearchResult {
       province: null,
       district: null,
     },
-    rep: null,
+    people: [],
     phones: {
       primary: null,
       secondary: null,

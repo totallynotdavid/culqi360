@@ -1,4 +1,7 @@
-import type { SearchResult } from "~/contracts/search/engine-results.generated";
+import type {
+  PersonInfo,
+  SearchResult,
+} from "~/contracts/search/engine-results.generated";
 
 export function makeDocumentResult(partial: {
   doc_type?: string;
@@ -76,6 +79,7 @@ export function makeCompanyResult(partial: {
   phone_primary?: string | null;
   phone_secondary?: string | null;
   sibling_phones?: string[] | null;
+  people?: PersonInfo[];
 }): SearchResult {
   const {
     id,
@@ -84,6 +88,7 @@ export function makeCompanyResult(partial: {
     phone_primary = null,
     phone_secondary = null,
     sibling_phones = null,
+    people = [],
   } = partial;
   const stableId = id ?? Number(ruc);
 
@@ -107,7 +112,7 @@ export function makeCompanyResult(partial: {
       province: null,
       district: null,
     },
-    rep: null,
+    people,
     phones: {
       primary: phone_primary,
       secondary: phone_secondary,

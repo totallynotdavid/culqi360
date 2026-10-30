@@ -123,6 +123,55 @@ async fn search_by_phone_returns_siblings() {
     );
 }
 
+#[tokio::test]
+async fn company_result_lists_its_people_in_rank_order() {
+    let server = make_server(100);
+    let response = signed_request(
+        &json!({"intent":"companies","query":"20100011111","limit":5}),
+        &server,
+    )
+    .await;
+
+    response.assert_status_ok();
+    let payload = response.json::<serde_json::Value>();
+    assert_eq!(payload["count"], 1);
+    assert_eq!(payload["results"][0]["kind"], "company");
+    assert_eq!(
+        payload["results"][0]["people"],
+        json!([
+            {
+                "doc_type": "DNI",
+                "doc_number": "12345678",
+                "name": "JUAN PEREZ",
+                "role_name": "GERENTE GENERAL",
+                "role_start_date": "2020-01-01",
+            },
+            {
+                "doc_type": "DNI",
+                "doc_number": "87654321",
+                "name": "MARIA LOPEZ",
+                "role_name": "SOCIO",
+                "role_start_date": null,
+            },
+        ])
+    );
+}
+
+#[tokio::test]
+async fn company_without_people_has_an_empty_list() {
+    let server = make_server(100);
+    let response = signed_request(
+        &json!({"intent":"companies","query":"20100022222","limit":5}),
+        &server,
+    )
+    .await;
+
+    response.assert_status_ok();
+    let payload = response.json::<serde_json::Value>();
+    assert_eq!(payload["results"][0]["company"]["ruc"], "20100022222");
+    assert_eq!(payload["results"][0]["people"], json!([]));
+}
+
 // auth / validation
 
 #[tokio::test]

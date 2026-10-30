@@ -2,7 +2,6 @@ import { makeCompanyResult } from "@tests/support/shared/search-row";
 import { describe, expect, it } from "vitest";
 
 import { groupByCompany } from "~/features/search/model/grouping";
-
 describe("client search grouping companies", () => {
   it("groups company rows by ruc and aggregates phones", () => {
     const groups = groupByCompany([
@@ -48,6 +47,31 @@ describe("client search grouping companies", () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.phones).toEqual(["999111222"]);
+  });
+
+  it("lists the company's people once each across rows", () => {
+    const juan = {
+      doc_type: "DNI",
+      doc_number: "12345678",
+      name: "JUAN PEREZ",
+      role_name: "GERENTE GENERAL",
+      role_start_date: "2020-01-01",
+    };
+    const unnamed = {
+      doc_type: null,
+      doc_number: null,
+      name: null,
+      role_name: "SOCIO",
+      role_start_date: null,
+    };
+    const groups = groupByCompany([
+      makeCompanyResult({ ruc: "20100000001", people: [juan, unnamed] }),
+      makeCompanyResult({ ruc: "20100000001", people: [juan] }),
+    ]);
+
+    expect(groups[0]?.people).toEqual([
+      { doc_type: "DNI", doc_number: "12345678", name: "JUAN PEREZ" },
+    ]);
   });
 
   it("recovers company name from later rows", () => {

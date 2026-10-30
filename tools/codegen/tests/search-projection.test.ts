@@ -153,6 +153,28 @@ describe("renderResultContract", () => {
     expect(ts).toContain("org: OrgInfo | null;");
   });
 
+  test("a people object is a list of PersonInfo in Rust + TS", () => {
+    const spec = parseProjectionSpec({
+      projection: "people_projection",
+      fields: [
+        SPEC.fields[0],
+        {
+          path: "people.name",
+          canonical_fields: ["rep_name"],
+          nullable: true,
+          storage: [{ table: "company_people_projection", column: "name" }],
+        },
+      ],
+    });
+
+    const rust = renderResultContractRust(spec, spec);
+    const ts = renderResultContractTs(spec, spec);
+
+    expect(rust).toContain("pub people: Vec<PersonInfo>");
+    expect(ts).toContain("people: PersonInfo[];");
+    expect(ts).toContain("isArrayOf(value.people, isPersonInfo)");
+  });
+
   test("TS guards check the same fields the interfaces declare", () => {
     const spec = parseProjectionSpec(SPEC);
     const ts = renderResultContractTs(spec, spec);

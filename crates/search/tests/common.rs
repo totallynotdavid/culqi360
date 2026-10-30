@@ -62,13 +62,18 @@ pub fn create_test_db() -> tempfile::NamedTempFile {
             org_department      TEXT,
             org_province        TEXT,
             org_district        TEXT,
-            rep_doc_type        TEXT,
-            rep_doc_number      TEXT,
-            rep_name            TEXT,
-            role_name           TEXT,
-            role_start_date     TEXT,
             phone_primary       TEXT,
             phone_secondary     TEXT
+        );
+        CREATE TABLE company_people_projection (
+            company_id          INTEGER NOT NULL,
+            position            INTEGER NOT NULL,
+            doc_type            TEXT,
+            doc_number          TEXT,
+            name                TEXT,
+            role_name           TEXT,
+            role_start_date     TEXT,
+            PRIMARY KEY(company_id, position)
         );
         CREATE TABLE doc_projection_phone_index (
             phone   TEXT    NOT NULL,
@@ -111,11 +116,17 @@ pub fn create_test_db() -> tempfile::NamedTempFile {
 
         INSERT INTO company_projection(
             company_id, ruc, legal_name, trade_name, org_status, fiscal_address,
-            rep_name, role_name, role_start_date, phone_primary, phone_secondary
+            phone_primary, phone_secondary
         ) VALUES
             (1,'20100011111','ACME SAC','ACME','ACTIVO','AV. LIMA 123',
-             'JUAN PEREZ','GERENTE GENERAL','2020-01-01',
-             '999111222','999333444');
+             '999111222','999333444'),
+            (2,'20100022222','GLOBEX SAC',NULL,'ACTIVO',NULL,NULL,NULL);
+
+        INSERT INTO company_people_projection(
+            company_id, position, doc_type, doc_number, name, role_name, role_start_date
+        ) VALUES
+            (1,1,'DNI','12345678','JUAN PEREZ','GERENTE GENERAL','2020-01-01'),
+            (1,2,'DNI','87654321','MARIA LOPEZ','SOCIO',NULL);
 
         INSERT INTO doc_projection_phone_index(phone, doc_id) VALUES
             ('999111222',1),('999333444',1),('988777666',2),('977000111',3);

@@ -73,13 +73,18 @@ pub fn create_test_db() -> tempfile::NamedTempFile {
             org_department      TEXT,
             org_province        TEXT,
             org_district        TEXT,
-            rep_doc_type        TEXT,
-            rep_doc_number      TEXT,
-            rep_name            TEXT,
-            role_name           TEXT,
-            role_start_date     TEXT,
             phone_primary       TEXT,
             phone_secondary     TEXT
+        );
+        CREATE TABLE company_people_projection (
+            company_id          INTEGER NOT NULL,
+            position            INTEGER NOT NULL,
+            doc_type            TEXT,
+            doc_number          TEXT,
+            name                TEXT,
+            role_name           TEXT,
+            role_start_date     TEXT,
+            PRIMARY KEY(company_id, position)
         );
         CREATE TABLE doc_projection_phone_index (
             phone   TEXT    NOT NULL,

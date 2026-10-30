@@ -64,7 +64,17 @@ describe("engine search response decoding", () => {
     org_name: "ACME SAC",
     sibling_phones: ["999333444"],
   });
-  const company = makeCompanyResult({ ruc: "20100000001" });
+  const companyPerson = {
+    doc_type: "DNI",
+    doc_number: "12345678",
+    name: "JUAN PEREZ",
+    role_name: null,
+    role_start_date: null,
+  };
+  const company = makeCompanyResult({
+    ruc: "20100000001",
+    people: [companyPerson],
+  });
 
   it("returns every row of a valid response", async () => {
     const result = await searchWith({ results: [person, company], count: 2 });
@@ -146,7 +156,12 @@ describe("engine search response decoding", () => {
     ["a missing company", withField(company, ["company"], undefined)],
     ["a non-integer company id", withField(company, ["company", "id"], "20")],
     ["a null company ruc", withField(company, ["company", "ruc"], null)],
-    ["a missing rep", withField(company, ["rep"], undefined)],
+    ["a missing people list", withField(company, ["people"], undefined)],
+    ["a non-array people list", withField(company, ["people"], null)],
+    [
+      "a numeric person name",
+      withField(company, ["people"], [{ ...companyPerson, name: 1 }]),
+    ],
     ["an unknown kind", withField(person, ["kind"], "branch")],
     ["a missing kind", withField(person, ["kind"], undefined)],
     ["a non-object row", null],
