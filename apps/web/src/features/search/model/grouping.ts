@@ -5,6 +5,12 @@ export interface CompanyRef {
   name: string | null;
 }
 
+export interface PersonRef {
+  doc_type: string | null;
+  doc_number: string | null;
+  name: string | null;
+}
+
 export interface PersonGroup {
   key: string;
   doc_type: string;
@@ -21,6 +27,7 @@ export interface CompanyGroup {
   ruc: string | null;
   name: string | null;
   phones: string[];
+  people: PersonRef[];
 }
 
 function normalized(value: string | null | undefined): string {
@@ -132,43 +139,56 @@ export function groupByCompany(
     }
 
     const key = `company:${row.company.id}`;
-    const existing = groups.get(key);
-
-    if (existing) {
-      if (!existing.name) {
-        existing.name = normalized(row.company.legal_name) || null;
-      }
-
-      const phoneSet = new Set(existing.phones);
-
-      pushUnique(existing.phones, phoneSet, row.phones.primary);
-      pushUnique(existing.phones, phoneSet, row.phones.secondary);
-
-      for (const siblingPhone of row.phones.siblings ?? []) {
-        pushUnique(existing.phones, phoneSet, siblingPhone);
-      }
-
-      continue;
-    }
-
-    const phones: string[] = [];
-    const phoneSet = new Set<string>();
-
-    pushUnique(phones, phoneSet, row.phones.primary);
-    pushUnique(phones, phoneSet, row.phones.secondary);
-
-    for (const siblingPhone of row.phones.siblings ?? []) {
-      pushUnique(phones, phoneSet, siblingPhone);
-    }
-
-    groups.set(key, {
+    const group = groups.get(key) ?? {
       id: row.company.id,
       key,
       ruc: normalized(row.company.ruc) || null,
-      name: normalized(row.company.legal_name) || null,
-      phones,
-    });
+      name: null,
+      phones: [],
+      people: [],
+    };
+
+    groups.set(key, group);
+    mergeCompanyRow(group, row);
   }
 
   return [...groups.values()];
+}
+
+function mergeCompanyRow(
+  group: CompanyGroup,
+  row: Extract<SearchResult, { kind: "company" }>,
+): void {
+  group.name ??= normalized(row.company.legal_name) || null;
+
+  const phoneSet = new Set(group.phones);
+
+  pushUnique(group.phones, phoneSet, row.phones.primary);
+  pushUnique(group.phones, phoneSet, row.phones.secondary);
+
+  for (const siblingPhone of row.phones.siblings ?? []) {
+    pushUnique(group.phones, phoneSet, siblingPhone);
+  }
+
+  const personKeys = new Set(group.people.map(personRefKey));
+
+  for (const person of row.people) {
+    const ref: PersonRef = {
+      doc_type: normalized(person.doc_type) || null,
+      doc_number: normalized(person.doc_number) || null,
+      name: normalized(person.name) || null,
+    };
+    const refKey = personRefKey(ref);
+
+    if (refKey === "||" || personKeys.has(refKey)) {
+      continue;
+    }
+
+    personKeys.add(refKey);
+    group.people.push(ref);
+  }
+}
+
+function personRefKey(person: PersonRef): string {
+  return `${person.doc_type ?? ""}|${person.doc_number ?? ""}|${person.name ?? ""}`;
 }

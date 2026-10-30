@@ -5,7 +5,7 @@ import User from "~/components/icons/user";
 import Users from "~/components/icons/users";
 import type { AvatarType } from "~/components/ui/display/avatar";
 
-import type { CompanyGroup, PersonGroup } from "./grouping";
+import type { CompanyGroup, PersonGroup, PersonRef } from "./grouping";
 import type { SearchViewModel } from "./search-view-model";
 
 type FieldIcon = typeof Info;
@@ -96,9 +96,31 @@ function companyItem(company: CompanyGroup): SearchResultItem {
         kind: "text",
         values: company.name ? [company.name] : [],
       },
+      {
+        label: "Personas",
+        icon: Users,
+        kind: "chips",
+        values: company.people.map(personChip).filter(isNonEmpty),
+      },
     ],
     source: { kind: "company", company },
   };
+}
+
+function personChip(person: PersonRef): string {
+  const document = [person.doc_type, person.doc_number]
+    .filter((part) => part !== null)
+    .join(" ");
+
+  if (!person.name) {
+    return document;
+  }
+
+  return document ? `${person.name} (${document})` : person.name;
+}
+
+function isNonEmpty(value: string): boolean {
+  return value.length > 0;
 }
 
 export function toSearchResultItems(
