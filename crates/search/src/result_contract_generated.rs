@@ -84,7 +84,7 @@ pub struct CompanyInfo {
 }
 
 #[derive(Debug, Serialize)]
-pub struct RepInfo {
+pub struct PersonInfo {
     pub doc_type: Option<String>,
     pub doc_number: Option<String>,
     pub name: Option<String>,
@@ -95,7 +95,7 @@ pub struct RepInfo {
 #[derive(Debug, Serialize)]
 pub struct CompanyRow {
     pub company: CompanyInfo,
-    pub rep: Option<RepInfo>,
+    pub people: Vec<PersonInfo>,
     pub phones: PhoneInfo,
 }
 

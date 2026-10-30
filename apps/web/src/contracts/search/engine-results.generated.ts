@@ -78,7 +78,7 @@ export interface CompanyInfo {
   district: string | null;
 }
 
-export interface RepInfo {
+export interface PersonInfo {
   doc_type: string | null;
   doc_number: string | null;
   name: string | null;
@@ -88,7 +88,7 @@ export interface RepInfo {
 
 export interface CompanyRow {
   company: CompanyInfo;
-  rep: RepInfo | null;
+  people: PersonInfo[];
   phones: PhoneInfo;
 }
 
@@ -111,6 +111,10 @@ function isInteger(value: unknown): value is number {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(isString);
+}
+
+function isArrayOf(value: unknown, guard: (item: unknown) => boolean): boolean {
+  return Array.isArray(value) && value.every(guard);
 }
 
 function isNullable(
@@ -212,7 +216,7 @@ function isCompanyInfo(value: unknown): value is CompanyInfo {
   );
 }
 
-function isRepInfo(value: unknown): value is RepInfo {
+function isPersonInfo(value: unknown): value is PersonInfo {
   return (
     isPlainRecord(value) &&
     isNullable(value.doc_type, isString) &&
@@ -227,7 +231,7 @@ function isCompanyRow(value: unknown): value is CompanyRow {
   return (
     isPlainRecord(value) &&
     isCompanyInfo(value.company) &&
-    isNullable(value.rep, isRepInfo) &&
+    isArrayOf(value.people, isPersonInfo) &&
     isPhoneInfo(value.phones)
   );
 }

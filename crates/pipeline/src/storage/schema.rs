@@ -221,15 +221,24 @@ pub fn init_schema(db_path: &str) -> Result<(), PipelineError> {
             org_department TEXT,
             org_province TEXT,
             org_district TEXT,
-            rep_doc_type TEXT,
-            rep_doc_number TEXT,
-            rep_name TEXT,
-            role_name TEXT,
-            role_start_date TEXT,
             phone_primary TEXT,
             phone_secondary TEXT,
             FOREIGN KEY(company_id) REFERENCES company(company_id)
         );
+
+        -- The people a company search result lists, best-ranked first.
+        -- `position` is the rank within the company (1 = primary representative).
+        CREATE TABLE IF NOT EXISTS company_people_projection (
+            company_id INTEGER NOT NULL,
+            position INTEGER NOT NULL,
+            doc_type TEXT,
+            doc_number TEXT,
+            name TEXT,
+            role_name TEXT,
+            role_start_date TEXT,
+            PRIMARY KEY(company_id, position),
+            FOREIGN KEY(company_id) REFERENCES company(company_id)
+        ) WITHOUT ROWID;
 
         CREATE TABLE IF NOT EXISTS doc_projection_phone_index (
             phone TEXT NOT NULL,
@@ -316,8 +325,10 @@ pub fn init_schema(db_path: &str) -> Result<(), PipelineError> {
         )
         WHERE rn = 1;
 
-        CREATE VIEW IF NOT EXISTS primary_role_by_company AS
-        SELECT company_id, rep_doc_type, rep_doc_number, rep_name, role_name, role_start_date
+        -- Every identifiable person of a company, ranked: rn = 1 is the primary
+        -- representative. A role with neither a name nor a document names no one.
+        CREATE VIEW IF NOT EXISTS ranked_role_by_company AS
+        SELECT company_id, rep_doc_type, rep_doc_number, rep_name, role_name, role_start_date, rn
         FROM (
             SELECT
                 cr.company_id, cr.rep_doc_type, cr.rep_doc_number, cr.rep_name,
@@ -330,8 +341,8 @@ pub fn init_schema(db_path: &str) -> Result<(), PipelineError> {
                         cr.role_id ASC
                 ) AS rn
             FROM company_role cr
-        )
-        WHERE rn = 1;
+            WHERE cr.rep_name <> '' OR cr.rep_doc_number <> ''
+        );
         "#,
     )?;
 

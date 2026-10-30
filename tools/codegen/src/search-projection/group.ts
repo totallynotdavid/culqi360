@@ -1,10 +1,13 @@
 import type { ProjectionField } from "./parse.ts";
 
 // Objects whose container is nullable in the SearchRow/SearchResult types.
-export const NULLABLE_OBJECTS = new Set(["org", "role", "rep"]);
+export const NULLABLE_OBJECTS = new Set(["org", "role"]);
+
+// Objects that repeat: the row carries a list of them, never a single one.
+export const ARRAY_OBJECTS = new Set(["people"]);
 
 // Preferred display order; any object not in this list is appended alphabetically.
-const PREFERRED_ORDER = ["doc", "company", "org", "rep", "role", "phones"];
+const PREFERRED_ORDER = ["doc", "company", "org", "role", "people", "phones"];
 
 export type ObjectGroup = {
   objectName: string;
@@ -47,9 +50,10 @@ export function fieldProp(field: ProjectionField): string {
 
 /** Derives the Info struct/interface name for an object group. */
 export function infoTypeName(objectName: string): string {
-  // "phones" is the only group whose type name is singular; everything else
-  // is just PascalCase + "Info" (e.g. "org" -> "OrgInfo").
+  // Plural group names name a singular type; everything else is just
+  // PascalCase + "Info" (e.g. "org" -> "OrgInfo").
   if (objectName === "phones") return "PhoneInfo";
+  if (objectName === "people") return "PersonInfo";
   return `${pascalCase(objectName)}Info`;
 }
 

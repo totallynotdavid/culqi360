@@ -1,6 +1,6 @@
 use crate::domain::QueryStrategy;
 use crate::result_contract_generated::{
-    CompanyInfo, CompanyRow, DocInfo, DocumentRow, OrgInfo, PhoneInfo, RepInfo, RoleInfo,
+    CompanyInfo, CompanyRow, DocInfo, DocumentRow, OrgInfo, PersonInfo, PhoneInfo, RoleInfo,
     SearchResult,
 };
 use rusqlite::{Connection, Row, params};
@@ -61,13 +61,13 @@ const COMPANY_SELECT_COLUMNS: &str = "
   NULLIF(c.org_department, '')      AS org_department,
   NULLIF(c.org_province, '')        AS org_province,
   NULLIF(c.org_district, '')        AS org_district,
-  NULLIF(c.rep_doc_type, '')        AS rep_doc_type,
-  NULLIF(c.rep_doc_number, '')      AS rep_doc_number,
-  NULLIF(c.rep_name, '')            AS rep_name,
-  NULLIF(c.role_name, '')           AS role_name,
-  NULLIF(c.role_start_date, '')     AS role_start_date,
   NULLIF(c.phone_primary, '')       AS phone_primary,
   NULLIF(c.phone_secondary, '')     AS phone_secondary";
+
+const SQL_COMPANY_PEOPLE: &str = "SELECT doc_type, doc_number, name, role_name, role_start_date\n\
+     FROM company_people_projection\n\
+     WHERE company_id = ?1\n\
+     ORDER BY position";
 
 static SQL_DOCUMENT: LazyLock<String> = LazyLock::new(|| {
     format!(
@@ -137,6 +137,16 @@ pub fn search(
     strategy: QueryStrategy,
     limit: usize,
 ) -> Result<Vec<SearchResult>, ApiError> {
+    let mut results = run_strategy(conn, strategy, limit)?;
+    attach_company_people(conn, &mut results)?;
+    Ok(results)
+}
+
+fn run_strategy(
+    conn: &Connection,
+    strategy: QueryStrategy,
+    limit: usize,
+) -> Result<Vec<SearchResult>, ApiError> {
     match strategy {
         QueryStrategy::Document {
             doc_type,
@@ -148,6 +158,31 @@ pub fn search(
         QueryStrategy::CompanyName(value) => search_by_company_name(conn, &value, limit),
         QueryStrategy::MixedName(value) => search_by_name(conn, &value, limit),
     }
+}
+
+/// Fills `people` on every company row. Each lookup is a primary-key range
+/// scan, so the cost is bounded by the result limit.
+fn attach_company_people(conn: &Connection, results: &mut [SearchResult]) -> Result<(), ApiError> {
+    let mut stmt = conn.prepare_cached(SQL_COMPANY_PEOPLE).map_err(db_err)?;
+    for result in results {
+        let SearchResult::Company(company_row) = result else {
+            continue;
+        };
+        company_row.people = stmt
+            .query_map(params![company_row.company.id], |row| {
+                Ok(PersonInfo {
+                    doc_type: row.get("doc_type")?,
+                    doc_number: row.get("doc_number")?,
+                    name: row.get("name")?,
+                    role_name: row.get("role_name")?,
+                    role_start_date: row.get("role_start_date")?,
+                })
+            })
+            .map_err(db_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(db_err)?;
+    }
+    Ok(())
 }
 
 fn search_by_document(
@@ -393,29 +428,6 @@ fn map_doc_row_with_siblings(row: &Row<'_>) -> rusqlite::Result<SearchResult> {
 }
 
 fn map_company_row(row: &Row<'_>) -> rusqlite::Result<SearchResult> {
-    let rep_doc_type: Option<String> = row.get("rep_doc_type")?;
-    let rep_doc_number: Option<String> = row.get("rep_doc_number")?;
-    let rep_name: Option<String> = row.get("rep_name")?;
-    let role_name: Option<String> = row.get("role_name")?;
-    let role_start_date: Option<String> = row.get("role_start_date")?;
-
-    let rep = if rep_doc_type.is_none()
-        && rep_doc_number.is_none()
-        && rep_name.is_none()
-        && role_name.is_none()
-        && role_start_date.is_none()
-    {
-        None
-    } else {
-        Some(RepInfo {
-            doc_type: rep_doc_type,
-            doc_number: rep_doc_number,
-            name: rep_name,
-            role_name,
-            role_start_date,
-        })
-    };
-
     Ok(SearchResult::Company(Box::new(CompanyRow {
         company: CompanyInfo {
             id: row.get("company_id")?,
@@ -435,7 +447,7 @@ fn map_company_row(row: &Row<'_>) -> rusqlite::Result<SearchResult> {
             province: row.get("org_province")?,
             district: row.get("org_district")?,
         },
-        rep,
+        people: Vec::new(),
         phones: PhoneInfo {
             primary: row.get("phone_primary")?,
             secondary: row.get("phone_secondary")?,

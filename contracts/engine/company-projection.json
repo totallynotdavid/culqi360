@@ -123,35 +123,46 @@
       "storage": [{ "table": "company_projection", "column": "org_district" }]
     },
     {
-      "path": "rep.doc_type",
+      "path": "people.doc_type",
       "canonical_fields": ["rep_doc_type"],
       "nullable": true,
-      "storage": [{ "table": "company_projection", "column": "rep_doc_type" }]
+      "derivation": "top_ranked_roles_per_company",
+      "storage": [
+        { "table": "company_people_projection", "column": "doc_type" }
+      ]
     },
     {
-      "path": "rep.doc_number",
+      "path": "people.doc_number",
       "canonical_fields": ["rep_doc_number"],
       "nullable": true,
-      "storage": [{ "table": "company_projection", "column": "rep_doc_number" }]
+      "derivation": "top_ranked_roles_per_company",
+      "storage": [
+        { "table": "company_people_projection", "column": "doc_number" }
+      ]
     },
     {
-      "path": "rep.name",
+      "path": "people.name",
       "canonical_fields": ["rep_name"],
       "nullable": true,
-      "storage": [{ "table": "company_projection", "column": "rep_name" }]
+      "derivation": "top_ranked_roles_per_company",
+      "storage": [{ "table": "company_people_projection", "column": "name" }]
     },
     {
-      "path": "rep.role_name",
+      "path": "people.role_name",
       "canonical_fields": ["role_name"],
       "nullable": true,
-      "storage": [{ "table": "company_projection", "column": "role_name" }]
+      "derivation": "top_ranked_roles_per_company",
+      "storage": [
+        { "table": "company_people_projection", "column": "role_name" }
+      ]
     },
     {
-      "path": "rep.role_start_date",
+      "path": "people.role_start_date",
       "canonical_fields": ["role_start_date"],
       "nullable": true,
+      "derivation": "top_ranked_roles_per_company",
       "storage": [
-        { "table": "company_projection", "column": "role_start_date" }
+        { "table": "company_people_projection", "column": "role_start_date" }
       ]
     },
     {

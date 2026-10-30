@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub use crate::result_contract_generated::{
-    CompanyInfo, CompanyRow, DocInfo, DocumentRow, OrgInfo, PhoneInfo, RepInfo, RoleInfo,
+    CompanyInfo, CompanyRow, DocInfo, DocumentRow, OrgInfo, PersonInfo, PhoneInfo, RoleInfo,
     SearchResult,
 };
 

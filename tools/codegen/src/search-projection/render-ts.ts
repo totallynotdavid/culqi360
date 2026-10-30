@@ -1,4 +1,5 @@
 import {
+  ARRAY_OBJECTS,
   fieldProp,
   groupByObject,
   infoTypeName,
@@ -69,6 +70,10 @@ const GUARD_HELPERS = [
   "  return Array.isArray(value) && value.every(isString);",
   "}",
   "",
+  "function isArrayOf(value: unknown, guard: (item: unknown) => boolean): boolean {",
+  "  return Array.isArray(value) && value.every(guard);",
+  "}",
+  "",
   "function isNullable(",
   "  value: unknown,",
   "  guard: (value: unknown) => boolean,",
@@ -116,6 +121,9 @@ function emitInfoGuards(groups: ObjectGroup[], guarded: Set<string>): string[] {
 function emitRowGuard(name: string, groups: ObjectGroup[]): string[] {
   const checks = groups.map(({ objectName }) => {
     const guard = `is${infoTypeName(objectName)}`;
+    if (ARRAY_OBJECTS.has(objectName)) {
+      return `isArrayOf(value.${objectName}, ${guard})`;
+    }
     return NULLABLE_OBJECTS.has(objectName)
       ? `isNullable(value.${objectName}, ${guard})`
       : `${guard}(value.${objectName})`;
@@ -174,13 +182,16 @@ function emitRow(name: string, groups: ObjectGroup[]): string[] {
   const lines = [`export interface ${name} {`];
   for (const { objectName } of groups) {
     const container = infoTypeName(objectName);
-    const tsType = NULLABLE_OBJECTS.has(objectName)
-      ? `${container} | null`
-      : container;
-    lines.push(`  ${objectName}: ${tsType};`);
+    lines.push(`  ${objectName}: ${tsContainerType(objectName, container)};`);
   }
   lines.push("}", "");
   return lines;
+}
+
+function tsContainerType(objectName: string, container: string): string {
+  if (ARRAY_OBJECTS.has(objectName)) return `${container}[]`;
+  if (NULLABLE_OBJECTS.has(objectName)) return `${container} | null`;
+  return container;
 }
 
 function tsFieldType(field: ProjectionField): string {

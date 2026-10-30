@@ -1,4 +1,5 @@
 import {
+  ARRAY_OBJECTS,
   fieldProp,
   groupByObject,
   infoTypeName,
@@ -112,13 +113,18 @@ function emitRow(name: string, groups: ObjectGroup[]): string[] {
   const lines = ["#[derive(Debug, Serialize)]", `pub struct ${name} {`];
   for (const { objectName } of groups) {
     const container = infoTypeName(objectName);
-    const rustType = NULLABLE_OBJECTS.has(objectName)
-      ? `Option<${container}>`
-      : container;
-    lines.push(`    pub ${objectName}: ${rustType},`);
+    lines.push(
+      `    pub ${objectName}: ${rustContainerType(objectName, container)},`,
+    );
   }
   lines.push("}", "");
   return lines;
+}
+
+function rustContainerType(objectName: string, container: string): string {
+  if (ARRAY_OBJECTS.has(objectName)) return `Vec<${container}>`;
+  if (NULLABLE_OBJECTS.has(objectName)) return `Option<${container}>`;
+  return container;
 }
 
 function rustFieldType(field: ProjectionField): string {

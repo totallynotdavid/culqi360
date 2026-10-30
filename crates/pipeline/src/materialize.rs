@@ -244,6 +244,25 @@ fn materialize_company_projection(tx: &rusqlite::Transaction<'_>) -> Result<(), 
         DELETE FROM company_projection
         WHERE company_id IN (SELECT company_id FROM tmp_dirty_company_ids);
 
+        DELETE FROM company_people_projection
+        WHERE company_id IN (SELECT company_id FROM tmp_dirty_company_ids);
+
+        -- A search result lists a few people; the rest stay in company_role.
+        INSERT INTO company_people_projection(
+            company_id, position, doc_type, doc_number, name, role_name, role_start_date
+        )
+        SELECT
+            rr.company_id,
+            rr.rn,
+            NULLIF(rr.rep_doc_type, ''),
+            NULLIF(rr.rep_doc_number, ''),
+            NULLIF(rr.rep_name, ''),
+            NULLIF(rr.role_name, ''),
+            NULLIF(rr.role_start_date, '')
+        FROM ranked_role_by_company rr
+        WHERE rr.company_id IN (SELECT company_id FROM tmp_dirty_company_ids)
+          AND rr.rn <= 10;
+
         WITH
         -- Restrict ranking to the dirty chunk. SQLite cannot push the outer
         -- filter through the window function.
@@ -272,7 +291,6 @@ fn materialize_company_projection(tx: &rusqlite::Transaction<'_>) -> Result<(), 
             org_status, org_condition, fiscal_address, registration_date,
             activity_start_date, line_of_business, economic_activity,
             org_ubigeo_code, org_department, org_province, org_district,
-            rep_doc_type, rep_doc_number, rep_name, role_name, role_start_date,
             phone_primary, phone_secondary
         )
         SELECT
@@ -292,15 +310,9 @@ fn materialize_company_projection(tx: &rusqlite::Transaction<'_>) -> Result<(), 
             cp.department                   AS org_department,
             cp.province                     AS org_province,
             cp.district                     AS org_district,
-            NULLIF(prc.rep_doc_type, '')    AS rep_doc_type,
-            NULLIF(prc.rep_doc_number, '')  AS rep_doc_number,
-            NULLIF(prc.rep_name, '')        AS rep_name,
-            NULLIF(prc.role_name, '')       AS role_name,
-            NULLIF(prc.role_start_date, '') AS role_start_date,
             phones.phone_primary,
             phones.phone_secondary
         FROM company cp
-        LEFT JOIN primary_role_by_company prc ON prc.company_id = cp.company_id
         LEFT JOIN top_two_phones phones ON phones.company_id = cp.company_id
         WHERE cp.company_id IN (SELECT company_id FROM tmp_dirty_company_ids);
 
@@ -395,6 +407,76 @@ mod tests {
 
         assert_eq!(projected, 7);
         assert_eq!(still_dirty, 0);
+    }
+
+    /// Dated roles rank first (newest first), then undated ones; unnamed
+    /// roles are skipped and only the top 10 are kept.
+    #[test]
+    fn company_people_keep_the_ten_best_ranked_named_roles() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir
+            .path()
+            .join("stage.sqlite")
+            .to_string_lossy()
+            .to_string();
+
+        init_schema(&path).expect("init schema");
+
+        let mut conn = open_rw(&path).expect("open db");
+
+        conn.execute(
+            "INSERT INTO company(company_id, ruc) VALUES (1, '20100000001')",
+            [],
+        )
+        .expect("insert company");
+        conn.execute(
+            "INSERT INTO projection_dirty_company(company_id) VALUES (1)",
+            [],
+        )
+        .expect("mark dirty");
+
+        let insert_role = |doc_number: &str, name: &str, start_date: &str| {
+            conn.execute(
+                "INSERT INTO company_role(company_id, rep_doc_type, rep_doc_number, rep_name, role_name, role_start_date)
+                 VALUES (1, 'DNI', ?1, ?2, 'SOCIO', ?3)",
+                params![doc_number, name, start_date],
+            )
+            .expect("insert role");
+        };
+
+        insert_role("00000001", "UNDATED", "");
+        for day in 1..=11 {
+            insert_role(
+                &format!("1000000{day:02}"),
+                &format!("DATED {day:02}"),
+                &format!("2020-01-{day:02}"),
+            );
+        }
+        conn.execute(
+            "INSERT INTO company_role(company_id, rep_doc_type, rep_doc_number, rep_name, role_name, role_start_date)
+             VALUES (1, '', '', '', 'SOCIO', '2024-01-01')",
+            [],
+        )
+        .expect("insert unnamed role");
+
+        assert_eq!(drain_dirty_companies(&mut conn, 3).expect("drain"), 1);
+
+        let names: Vec<String> = conn
+            .prepare(
+                "SELECT name FROM company_people_projection WHERE company_id = 1 ORDER BY position",
+            )
+            .expect("prepare")
+            .query_map([], |row| row.get(0))
+            .expect("query")
+            .collect::<Result<_, _>>()
+            .expect("collect");
+
+        let expected: Vec<String> = (2..=11)
+            .rev()
+            .map(|day| format!("DATED {day:02}"))
+            .collect();
+
+        assert_eq!(names, expected);
     }
 
     #[test]
