@@ -31,8 +31,8 @@ proptest           = "=1.12.0"
 tempfile           = "=3.27.0"
 axum-test          = "=21.1.0"
 csv                = "=1.4.0"
-encoding_rs        = "=0.8.42"
-toml               = "=1.1.8"
+encoding_rs        = "=0.8.44"
+toml               = "=1.2.0"
 
 [profile.release]
 opt-level = 3
