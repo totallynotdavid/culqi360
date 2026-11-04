@@ -95,7 +95,7 @@ export default defineConfig(({ command }) => {
           filter: {
             include: ["src/rpc/**/*.ts"],
           },
-          configure: "./src/server-config.ts",
+          serverSetup: "./src/server-config.ts",
         },
         // `.jsx`/`.tsx` cover the `?pick=` route ids emitted by fileRoutes;
         // the MDX entries are content routes the transform must also accept.

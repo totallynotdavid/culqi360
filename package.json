@@ -31,13 +31,16 @@
   "devDependencies": {
     "@crm/tsconfig": "workspace:*",
     "@types/bun": "^1.4.4",
-    "@types/node": "^26.6.5",
-    "agent-browser": "^0.40.0",
-    "oxfmt": "^0.75.0",
-    "oxlint": "^1.90.0",
+    "@types/node": "^26.6.6",
+    "agent-browser": "^0.41.2",
+    "oxfmt": "^0.76.0",
+    "oxlint": "^1.91.0",
     "oxlint-tsgolint": "^7.0.2005",
     "shx": "^0.4.0",
     "typescript": "^7.0.2"
   },
-  "packageManager": "bun@1.4.4"
+  "packageManager": "bun@1.4.4",
+  "trustedDependencies": [
+    "agent-browser"
+  ]
 }
