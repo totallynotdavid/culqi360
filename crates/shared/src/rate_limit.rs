@@ -36,24 +36,33 @@ impl RateLimiter {
         let cost = cost as f64;
         let refill_rate = self.tokens_per_minute as f64 / 60.0;
 
-        if let Some(mut bucket) = self.buckets.get_mut(key) {
-            let elapsed = now.duration_since(bucket.last_refill_at).as_secs_f64();
-            let refilled = (bucket.tokens + elapsed * refill_rate).min(self.capacity);
-            bucket.tokens = refilled;
-            bucket.last_refill_at = now;
-
-            if bucket.tokens < cost {
-                return false;
-            }
-            bucket.tokens -= cost;
-            return true;
-        }
-
-        // First access: initialise bucket and deduct cost immediately.
-        self.buckets.entry(key.to_string()).or_insert(Bucket {
-            tokens: (self.capacity - cost).max(0.0),
+        let mut bucket = self.buckets.entry(key.to_string()).or_insert(Bucket {
+            tokens: self.capacity,
             last_refill_at: now,
         });
-        cost <= self.capacity
+        let elapsed = now.duration_since(bucket.last_refill_at).as_secs_f64();
+        let refilled = (bucket.tokens + elapsed * refill_rate).min(self.capacity);
+        bucket.tokens = refilled;
+        bucket.last_refill_at = now;
+
+        if bucket.tokens < cost {
+            return false;
+        }
+
+        bucket.tokens -= cost;
+        true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RateLimiter;
+
+    #[test]
+    fn first_request_consumes_the_bucket_capacity() {
+        let limiter = RateLimiter::new(1);
+
+        assert!(limiter.allow("test", 1));
+        assert!(!limiter.allow("test", 1));
     }
 }
