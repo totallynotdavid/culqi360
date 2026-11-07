@@ -5,6 +5,23 @@ import path from "node:path";
 import sharp from "sharp";
 import type { Plugin, ResolvedConfig } from "vite";
 
+function isPathInsideRoot(rootPath: string, targetPath: string): boolean {
+  const relativePath = path.relative(rootPath, targetPath);
+  return (
+    relativePath !== "" &&
+    !relativePath.startsWith("..") &&
+    !path.isAbsolute(relativePath)
+  );
+}
+
+async function resolvePath(filePath: string): Promise<string | null> {
+  try {
+    return await fs.realpath(filePath);
+  } catch {
+    return null;
+  }
+}
+
 export function responsiveImagesPlugin(): Plugin {
   let config: ResolvedConfig;
 
@@ -21,11 +38,17 @@ export function responsiveImagesPlugin(): Plugin {
         const format = searchParams.get("responsive-format");
 
         if (format) {
-          // Resolve the file path relative to the root
-          const filePath = path.join(config.root, urlPath);
-          if (existsSync(filePath)) {
+          const rootPath = await resolvePath(config.root);
+          const requestedPath = path.resolve(config.root, `.${urlPath}`);
+          const sourcePath = await resolvePath(requestedPath);
+
+          if (
+            rootPath &&
+            sourcePath &&
+            isPathInsideRoot(rootPath, sourcePath)
+          ) {
             try {
-              const sourceBuffer = await fs.readFile(filePath);
+              const sourceBuffer = await fs.readFile(sourcePath);
               let outputBuffer: Buffer;
               let contentType = `image/${format}`;
 
@@ -34,11 +57,12 @@ export function responsiveImagesPlugin(): Plugin {
               } else if (format === "webp") {
                 outputBuffer = await sharp(sourceBuffer).webp().toBuffer();
               } else if (format === "ico") {
-                const icoPath = filePath.replace(
-                  path.extname(filePath),
+                const requestedIcoPath = requestedPath.replace(
+                  path.extname(requestedPath),
                   ".ico",
                 );
-                if (existsSync(icoPath)) {
+                const icoPath = await resolvePath(requestedIcoPath);
+                if (icoPath && isPathInsideRoot(rootPath, icoPath)) {
                   outputBuffer = await fs.readFile(icoPath);
                   contentType = "image/x-icon";
                 } else {
