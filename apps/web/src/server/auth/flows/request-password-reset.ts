@@ -2,13 +2,13 @@ import { fail, type DomainError } from "~/domain/errors";
 import {
   generatePasswordResetToken,
   hashPasswordResetToken,
+  PASSWORD_RESET_TOKEN_TTL_MS,
 } from "~/server/auth/password/reset-tokens";
 import type { OperationContext } from "~/server/platform/operation/context";
 import { Err, Ok, type Result } from "~/shared/result";
 
 import type { PasswordResetRequestContext } from "../infrastructure/password-reset-context";
 
-const TOKEN_TTL_MS = 60 * 60 * 1000;
 const MAX_REQUESTS_PER_HOUR = 3;
 
 export async function requestPasswordReset(
@@ -33,7 +33,7 @@ export async function requestPasswordReset(
   const recentCount =
     await input.deps.repos.passwordResetTokens.countRecentForUser(
       user.id,
-      new Date(now.getTime() - TOKEN_TTL_MS),
+      new Date(now.getTime() - PASSWORD_RESET_TOKEN_TTL_MS),
     );
   if (recentCount >= MAX_REQUESTS_PER_HOUR) {
     return Err(fail("rate_limited"));
@@ -43,7 +43,7 @@ export async function requestPasswordReset(
   await input.deps.repos.passwordResetTokens.create({
     user_id: user.id,
     token_hash: hashPasswordResetToken(token),
-    expires_at: new Date(now.getTime() + TOKEN_TTL_MS),
+    expires_at: new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS),
     created_at: now,
   });
 

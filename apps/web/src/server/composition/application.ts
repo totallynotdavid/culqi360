@@ -46,7 +46,11 @@ function createApplication(infrastructure: ServerInfrastructure) {
     observability,
   );
 
-  const users = createUsersRuntime(infrastructure, uploadsConfig());
+  const users = createUsersRuntime(
+    infrastructure,
+    uploadsConfig(),
+    shared.applicationConfig.publicOrigin,
+  );
 
   const dataSourceUploads = createDataSourceUploadsRuntime(shared.engine);
   const ingestBridge = createIngestJobBridge({

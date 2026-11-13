@@ -11,10 +11,11 @@ import { Err, Ok, type Result } from "~/shared/result";
 export type MemberRow = Selectable<UsersTable>;
 
 // Single owner of the "an administrator may act on this member" invariant, so
-// every member write use-case enforces the same three checks: the target must
-// exist in the actor's branch, must not be the actor themselves, and the
-// actor's role must outrank the target's. Delete additionally applies the
-// stricter canDeleteMember check at its own site.
+// every member write use-case enforces the same checks: the actor must hold
+// the team:manage permission, the target must exist in the actor's branch,
+// must not be the actor themselves, and the actor's role must outrank the
+// target's. Delete additionally applies the stricter canDeleteMember check
+// at its own site.
 export async function authorizeMemberManagement(
   ctx: AppContext,
   users: UsersRepo,

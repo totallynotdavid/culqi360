@@ -1,4 +1,5 @@
 import type { AccessSecurityTx } from "~/server/auth/application/ports";
+import type { createPasswordResetTokensRepo } from "~/server/auth/repos-password-reset";
 import type { AppUow } from "~/server/platform/database/uow";
 import type { AvatarService } from "~/server/users/avatar-service";
 import type { BranchesRepo } from "~/server/users/repos-branches";
@@ -8,6 +9,7 @@ import type { UsersRepo } from "~/server/users/repos-users";
 
 export type MemberLifecycleTx = AccessSecurityTx & {
   workload: MemberWorkloadRepo;
+  passwordResetTokens: ReturnType<typeof createPasswordResetTokensRepo>;
 };
 
 export interface MemberReadDeps {

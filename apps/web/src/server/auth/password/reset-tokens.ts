@@ -4,6 +4,8 @@ import {
   encodeHexLowerCase,
 } from "@oslojs/encoding";
 
+export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
 const TOKEN_BYTES = 20;
 const TOKEN_PATTERN = /^[a-z2-7]{32}$/;
 
