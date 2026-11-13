@@ -23,6 +23,7 @@ import { MemberAdminActions } from "~/features/team-management/member-admin-acti
 import { MemberCapacityTab } from "~/features/team-management/member-capacity-tab";
 import { MemberInfoTab } from "~/features/team-management/member-info-tab";
 import { MemberPermissionsTab } from "~/features/team-management/member-permissions-tab";
+import { MemberResetLink } from "~/features/team-management/member-reset-link";
 import { memberDetailQuery } from "~/rpc/team-management/member-detail";
 
 import styles from "~/features/team-management/team-management.module.css";
@@ -109,6 +110,7 @@ export default function SettingsMemberDetailPage() {
                   <Switch>
                     <Match when={activeTab() === "info"}>
                       <MemberInfoTab detail={member()} />
+                      <MemberResetLink detail={member()} />
                       <MemberAdminActions detail={member()} />
                     </Match>
 

@@ -173,6 +173,34 @@
   gap: 8px;
 }
 
+.resetLinkPanel {
+  margin-top: 12px;
+}
+
+.resetLinkRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.resetLinkHint {
+  font-size: var(--font-size-sm);
+  color: var(--foreground-tertiary);
+}
+
+.resetLinkNote {
+  margin: 8px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--foreground-tertiary);
+}
+
+.resetLinkWarning {
+  margin: 8px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--warning);
+}
+
 .modalField {
   margin-top: 12px;
 }

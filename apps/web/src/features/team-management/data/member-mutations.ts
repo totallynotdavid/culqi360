@@ -7,6 +7,7 @@ import type {
   UpdateMemberProfileInput,
 } from "~/contracts/members";
 import { memberDetailQuery } from "~/rpc/team-management/member-detail";
+import { generateMemberResetLink } from "~/rpc/team-management/member-reset-link";
 import { membersRosterQuery } from "~/rpc/team-management/members-roster";
 import {
   startImpersonation,
@@ -55,6 +56,12 @@ export const updateMemberExpiryMutation = action(
     return respond({ message }, { revalidate: revalidateMember });
   },
   "updateMemberExpiry",
+);
+
+export const generateMemberResetLinkMutation = action(
+  async (userId: string) =>
+    respond(await generateMemberResetLink(userId), { revalidate: [] }),
+  "generateMemberResetLink",
 );
 
 export const deleteMemberMutation = action(async (userId: string) => {
